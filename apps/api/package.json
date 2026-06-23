@@ -7,23 +7,31 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "check-types": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit"
   },
   "dependencies": {
-    "express": "^4.19.2",
+    "@prisma/client": "^5.14.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "zod": "^3.23.8",
-    "@prisma/client": "^5.14.0"
+    "express": "^4.19.2",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
-    "@types/express": "^4.17.21",
     "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
     "@types/node": "^22.15.3",
-    "typescript": "5.9.2",
+    "@types/supertest": "^7.2.0",
+    "@vitest/coverage-v8": "^4.1.9",
+    "prisma": "^5.14.0",
+    "supertest": "^7.2.2",
     "tsx": "^4.19.0",
-    "prisma": "^5.14.0"
+    "typescript": "5.9.2",
+    "vitest": "^4.1.9"
   }
 }

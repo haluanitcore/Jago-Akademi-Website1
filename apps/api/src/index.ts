@@ -1,23 +1,7 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+import { app } from './app.js';
 
-dotenv.config();
+const port = process.env.PORT ?? 4000;
 
-const app = express();
-const port = process.env.PORT || 4000;
-
-app.use(cors());
-app.use(express.json());
-
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    service: 'Jago Akademi Core API'
-  });
-});
-
-app.listen(port, () => {
-  console.log(`[server]: Jago Akademi API is running at http://localhost:${port}`);
+app.listen(Number(port), "0.0.0.0", () => {
+  console.log(`[server]: Jago Akademi API running at http://localhost:${port}`);
 });
