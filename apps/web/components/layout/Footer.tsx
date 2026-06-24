@@ -34,7 +34,7 @@ const socials = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-white/5 bg-[#0d0d0d]">
+    <footer className="border-t border-[#E5E5E5] bg-[#FAFAFA]">
       {/* Main footer */}
       <div className="container-pad py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8">
@@ -51,7 +51,7 @@ export function Footer() {
                 />
               </div>
             </Link>
-            <p className="text-sm text-[#a3a3a3] leading-relaxed max-w-xs">
+            <p className="text-sm text-[#636366] leading-relaxed max-w-xs">
               Platform edukasi digital terlengkap Indonesia. Belajar, berlatih, dan
               berkarier bersama ribuan profesional.
             </p>
@@ -65,7 +65,7 @@ export function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={text}
-                  className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/5 border border-white/[0.08] text-[#a3a3a3] hover:text-[#00d4ff] hover:border-[#00d4ff]/30 hover:bg-[#00d4ff]/5 transition-all duration-200 text-[10px] font-bold"
+                  className="w-9 h-9 flex items-center justify-center rounded-lg bg-white border border-[#E5E5E5] text-[#636366] hover:text-[#0077A8] hover:border-[rgba(0,119,168,0.3)] hover:bg-[rgba(0,212,255,0.06)] transition-all duration-200 text-[10px] font-bold shadow-e1"
                 >
                   {label}
                 </a>
@@ -77,9 +77,9 @@ export function Footer() {
               href="https://wa.me/6281234567890"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm font-medium text-[#f5f5f5] hover:text-[#00d4ff] transition-colors group"
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#1D1D1F] hover:text-[#0077A8] transition-colors group"
             >
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               Chat WhatsApp
               <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </a>
@@ -87,8 +87,8 @@ export function Footer() {
 
           {/* Link columns */}
           {Object.entries(footerLinks).map(([category, links]) => (
-            <div key={category} className="space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-[#525252]">
+            <nav key={category} aria-label={`Navigasi ${category}`} className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-[#6E6E73]">
                 {category}
               </h4>
               <ul className="space-y-2.5">
@@ -96,14 +96,14 @@ export function Footer() {
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="text-sm text-[#a3a3a3] hover:text-[#f5f5f5] transition-colors"
+                      className="text-sm text-[#636366] hover:text-[#1D1D1F] transition-colors"
                     >
                       {link.label}
                     </Link>
                   </li>
                 ))}
               </ul>
-            </div>
+            </nav>
           ))}
         </div>
       </div>
@@ -113,14 +113,14 @@ export function Footer() {
 
       {/* Bottom bar */}
       <div className="container-pad py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p className="text-xs text-[#525252]">
+        <p className="text-xs text-[#6E6E73]">
           © 2025–2026 Jago Akademi. Hak cipta dilindungi.
         </p>
         <div className="flex items-center gap-6">
-          <Link href="/privacy" className="text-xs text-[#525252] hover:text-[#a3a3a3] transition-colors">
+          <Link href="/privacy" className="text-xs text-[#6E6E73] hover:text-[#636366] transition-colors">
             Kebijakan Privasi
           </Link>
-          <Link href="/terms" className="text-xs text-[#525252] hover:text-[#a3a3a3] transition-colors">
+          <Link href="/terms" className="text-xs text-[#6E6E73] hover:text-[#636366] transition-colors">
             Syarat & Ketentuan
           </Link>
         </div>

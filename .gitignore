@@ -39,3 +39,8 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# AI agents
+.claude/
+.gemini/
+jago_akademi_clarification_questions.docx.pdf

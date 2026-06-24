@@ -22,8 +22,8 @@ export function ActionButtons({ isLocked = true }: ActionButtonsProps) {
           className={[
             "flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-medium transition-all duration-200 text-left",
             isLocked
-              ? "border-[#1f1f1f] bg-[#141414] text-[#3a3a3a] cursor-not-allowed"
-              : "border-[#262626] bg-[#141414] text-[#a3a3a3] hover:border-[#00d4ff]/30 hover:text-[#00d4ff]",
+              ? "border-[#E5E5E5] bg-[#FAFAFA] text-[#AEAEB2] cursor-not-allowed"
+              : "border-[#E5E5E5] bg-white text-[#636366] hover:border-[rgba(0,119,168,0.3)] hover:text-[#0077A8] shadow-e1",
           ].join(" ")}
         >
           <Icon size={14} className="flex-none" />

@@ -1,21 +1,72 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import path from "node:path";
 
-dotenv.config();
+import { env } from "./config/env.js";
+import { generalLimiter, authLimiter } from "./middleware/rateLimiter.js";
+import { notFound, errorHandler } from "./middleware/errorHandler.js";
+import healthRouter from "./routes/health.js";
+import authRouter from "./routes/auth.js";
+import usersRouter from "./routes/users.js";
+import certificatesRouter from "./routes/certificates.js";
+import coursesRouter from "./routes/courses.js";
+import categoriesRouter from "./routes/categories.js";
+import searchRouter from "./routes/search.js";
+import uploadRouter from "./routes/upload.js";
+import enrollmentsRouter from "./routes/enrollments.js";
+import progressRouter from "./routes/progress.js";
+import quizRouter from "./routes/quiz.js";
+import dashboardRouter from "./routes/dashboard.js";
+import videosRouter from "./routes/videos.js";
+import adminRouter from "./routes/admin.js";
+import checkoutRouter from "./routes/checkout.js";
+import ordersRouter from "./routes/orders.js";
+import couponsRouter from "./routes/coupons.js";
+import webhooksRouter from "./routes/webhooks.js";
+import ebooksRouter from "./routes/ebooks.js";
+import lmsRouter from "./routes/lms.js";
 
 export const app = express();
 
-const corsOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:3004';
+// Trust proxy for correct IP behind load balancer / Cloudflare
+app.set("trust proxy", 1);
 
-app.use(cors({ origin: corsOrigin, credentials: true }));
-app.use(express.json());
+app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
+// Capture raw body for webhook signature verification
+app.use(
+  express.json({
+    verify: (req: unknown, _res: unknown, buf: Buffer) => {
+      (req as Record<string, unknown>).rawBody = buf;
+    },
+  })
+);
+app.use(cookieParser());
+app.use(generalLimiter);
 
-app.get('/api/health', (_req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    service: 'Jago Akademi Core API',
-    version: '1.0.0',
-  });
-});
+// Serve uploaded files (dev only — use CDN/R2 in production)
+app.use("/uploads", express.static(path.join(process.cwd(), env.UPLOAD_DIR)));
+
+app.use("/api", healthRouter);
+app.use("/api/auth", authLimiter, authRouter);
+app.use("/api/users", usersRouter);
+app.use("/api/certificates", certificatesRouter);
+app.use("/api/courses", coursesRouter);
+app.use("/api/categories", categoriesRouter);
+app.use("/api/search", searchRouter);
+app.use("/api/upload", uploadRouter);
+app.use("/api/enrollments", enrollmentsRouter);
+app.use("/api/progress", progressRouter);
+app.use("/api/quiz", quizRouter);
+app.use("/api/dashboard", dashboardRouter);
+app.use("/api/videos", videosRouter);
+app.use("/api/admin", adminRouter);
+app.use("/api/checkout", checkoutRouter);
+app.use("/api/orders", ordersRouter);
+app.use("/api/coupons", couponsRouter);
+app.use("/api/webhooks", webhooksRouter);
+app.use("/api/ebooks", ebooksRouter);
+app.use("/api/lms", lmsRouter);
+
+app.use(notFound);
+app.use(errorHandler);

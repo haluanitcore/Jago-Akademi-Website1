@@ -61,34 +61,34 @@ export default async function MateriPage({ params }: Props) {
 
             {/* Sidebar: progress */}
             <div className="flex flex-col gap-4">
-              <div className="bg-[#141414] border border-[#1f1f1f] rounded-xl p-5 flex flex-col gap-4">
-                <h3 className="text-[#f5f5f5] font-semibold text-sm">Progress Belajar</h3>
+              <div className="bg-white border border-[#E5E5E5] rounded-xl p-5 flex flex-col gap-4 shadow-e1">
+                <h3 className="text-[#1D1D1F] font-semibold text-sm">Progress Belajar</h3>
                 <ProgressBar percent={0} />
-                <div className="text-[#525252] text-xs flex flex-col gap-1">
+                <div className="text-[#6E6E73] text-xs flex flex-col gap-1">
                   <span>0 dari {lesson.chapters.length} video selesai</span>
-                  <span className="text-[#3a3a3a]">Berlangganan untuk mulai belajar</span>
+                  <span className="text-[#AEAEB2]">Berlangganan untuk mulai belajar</span>
                 </div>
               </div>
 
               {/* Lesson stats */}
-              <div className="bg-[#141414] border border-[#1f1f1f] rounded-xl p-5">
-                <h3 className="text-[#f5f5f5] font-semibold text-sm mb-3">Statistik Materi</h3>
+              <div className="bg-white border border-[#E5E5E5] rounded-xl p-5 shadow-e1">
+                <h3 className="text-[#1D1D1F] font-semibold text-sm mb-3">Statistik Materi</h3>
                 <div className="flex flex-col gap-2 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-[#525252]">Total Bab</span>
-                    <span className="text-[#a3a3a3]">{lesson.chapterCount}</span>
+                    <span className="text-[#6E6E73]">Total Bab</span>
+                    <span className="text-[#636366]">{lesson.chapterCount}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#525252]">Total Pelajar</span>
-                    <span className="text-[#a3a3a3]">{lesson.studentCount}</span>
+                    <span className="text-[#6E6E73]">Total Pelajar</span>
+                    <span className="text-[#636366]">{lesson.studentCount}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#525252]">Rating</span>
-                    <span className="text-yellow-400">{lesson.rating.toFixed(2)} ★</span>
+                    <span className="text-[#6E6E73]">Rating</span>
+                    <span className="text-yellow-600">{lesson.rating.toFixed(2)} ★</span>
                   </div>
                   {lesson.isPortfolioProject && (
-                    <div className="mt-2 pt-2 border-t border-[#1f1f1f]">
-                      <span className="text-[10px] font-semibold px-2 py-1 rounded bg-[#ff0066]/10 border border-[#ff0066]/20 text-[#ff0066]">
+                    <div className="mt-2 pt-2 border-t border-[#EFEFEF]">
+                      <span className="text-[10px] font-semibold px-2 py-1 rounded bg-[rgba(204,0,82,0.08)] border border-[rgba(204,0,82,0.2)] text-[#CC0052]">
                         Portfolio Project
                       </span>
                     </div>

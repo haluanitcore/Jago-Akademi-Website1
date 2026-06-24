@@ -57,7 +57,7 @@ const products = [
 
 export function ProductsSection() {
   return (
-    <section className="section bg-[#0a0a0a]">
+    <section className="section bg-[#FAFAFA]">
       <div className="container-pad">
         {/* Header */}
         <div className="text-center mb-14">
@@ -66,7 +66,7 @@ export function ProductsSection() {
             Semua yang kamu butuhkan{" "}
             <span className="text-gradient-brand">dalam satu platform</span>
           </h2>
-          <p className="text-[#a3a3a3] max-w-xl mx-auto">
+          <p className="text-[#636366] max-w-xl mx-auto">
             Dari belajar mandiri, hadir di event, hingga membangun karier sebagai trainer —
             semua tersedia di Jago Akademi.
           </p>
@@ -89,30 +89,30 @@ export function ProductsSection() {
 
               {/* Icon */}
               <div
-                className={`w-12 h-12 flex items-center justify-center rounded-xl ${
+                className={`w-12 h-12 flex items-center justify-center rounded-xl transition-colors ${
                   color === "cyan"
-                    ? "bg-[#00d4ff]/10 border border-[#00d4ff]/20 group-hover:bg-[#00d4ff]/20"
-                    : "bg-[#ff0066]/10 border border-[#ff0066]/20 group-hover:bg-[#ff0066]/20"
-                } transition-colors`}
+                    ? "bg-[rgba(0,212,255,0.08)] border border-[rgba(0,119,168,0.2)] group-hover:bg-[rgba(0,212,255,0.14)]"
+                    : "bg-[rgba(255,0,102,0.07)] border border-[rgba(204,0,82,0.2)] group-hover:bg-[rgba(255,0,102,0.12)]"
+                }`}
               >
                 <Icon
                   size={22}
-                  className={color === "cyan" ? "text-[#00d4ff]" : "text-[#ff0066]"}
+                  className={color === "cyan" ? "text-[#0077A8]" : "text-[#CC0052]"}
                 />
               </div>
 
               {/* Content */}
               <div className="flex-1">
-                <h3 className="font-semibold text-[#f5f5f5] mb-1.5 group-hover:text-white transition-colors">
+                <h3 className="font-semibold text-[#1D1D1F] mb-1.5 group-hover:text-[#0077A8] transition-colors">
                   {label}
                 </h3>
-                <p className="text-sm text-[#737373] leading-relaxed">{desc}</p>
+                <p className="text-sm text-[#636366] leading-relaxed">{desc}</p>
               </div>
 
               {/* Arrow */}
               <div
                 className={`flex items-center gap-1.5 text-xs font-medium ${
-                  color === "cyan" ? "text-[#00d4ff]" : "text-[#ff0066]"
+                  color === "cyan" ? "text-[#0077A8]" : "text-[#CC0052]"
                 } opacity-0 group-hover:opacity-100 transition-opacity`}
               >
                 Selengkapnya

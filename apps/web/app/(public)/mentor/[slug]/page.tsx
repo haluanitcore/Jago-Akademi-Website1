@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { getMentorBySlug, mentors, categories } from "@/lib/e-course/utils";
 import { MentorHero } from "@/components/mentor/MentorHero";
 import { MentorCourseGrid } from "@/components/mentor/MentorCourseGrid";
+import { MentorConnect } from "@/components/mentor/MentorConnect";
 import type { MentorParams } from "@/lib/e-course/types";
 
 type Props = {
@@ -39,6 +40,7 @@ export default async function MentorPage({ params }: Props) {
     <>
       <MentorHero mentor={mentor} />
       <MentorCourseGrid mentor={mentor} topics={mentorTopics} />
+      <MentorConnect mentor={mentor} />
     </>
   );
 }

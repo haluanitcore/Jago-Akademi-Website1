@@ -10,8 +10,8 @@ export function VideoChapterList({ chapters, lessonTitle }: VideoChapterListProp
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-[#f5f5f5] font-semibold text-lg">{lessonTitle}</h2>
-        <span className="text-[#525252] text-xs">{chapters.length} video</span>
+        <h2 className="text-[#1D1D1F] font-semibold text-lg">{lessonTitle}</h2>
+        <span className="text-[#6E6E73] text-xs">{chapters.length} video</span>
       </div>
       <div className="flex flex-col gap-2">
         {chapters.map((chapter, i) => (

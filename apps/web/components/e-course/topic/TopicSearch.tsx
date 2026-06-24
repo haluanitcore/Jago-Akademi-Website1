@@ -22,9 +22,8 @@ export function TopicSearch({ lessons, categorySlug, topicSlug }: TopicSearchPro
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Search bar */}
       <div className="relative max-w-md">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#525252]" />
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#AEAEB2]" />
         <input
           type="search"
           placeholder="Cari materi..."
@@ -34,14 +33,12 @@ export function TopicSearch({ lessons, categorySlug, topicSlug }: TopicSearchPro
         />
       </div>
 
-      {/* Results count */}
       {query && (
-        <p className="text-[#525252] text-xs">
+        <p className="text-[#6E6E73] text-xs">
           {filtered.length} hasil untuk &ldquo;{query}&rdquo;
         </p>
       )}
 
-      {/* Grid */}
       {filtered.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {filtered.map((lesson) => (
@@ -55,7 +52,7 @@ export function TopicSearch({ lessons, categorySlug, topicSlug }: TopicSearchPro
         </div>
       ) : (
         <div className="text-center py-16">
-          <p className="text-[#525252] text-sm">Tidak ada materi yang cocok.</p>
+          <p className="text-[#6E6E73] text-sm">Tidak ada materi yang cocok.</p>
         </div>
       )}
     </div>

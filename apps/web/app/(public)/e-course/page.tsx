@@ -3,6 +3,8 @@ import { ECourseHero } from "@/components/e-course/ECourseHero";
 import { ECourseTestimonials } from "@/components/e-course/ECourseTestimonials";
 import { ECourseFeatures } from "@/components/e-course/ECourseFeatures";
 import { ECourseCatalog } from "@/components/e-course/ECourseCatalog";
+import { LeaderboardSection } from "@/components/e-course/LeaderboardSection";
+import { ECourseLearningPaths } from "@/components/e-course/ECourseLearningPaths";
 
 export const metadata: Metadata = {
   title: "E-Course — Pelajari 1.000+ Skill Profesional & Bersertifikat | Jago Akademi",
@@ -23,6 +25,8 @@ export default function ECoursePage() {
       <ECourseTestimonials />
       <ECourseFeatures />
       <ECourseCatalog />
+      <LeaderboardSection />
+      <ECourseLearningPaths />
     </>
   );
 }

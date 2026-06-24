@@ -20,14 +20,14 @@ export function SubscriptionLock({ isLocked, children }: SubscriptionLockProps) 
       </div>
 
       <div className="absolute inset-0 flex items-center justify-center z-10">
-        <div className="text-center max-w-sm px-6 py-8 bg-[#141414] border border-[#00d4ff]/20 rounded-2xl shadow-2xl mx-4">
-          <div className="w-12 h-12 rounded-xl bg-[#00d4ff]/10 border border-[#00d4ff]/20 flex items-center justify-center mx-auto mb-4">
-            <Lock size={20} className="text-[#00d4ff]" />
+        <div className="text-center max-w-sm px-6 py-8 bg-white border border-[rgba(0,119,168,0.2)] rounded-2xl shadow-e3 mx-4">
+          <div className="w-12 h-12 rounded-xl bg-[rgba(0,212,255,0.08)] border border-[rgba(0,119,168,0.2)] flex items-center justify-center mx-auto mb-4">
+            <Lock size={20} className="text-[#0077A8]" />
           </div>
-          <h3 className="text-[#f5f5f5] font-bold font-display text-lg mb-2">
+          <h3 className="text-[#1D1D1F] font-bold font-display text-lg mb-2">
             Konten Terkunci
           </h3>
-          <p className="text-[#a3a3a3] text-sm mb-5 leading-relaxed">
+          <p className="text-[#636366] text-sm mb-5 leading-relaxed">
             Berlangganan Jago Akademi untuk mengakses semua materi, video, dan sertifikat pembelajaran.
           </p>
           <Link
@@ -36,7 +36,7 @@ export function SubscriptionLock({ isLocked, children }: SubscriptionLockProps) 
           >
             Berlangganan Sekarang
           </Link>
-          <p className="text-[#3a3a3a] text-xs mt-3">
+          <p className="text-[#AEAEB2] text-xs mt-3">
             Akses seumur hidup · Sertifikat resmi · Komunitas eksklusif
           </p>
         </div>

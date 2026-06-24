@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Menu, X, ChevronDown, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
-  { label: "Kursus", href: "/kursus" },
+  { label: "E-Course", href: "/e-course" },
   { label: "Event", href: "/event" },
   {
     label: "Produk",
@@ -24,6 +25,7 @@ const navLinks = [
 ];
 
 export function Navbar() {
+  const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -36,7 +38,6 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close dropdown on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -62,7 +63,7 @@ export function Navbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         isScrolled
-          ? "bg-[#0d0d0d]/90 backdrop-blur-dark border-b border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
+          ? "bg-white/90 backdrop-blur-dark border-b border-[#E5E5E5] shadow-e1"
           : "bg-transparent"
       )}
     >
@@ -100,7 +101,7 @@ export function Navbar() {
                   }
                   onFocus={() => openDropdown(link.label)}
                   onBlur={scheduleClose}
-                  className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-[#a3a3a3] hover:text-[#f5f5f5] transition-colors"
+                  className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-[#636366] hover:text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors"
                 >
                   {link.label}
                   <ChevronDown
@@ -129,12 +130,12 @@ export function Navbar() {
                           key={child.href}
                           href={child.href}
                           role="menuitem"
-                          className="flex flex-col gap-0.5 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group"
+                          className="flex flex-col gap-0.5 px-3 py-2.5 rounded-lg hover:bg-[#F5F5F7] transition-colors group"
                         >
-                          <span className="text-sm font-medium text-[#f5f5f5] group-hover:text-[#00d4ff] transition-colors">
+                          <span className="text-sm font-medium text-[#1D1D1F] group-hover:text-[#0077A8] transition-colors">
                             {child.label}
                           </span>
-                          <span className="text-xs text-[#525252]">{child.desc}</span>
+                          <span className="text-xs text-[#6E6E73]">{child.desc}</span>
                         </Link>
                       ))}
                     </div>
@@ -145,7 +146,13 @@ export function Navbar() {
               <li key={link.label}>
                 <Link
                   href={link.href}
-                  className="px-3 py-2 rounded-lg text-sm font-medium text-[#a3a3a3] hover:text-[#f5f5f5] transition-colors"
+                  aria-current={pathname.startsWith(link.href) && link.href !== "#" ? "page" : undefined}
+                  className={cn(
+                    "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    pathname.startsWith(link.href) && link.href !== "#"
+                      ? "text-[#1D1D1F] bg-[#F5F5F7]"
+                      : "text-[#636366] hover:text-[#1D1D1F] hover:bg-[#F5F5F7]"
+                  )}
                 >
                   {link.label}
                 </Link>
@@ -158,7 +165,7 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-3">
           <Link
             href="/kolaborasi"
-            className="flex items-center gap-1.5 text-sm font-medium text-[#a3a3a3] hover:text-[#00d4ff] transition-colors"
+            className="flex items-center gap-1.5 text-sm font-medium text-[#636366] hover:text-[#0077A8] transition-colors"
           >
             <Sparkles size={14} aria-hidden="true" />
             Kolaborasi
@@ -177,7 +184,7 @@ export function Navbar() {
           aria-label={isMobileOpen ? "Tutup menu" : "Buka menu"}
           aria-expanded={isMobileOpen}
           aria-controls={mobileMenuId}
-          className="md:hidden p-2 rounded-lg text-[#a3a3a3] hover:text-[#f5f5f5] hover:bg-white/5 transition-colors"
+          className="md:hidden p-2 rounded-lg text-[#636366] hover:text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors"
           onClick={() => setIsMobileOpen(!isMobileOpen)}
         >
           {isMobileOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
@@ -190,20 +197,20 @@ export function Navbar() {
           id={mobileMenuId}
           role="dialog"
           aria-label="Menu navigasi mobile"
-          className="md:hidden border-t border-white/5 bg-[#0d0d0d]/95 backdrop-blur-dark"
+          className="md:hidden border-t border-[#E5E5E5] bg-white/95 backdrop-blur-dark"
         >
           <div className="container-pad py-4 space-y-1">
             {navLinks.map((link) =>
               link.children ? (
                 <div key={link.label}>
-                  <p className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#525252]">
+                  <p className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#6E6E73]">
                     {link.label}
                   </p>
                   {link.children.map((child) => (
                     <Link
                       key={child.href}
                       href={child.href}
-                      className="block px-3 py-2.5 rounded-lg text-sm text-[#a3a3a3] hover:text-[#f5f5f5] hover:bg-white/5 transition-colors"
+                      className="block px-3 py-2.5 rounded-lg text-sm text-[#636366] hover:text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors"
                       onClick={() => setIsMobileOpen(false)}
                     >
                       {child.label}
@@ -214,14 +221,20 @@ export function Navbar() {
                 <Link
                   key={link.label}
                   href={link.href}
-                  className="block px-3 py-2.5 rounded-lg text-sm font-medium text-[#a3a3a3] hover:text-[#f5f5f5] hover:bg-white/5 transition-colors"
+                  aria-current={pathname.startsWith(link.href) && link.href !== "#" ? "page" : undefined}
+                  className={cn(
+                    "block px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                    pathname.startsWith(link.href) && link.href !== "#"
+                      ? "text-[#1D1D1F] bg-[#F5F5F7]"
+                      : "text-[#636366] hover:text-[#1D1D1F] hover:bg-[#F5F5F7]"
+                  )}
                   onClick={() => setIsMobileOpen(false)}
                 >
                   {link.label}
                 </Link>
               )
             )}
-            <div className="pt-4 border-t border-white/5 flex flex-col gap-2">
+            <div className="pt-4 border-t border-[#E5E5E5] flex flex-col gap-2">
               <Link href="/masuk" className="btn btn-ghost w-full justify-center">
                 Masuk
               </Link>

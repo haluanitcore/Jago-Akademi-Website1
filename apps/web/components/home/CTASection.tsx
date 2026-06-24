@@ -3,10 +3,10 @@ import { ArrowRight, Zap } from "lucide-react";
 
 export function CTASection() {
   return (
-    <section className="section relative overflow-hidden bg-[#0a0a0a]">
-      {/* Gradient orbs */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full bg-[#00d4ff]/5 blur-[150px] pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] rounded-full bg-[#ff0066]/5 blur-[120px] pointer-events-none" />
+    <section className="section relative overflow-hidden bg-white">
+      {/* Soft gradient orbs */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full bg-[#00d4ff]/8 blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] rounded-full bg-[#ff0066]/6 blur-[120px] pointer-events-none" />
 
       <div className="container-pad relative z-10">
         <div className="max-w-3xl mx-auto text-center">
@@ -22,7 +22,7 @@ export function CTASection() {
             <span className="text-gradient-brand">Jago</span>?
           </h2>
 
-          <p className="text-lg text-[#a3a3a3] mb-10 max-w-xl mx-auto">
+          <p className="text-lg text-[#636366] mb-10 max-w-xl mx-auto">
             Bergabunglah dengan 50.000+ profesional yang sudah membuktikan.
             Daftar gratis, mulai belajar hari ini.
           </p>
@@ -37,7 +37,7 @@ export function CTASection() {
             </Link>
           </div>
 
-          <p className="mt-6 text-xs text-[#525252]">
+          <p className="mt-6 text-xs text-[#6E6E73]">
             Tidak perlu kartu kredit · Akses langsung · Batalkan kapan saja
           </p>
         </div>

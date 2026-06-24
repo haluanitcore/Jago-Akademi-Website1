@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async redirects() {
+    return [
+      { source: "/kursus", destination: "/e-course", permanent: true },
+      { source: "/kursus/:path*", destination: "/e-course/:path*", permanent: true },
+    ];
+  },
   transpilePackages: ["@repo/ui"],
   images: {
     remotePatterns: [

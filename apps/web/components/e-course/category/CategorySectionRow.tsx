@@ -14,14 +14,14 @@ export function CategorySectionRow({ topic, categorySlug }: CategorySectionRowPr
       {/* Section header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h3 className="text-[#f5f5f5] font-semibold text-base">{topic.title}</h3>
-          <p className="text-[#525252] text-xs mt-0.5">
+          <h3 className="text-[#1D1D1F] font-semibold text-base">{topic.title}</h3>
+          <p className="text-[#6E6E73] text-xs mt-0.5">
             {topic.lessonCount} Materi · {topic.videoCount} Video
           </p>
         </div>
         <Link
           href={`/e-course/${categorySlug}/${topic.slug}`}
-          className="flex-none flex items-center gap-1 text-xs text-[#00d4ff] hover:text-[#00d4ff]/80 transition-colors"
+          className="flex-none flex items-center gap-1 text-xs text-[#0077A8] hover:text-[#005c7a] transition-colors"
         >
           Selengkapnya
           <ArrowRight size={12} />
