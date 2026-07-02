@@ -4,6 +4,11 @@
 
 | ID | Temuan | Ditemukan saat | Severity | Rekomendasi | Target Fase |
 |----|--------|----------------|----------|-------------|-------------|
+| BL-18 | **Tidak ada endpoint data-access/export** (hak akses PDP Art. 5-6). | TASK-051 | 🟡 Medium | Tambah `GET /api/users/me/export` (bundle JSON data user). | Phase 5 |
+| BL-19 | **Tidak ada retention policy** — `AuditLog` (IP/UA) + akun teranonimisasi menumpuk tanpa batas (PDP Art. 43). | TASK-051 | 🟡 Medium | Retention policy + job purge `AuditLog` > 12 bln (BullMQ scheduled). | Phase 5 |
+| BL-20 | **Consent tanpa versi kebijakan** — hanya `consentGivenAt`, tak bisa trigger re-consent saat policy berubah. | TASK-051 | 🔴 High (pre-launch) | Simpan `privacyPolicyVersion` saat consent. | Phase 5 (pre-launch) |
+| BL-21 | **Breach-response process** (PDP Art. 46, 3×24 jam) — bagian ditambahkan ke RUNBOOK_INCIDENT (TASK-051), butuh formalisasi legal. | TASK-051 | 🔴 High (pre-launch) | Finalisasi workflow notifikasi 72 jam + kontak otoritas. | Phase 5 (pre-launch) |
+| BL-22 | **Cross-border transfer belum di-assess** (PDP Art. 56) — Cloudflare R2/Stream, Resend, Sentry mungkin di luar Indonesia. | TASK-051 | 🔴 High (pre-launch) | Review DPA per processor + disclosure di privacy notice. | Phase 5 (pre-launch, legal) |
 | BL-17 | **Web Sentry belum ada** — TASK-023 menambah observability API (Sentry+pino+/ready). Sisi web (Next.js) belum diinstrumentasi (butuh `@sentry/nextjs` + `instrumentation.ts` + sentry configs). | TASK-023 | 🟡 Medium | Install `@sentry/nextjs`, wire client/server/edge config + `NEXT_PUBLIC_SENTRY_DSN`, verifikasi build. | Phase 5 (pra public launch) |
 | BL-01 | **5 apps di monorepo** (`admin`, `api`, `lms`, `trainer`, `web`), bukan 2. `apps/admin`, `apps/lms`, `apps/trainer` hanya scaffold `create-next-app` default (1 boilerplate `page.tsx` masing-masing). Fungsi asli admin/lms/trainer ada di dalam `apps/web`. | TASK-001 | 🟡 Medium | Hapus 3 scaffold mati atau putuskan repurpose. SSOT hanya mengakui `apps/api` + `apps/web`. Konfirmasi stakeholder. | Phase 2 (cleanup) |
 | BL-02 | **52 type error API** (`trainer.ts` 21, `lms.ts` 14, dll) — referensi field/relasi Prisma yang tidak ada di schema. | TASK-000 | 🔴 High | Diselesaikan di **TASK-002**. | Phase 1 |

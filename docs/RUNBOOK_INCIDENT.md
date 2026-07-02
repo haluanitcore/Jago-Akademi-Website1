@@ -48,6 +48,18 @@ Configure in Sentry + the uptime monitor:
 5. **Verify** recovery: `/api/ready` 200 + smoke test + error rate normal.
 6. **Post-incident:** write a short postmortem (timeline, root cause, action items); add a regression test; file BACKLOG items.
 
+## Data breach response (UU PDP Art. 46 — 3×24 hours)
+
+A breach = unauthorized access/disclosure/loss of personal data. Treat as **P1**.
+
+1. **Contain** (0–1 h): revoke exposed credentials/tokens, rotate secrets, isolate the affected service, preserve logs/evidence (do not wipe).
+2. **Assess** (1–6 h): what data, how many subjects, sensitivity, root cause. Use `AuditLog` + pino logs (`requestId`) to scope.
+3. **Notify (≤ 72 h)**: report to the data-protection authority **and** affected data subjects — nature of breach, data involved, likely impact, mitigation, contact point. Owner: DPO/CTO.
+4. **Remediate**: patch root cause, add regression test, force re-auth if sessions compromised.
+5. **Document**: incident record + postmortem; update this runbook if the process gapped.
+
+> Legal review pending (BL-21). Cross-border processors (Cloudflare/Resend/Sentry) are in scope — see `docs/PDP_COMPLIANCE_AUDIT.md` (BL-22).
+
 ## Common commands
 
 ```bash
