@@ -785,13 +785,21 @@ app.use(helmet({
 
 ## 7. PAYMENT GATEWAY INTEGRATION
 
-### 7.1 Midtrans Integration (Primary)
+> ⚠️ **Correction (TASK-050 / INC-01):** the primary gateway is **DOKU**, not Midtrans.
+> The actual implementation lives in `apps/api/src/services/payment/dokuService.ts`
+> (`createDokuOrder`, `verifyDokuWebhook`) with env `DOKU_CLIENT_ID`, `DOKU_SECRET_KEY`,
+> `DOKU_BASE_URL`. Webhook fulfillment is queued idempotently (see `docs/RUNBOOK_QUEUE.md`
+> and `apps/api/src/jobs/processors/webhook.ts`). The block below is retained as a
+> generic gateway-flow illustration only.
+
+### 7.1 DOKU Integration (Primary) — illustrative flow
 
 ```typescript
-// Checkout Flow
+// Checkout Flow (illustrative — see dokuService.ts for the real DOKU calls)
 async function createPayment(order: Order) {
-  const midtrans = new MidtransClient({
-    serverKey: process.env.MIDTRANS_SERVER_KEY,
+  const gateway = new PaymentClient({
+    clientId: process.env.DOKU_CLIENT_ID,
+    secretKey: process.env.DOKU_SECRET_KEY,
     isProduction: process.env.NODE_ENV === 'production'
   });
 
@@ -828,7 +836,7 @@ async function createPayment(order: Order) {
 }
 
 // Webhook Handler
-async function handlePaymentWebhook(notification: MidtransNotification) {
+async function handlePaymentWebhook(notification: PaymentNotification) {
   // Verify signature
   const hash = crypto.createHash('sha512')
     .update(`${notification.order_id}${notification.status_code}${notification.gross_amount}${SERVER_KEY}`)

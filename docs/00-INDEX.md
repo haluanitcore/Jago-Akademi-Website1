@@ -22,11 +22,29 @@
 | 5 | Implementation Roadmap | [05-IMPLEMENTATION-ROADMAP.md](./05-IMPLEMENTATION-ROADMAP.md) | ~40 hal | ✅ Done |
 | 6 | Design System & Visual Identity | [06-DESIGN-SYSTEM.md](./06-DESIGN-SYSTEM.md) | ~55 hal | ✅ Done |
 | 9 | Test Plan (Fase 9) | [09-TEST-PLAN.md](./09-TEST-PLAN.md) | ~12 hal | ✅ Done |
-| 10a | Launch Checklist (Fase 10) | [10-LAUNCH-CHECKLIST.md](./10-LAUNCH-CHECKLIST.md) | ~8 hal | ✅ Done |
-| 10a | Deployment Guide (Fase 10) | [10-DEPLOYMENT-GUIDE.md](./10-DEPLOYMENT-GUIDE.md) | ~10 hal | ✅ Done |
+| 10a1 | Launch Checklist (Fase 10) | [10-LAUNCH-CHECKLIST.md](./10-LAUNCH-CHECKLIST.md) | ~8 hal | ✅ Done |
+| 10a2 | Deployment Guide (Fase 10) | [10-DEPLOYMENT-GUIDE.md](./10-DEPLOYMENT-GUIDE.md) | ~10 hal | ✅ Done |
 | 10b | Soft Launch Strategy (Fase 10B) | [10B-SOFT-LAUNCH-STRATEGY.md](./10B-SOFT-LAUNCH-STRATEGY.md) | ~18 hal | ✅ Done |
 | 10c | Public Launch Playbook (Fase 10C) | [10C-PUBLIC-LAUNCH-PLAYBOOK.md](./10C-PUBLIC-LAUNCH-PLAYBOOK.md) | ~22 hal | ✅ Done |
 | 10d | Growth & Scale Strategy (Fase 10D) | [10D-GROWTH-SCALE-STRATEGY.md](./10D-GROWTH-SCALE-STRATEGY.md) | ~25 hal | ✅ Done |
+
+### Dokumen Engineering (eksekusi TASK-000→030)
+
+| Dokumen | File | Fungsi |
+|---------|------|--------|
+| SSOT / Blueprint | [PROJECT_PROGRESS_REPORT_V2.md](../PROJECT_PROGRESS_REPORT_V2.md) | Single Source of Truth eksekusi |
+| Baseline Audit | [BASELINE_AUDIT.md](./BASELINE_AUDIT.md) | Kondisi faktual awal (TASK-000) |
+| Backlog | [BACKLOG.md](./BACKLOG.md) | 17 gap/follow-up tracked |
+| ADR | [adr/0001-frontend-stack.md](./adr/0001-frontend-stack.md) | Keputusan Next 16/React 19 + fallback |
+| Compatibility Matrix | [COMPATIBILITY_MATRIX.md](./COMPATIBILITY_MATRIX.md) | Versi pinned + kompat |
+| Security Checklist | [SECURITY_CHECKLIST.md](./SECURITY_CHECKLIST.md) | Postur keamanan P1 + RBAC |
+| RBAC Matrix | [rbac-matrix.md](./rbac-matrix.md) | Role × endpoint |
+| CI Runbook | [RUNBOOK_CI.md](./RUNBOOK_CI.md) | CI gate + branch protection |
+| Deploy Runbook | [RUNBOOK_DEPLOY.md](./RUNBOOK_DEPLOY.md) | Deploy host + DNS/SSL + rollback |
+| DB Runbook | [RUNBOOK_DB.md](./RUNBOOK_DB.md) | Migration + backup + restore |
+| Queue Runbook | [RUNBOOK_QUEUE.md](./RUNBOOK_QUEUE.md) | BullMQ worker ops |
+| Incident Runbook | [RUNBOOK_INCIDENT.md](./RUNBOOK_INCIDENT.md) | Observability + SLA + response |
+| Integration Verify | [INTEGRATION_VERIFICATION.md](./INTEGRATION_VERIFICATION.md) | Matriks verifikasi live (TASK-030) |
 
 **Total dokumentasi: ~400 halaman** (18 dokumen)
 
@@ -97,9 +115,11 @@
 | Storage | Cloudflare R2 |
 | Video | Cloudflare Stream (HLS + signed URL) |
 | Auth | JWT + Google OAuth |
-| Payment | Midtrans (primer) + Xendit (backup) |
-| Email | Resend / AWS SES |
+| Payment | **DOKU** (VA, QRIS, e-wallet) |
+| Email | Resend |
 | WA Notif | Fonnte API |
+| Queue/Cache | Redis 7 + BullMQ (email, certificate, search-index, webhook) |
+| Logging/Monitoring | pino (JSON + request-id) + Sentry |
 | Push Notif | OneSignal |
 | Monitoring | Sentry + Grafana |
 | CDN | Cloudflare |
@@ -156,7 +176,7 @@
 - ✅ Public website (7 halaman utama)
 - ✅ E-Course (listing, detail, player, progress, quiz, sertifikat)
 - ✅ Event (listing, detail, registrasi, tiket QR, reminder)
-- ✅ Payment (Midtrans full: VA, QRIS, e-wallet, CC)
+- ✅ Payment (DOKU: VA, QRIS, e-wallet)
 - ✅ Student dashboard (kursus, progress, sertifikat)
 - ✅ Admin panel dasar (user, kursus, transaksi)
 - ✅ Email transaksional (konfirmasi, invoice, sertifikat)

@@ -61,8 +61,11 @@ Membangun fondasi strategis, menyelaraskan visi, dan mendefinisikan scope produk
 | Business Analyst | 1 | Full-time |
 
 ### Business Tasks
+
+> ⚠️ **Catatan (TASK-050 / INC-01):** dokumen roadmap ini merekam rencana awal yang menyebut **Midtrans**. **Keputusan final = DOKU** (lihat `00-INDEX.md`, `03-SYSTEM-ARCHITECTURE.md`, `apps/api/src/services/payment/dokuService.ts`). Referensi "Midtrans" di bawah dipertahankan sebagai catatan historis perencanaan; implementasi aktual memakai DOKU. Midtrans/Xendit hanya opsi failover potensial (Indonesia) / gateway Malaysia (Xendit, lihat 10D).
+
 - Finalisasi unit bisnis dan pricing per produk
-- Konfirmasi payment gateway (Midtrans sebagai primer)
+- Konfirmasi payment gateway (final: **DOKU**; rencana awal menyebut Midtrans)
 - Legal: persiapkan ToS, Privacy Policy, Kontrak Trainer
 - Tentukan domain & branding dasar
 - Setup entitas hukum (PT) jika belum ada

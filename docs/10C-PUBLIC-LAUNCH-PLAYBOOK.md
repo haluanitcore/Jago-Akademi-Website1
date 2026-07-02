@@ -59,7 +59,7 @@ Sebelum menekan tombol Full Public Launch, **semua checklist berikut harus hijau
 - [ ] **Certificate generator** berfungsi dan QR code verifikasi aktif
 - [ ] **PDF download** untuk e-book tidak ada error di semua browser utama
 - [ ] **LMS B2B** — white-label domain custom sudah diuji dengan 3 pilot klien
-- [ ] **Email transaksional** (Midtrans notif, selamat datang, invoice) semua terkirim
+- [ ] **Email transaksional** (DOKU notif, selamat datang, invoice) semua terkirim
 
 #### KONTEN & KURSUS
 

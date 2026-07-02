@@ -572,7 +572,7 @@ US-053: Sebagai Admin CRM, saya ingin mencatat semua leads B2B dan
 - Monitoring: Sentry + Grafana + Prometheus
 
 **Third-Party Integration:**
-- Payment: Midtrans (primer) + Xendit (backup)
+- Payment: DOKU (VA, QRIS, e-wallet)
 - WhatsApp: Fonnte / WA Business API
 - Push Notification: OneSignal / Firebase FCM
 - Analytics: Google Analytics 4 + Mixpanel
@@ -876,7 +876,7 @@ referral_link_shared, referral_converted
 - ✅ Halaman publik (home, about, clients, FAQ, contact)
 - ✅ E-Course (listing, detail, purchase, video player, progress, sertifikat)
 - ✅ Event (listing, detail, pendaftaran, tiket digital)
-- ✅ Payment Gateway (Midtrans: VA, QRIS, GoPay)
+- ✅ Payment Gateway (DOKU: VA, QRIS, e-wallet)
 - ✅ Student Dashboard (my courses, progress, certificates)
 - ✅ Admin Dashboard (dasar: kelola kursus, user, transaksi)
 - ✅ Email notifikasi transaksional
