@@ -42,9 +42,17 @@ TASK-000 → 001 → 002 → (003 ∥ 004 ∥ 011) → (012 ∥ 013) → [QUALIT
 - [x] **TASK-000** — Baseline audit (`docs/BASELINE_AUDIT.md`)
 - [x] **Phase 1 STABILIZE** — TASK-001..004 ✅ (commit+tag, 52 type errors fixed, deps pinned, CI). Build+typecheck+lint green.
 - [x] **Phase 2 QUALITY GATE** — TASK-010..013 ✅ (coverage gate enforced, error-envelope migration, lms.ts split to 7 modules, security P1 CSP/HSTS/RBAC). **267/267 tests**, both builds green. Next.js audit = accepted risk (BL-15).
-- [ ] **Phase 3 INFRA** — TASK-020..023 (deploy [NEXT, prep-only + human-gated], DB, queue, observability)
-- [ ] **Phase 4 LIVE INTEGRATION** — TASK-030
-- [ ] 🚀 **Soft Launch (10B)** → Phase 5–6 → Public Launch (10C) → Scale (10D)
+- [x] **Phase 3 INFRA (code)** — TASK-020..023 ✅ code complete: deploy config+CD+runbooks, DB baseline migration+indexes+backup, BullMQ queue+worker, observability (Sentry/pino/requestId//ready). **281/281 tests**. 🖐️ Host execution (deploy, `migrate deploy`) awaits reviewer.
+- [x] **Phase 4 prep** — TASK-030 verification matrix authored (`docs/INTEGRATION_VERIFICATION.md`). 🖐️ Execution needs live host + sandbox money.
+- [ ] 🚀 **Soft Launch (10B)** → Phase 5–6 → Public Launch (10C) → Scale (10D) — after host deploy + live verification (human-gated)
+
+### 🖐️ Awaiting reviewer (human-gated, SSOT §9.6)
+1. Deploy to host + DNS/SSL — `docs/RUNBOOK_DEPLOY.md`
+2. `prisma migrate deploy` + backup cron + restore drill — `docs/RUNBOOK_DB.md`
+3. Set `SENTRY_DSN` + uptime/alert monitors — `docs/RUNBOOK_INCIDENT.md`
+4. Run live integration matrix (DOKU sandbox→prod) — `docs/INTEGRATION_VERIFICATION.md`
+5. Soft Launch Go/No-Go (Playbook 10B)
+6. Push branches when ready (nothing pushed yet)
 
 ## Perintah Cepat
 
