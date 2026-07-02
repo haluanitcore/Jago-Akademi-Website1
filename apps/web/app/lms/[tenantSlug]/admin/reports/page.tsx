@@ -6,6 +6,8 @@ import Link from "next/link";
 
 type ReportRow = {
   userId: string;
+  userName: string;
+  userEmail: string;
   courseId: string;
   courseTitle: string;
   totalLessons: number;
@@ -109,7 +111,7 @@ export default function LmsAdminReportsPage() {
           <table className="w-full text-sm">
             <thead className="bg-[#F5F5F7] text-[#6E6E73]">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">User ID</th>
+                <th className="px-4 py-3 text-left font-medium">Peserta</th>
                 <th className="px-4 py-3 text-left font-medium">Kursus</th>
                 <th className="px-4 py-3 text-center font-medium">Progress</th>
                 <th className="px-4 py-3 text-center font-medium">Selesai</th>
@@ -119,7 +121,10 @@ export default function LmsAdminReportsPage() {
             <tbody className="divide-y divide-[#F5F5F7]">
               {rows.map((r, i) => (
                 <tr key={i} className="hover:bg-[#F5F5F7]">
-                  <td className="px-4 py-3 font-mono text-xs text-[#6E6E73]">{r.userId.slice(0, 8)}…</td>
+                  <td className="px-4 py-3">
+                    <p className="text-sm font-medium text-[#1D1D1F]">{r.userName}</p>
+                    <p className="text-xs text-[#6E6E73]">{r.userEmail}</p>
+                  </td>
                   <td className="px-4 py-3 text-[#1D1D1F]">{r.courseTitle}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">

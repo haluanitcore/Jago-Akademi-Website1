@@ -45,7 +45,8 @@ export default function LmsCoursePlayerPage() {
     setCompleting(false);
     // Move to next lesson
     const idx = lessons.findIndex((l) => l.id === lessonId);
-    if (idx < lessons.length - 1) setActiveLesson(lessons[idx + 1]);
+    const next = lessons[idx + 1];
+    if (idx < lessons.length - 1 && next) setActiveLesson(next);
   }
 
   const completedCount = lessons.filter((l) => l.isCompleted).length;
@@ -117,8 +118,8 @@ export default function LmsCoursePlayerPage() {
               )}
 
               {activeLesson.content && (
-                <div className="prose prose-sm max-w-none text-[#3C3C43] mb-6 bg-white rounded-2xl border border-[#E5E5EA] p-5">
-                  <div dangerouslySetInnerHTML={{ __html: activeLesson.content.replace(/\n/g, "<br/>") }} />
+                <div className="prose prose-sm max-w-none text-[#3C3C43] mb-6 bg-white rounded-2xl border border-[#E5E5EA] p-5 whitespace-pre-wrap">
+                  {activeLesson.content}
                 </div>
               )}
 

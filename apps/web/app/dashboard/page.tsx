@@ -141,6 +141,28 @@ export default function DashboardPage() {
           )}
         </section>
 
+        {/* Quick links */}
+        <section>
+          <h2 className="text-lg font-bold text-[#1D1D1F] mb-4">Akses Cepat</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: "Tiket Event", href: "/dashboard/tiket", emoji: "🎫" },
+              { label: "Pesanan Saya", href: "/pesanan", emoji: "🧾" },
+              { label: "Profil Saya", href: "/dashboard/profil", emoji: "👤" },
+              { label: "Jelajahi Event", href: "/event", emoji: "🗓️" },
+            ].map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="bg-white rounded-2xl p-4 border border-[#E5E5EA] hover:shadow-md transition-shadow text-center"
+              >
+                <div className="text-2xl mb-1">{item.emoji}</div>
+                <p className="text-sm font-medium text-[#1D1D1F]">{item.label}</p>
+              </a>
+            ))}
+          </div>
+        </section>
+
         {/* Recent certificates */}
         {recentCertificates.length > 0 && (
           <section>

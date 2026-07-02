@@ -65,6 +65,15 @@ export default function LmsCertificatesPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs px-2.5 py-1 bg-green-100 text-green-700 rounded-full font-medium">Terverifikasi</span>
+                  <a
+                    href={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/api/lms/portal/${tenantSlug}/certificates/${cert.id}/download`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download
+                    className="text-xs px-3 py-1.5 rounded-lg bg-[#0077A8] text-white hover:bg-[#005f87] transition-colors font-medium"
+                  >
+                    Unduh PDF
+                  </a>
                 </div>
               </div>
             ))}

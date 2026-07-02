@@ -52,23 +52,21 @@ export default function LmsAdminDashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[
-          { label: "Manajemen Batch & Undangan", desc: "Buat batch, undang peserta via email", href: `/lms/${tenantSlug}/admin/batches`, color: "bg-blue-50 border-blue-200" },
-          { label: "Course Builder", desc: "Buat kursus, tambah pelajaran, dan kuis", href: `/lms/${tenantSlug}/admin/courses`, color: "bg-purple-50 border-purple-200" },
-          { label: "Laporan Completion", desc: "Pantau progres peserta & unduh laporan", href: `/lms/${tenantSlug}/admin/reports`, color: "bg-green-50 border-green-200" },
-        ].map(({ label, desc, href, color }) => (
-          <Link key={href} href={href} className={`border rounded-2xl p-5 hover:shadow-md transition-all ${color}`}>
-            <h3 className="font-semibold text-[#1D1D1F] mb-1">{label}</h3>
-            <p className="text-xs text-[#6E6E73]">{desc}</p>
+          { label: "Batch & Peserta", desc: "Buat batch, undang peserta via email, import CSV", href: `/lms/${tenantSlug}/admin/batches`, color: "bg-blue-50 border-blue-200", icon: "👥" },
+          { label: "Course Builder", desc: "Buat kursus, tambah pelajaran, dan kuis", href: `/lms/${tenantSlug}/admin/courses`, color: "bg-purple-50 border-purple-200", icon: "📚" },
+          { label: "Laporan Completion", desc: "Pantau progres peserta, unduh CSV & PDF", href: `/lms/${tenantSlug}/admin/reports`, color: "bg-green-50 border-green-200", icon: "📈" },
+          { label: "Pengaturan Workspace", desc: "Logo, warna brand, domain kustom", href: `/lms/${tenantSlug}/admin/settings`, color: "bg-amber-50 border-amber-200", icon: "⚙️" },
+        ].map(({ label, desc, href, color, icon }) => (
+          <Link key={href} href={href} className={`border rounded-2xl p-5 hover:shadow-md transition-all flex items-start gap-3 ${color}`}>
+            <span className="text-2xl mt-0.5">{icon}</span>
+            <div>
+              <h3 className="font-semibold text-[#1D1D1F] mb-1">{label}</h3>
+              <p className="text-xs text-[#6E6E73]">{desc}</p>
+            </div>
           </Link>
         ))}
-      </div>
-
-      <div className="mt-6 pt-6 border-t border-[#E5E5EA]">
-        <Link href={`/lms/${tenantSlug}`} className="text-sm text-[#0077A8] hover:underline">
-          ← Lihat Portal Peserta
-        </Link>
       </div>
     </div>
   );

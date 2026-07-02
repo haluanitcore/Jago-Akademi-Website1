@@ -45,6 +45,10 @@ export default function LessonPlayerPage() {
   const [quiz, setQuiz] = useState<QuizData>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewContent, setReviewContent] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewDone, setReviewDone] = useState(false);
 
   const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -133,6 +137,19 @@ export default function LessonPlayerPage() {
     setCompletedIds((prev) => new Set([...prev, lessonId]));
   }
 
+  async function submitReview(e: React.FormEvent) {
+    e.preventDefault();
+    if (!course || !token) return;
+    setReviewSubmitting(true);
+    await fetch(`${API}/api/reviews`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ itemType: "course", itemId: course.id, rating: reviewRating, content: reviewContent }),
+    });
+    setReviewDone(true);
+    setReviewSubmitting(false);
+  }
+
   // Navigate to next lesson
   function goToNext() {
     if (!course) return;
@@ -166,6 +183,8 @@ export default function LessonPlayerPage() {
   const allLessons = course.sections.flatMap((s) => s.lessons);
   const currentIdx = allLessons.findIndex((l) => l.id === lessonId);
   const hasNext = currentIdx >= 0 && currentIdx < allLessons.length - 1;
+  const isFinalLesson = !hasNext;
+  const courseCompleted = isFinalLesson && completedIds.has(lessonId);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F5F5F7]">
@@ -224,10 +243,9 @@ export default function LessonPlayerPage() {
           {/* Text lesson */}
           {lesson.type === "text" && lesson.contentText && (
             <div className="bg-white rounded-2xl border border-[#E5E5EA] p-6">
-              <div
-                className="prose prose-sm max-w-none text-[#3C3C43]"
-                dangerouslySetInnerHTML={{ __html: lesson.contentText }}
-              />
+              <div className="prose prose-sm max-w-none text-[#3C3C43] whitespace-pre-wrap">
+                {lesson.contentText}
+              </div>
             </div>
           )}
 
@@ -241,6 +259,53 @@ export default function LessonPlayerPage() {
                 token={token}
                 onPassed={handleQuizPassed}
               />
+            </div>
+          )}
+
+          {/* Course completion review prompt */}
+          {courseCompleted && !reviewDone && (
+            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-2xl p-6">
+              <div className="flex items-start gap-4">
+                <span className="text-3xl">🎉</span>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-[#1D1D1F] mb-1">Selamat! Anda telah menyelesaikan kursus ini</h3>
+                  <p className="text-sm text-[#6E6E73] mb-4">Bagikan pengalaman belajar Anda untuk membantu peserta lain.</p>
+                  <form onSubmit={submitReview} className="space-y-3">
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((r) => (
+                        <button key={r} type="button" onClick={() => setReviewRating(r)}
+                          className={`text-2xl transition-transform hover:scale-110 ${r <= reviewRating ? "text-amber-400" : "text-[#E5E5EA]"}`}>
+                          ⭐
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      value={reviewContent}
+                      onChange={(e) => setReviewContent(e.target.value)}
+                      placeholder="Ceritakan pengalaman belajar Anda di kursus ini..."
+                      rows={3}
+                      className="w-full border border-[#E5E5EA] rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0077A8]"
+                    />
+                    <div className="flex items-center gap-3">
+                      <button type="submit" disabled={reviewSubmitting} className="px-4 py-2 bg-[#0077A8] text-white text-sm rounded-xl hover:bg-[#005f87] disabled:opacity-50">
+                        {reviewSubmitting ? "Mengirim..." : "Kirim Ulasan"}
+                      </button>
+                      <button type="button" onClick={() => setReviewDone(true)} className="text-sm text-[#6E6E73] hover:text-[#1D1D1F]">
+                        Lewati
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+          {courseCompleted && reviewDone && (
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-5 flex items-center gap-3">
+              <span className="text-2xl">✅</span>
+              <div>
+                <p className="font-medium text-green-800">Terima kasih atas ulasan Anda!</p>
+                <p className="text-sm text-green-700 mt-0.5">Ulasan Anda membantu peserta lain memilih kursus terbaik.</p>
+              </div>
             </div>
           )}
 

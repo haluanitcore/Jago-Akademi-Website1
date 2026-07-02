@@ -23,6 +23,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   pending: { label: "Menunggu Pembayaran", color: "text-yellow-600 bg-yellow-50" },
   failed: { label: "Gagal", color: "text-red-600 bg-red-50" },
   expired: { label: "Kedaluwarsa", color: "text-gray-500 bg-gray-50" },
+  refunded: { label: "Direfund", color: "text-purple-600 bg-purple-50" },
 };
 
 function getApiBase() {
@@ -40,6 +41,10 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundLoading, setRefundLoading] = useState(false);
+  const [refundMessage, setRefundMessage] = useState("");
 
   useEffect(() => {
     const token = getToken();
@@ -81,6 +86,32 @@ export default function OrderDetailPage() {
   }
 
   const status = STATUS_LABEL[order.status] ?? { label: order.status, color: "text-gray-500 bg-gray-50" };
+
+  async function submitRefund(e: React.FormEvent) {
+    e.preventDefault();
+    const token = getToken();
+    if (!token) return;
+    setRefundLoading(true);
+    try {
+      const res = await fetch(`${getApiBase()}/api/orders/${orderId}/refund`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ reason: refundReason }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRefundMessage("Permintaan refund berhasil dikirim. Tim kami akan meninjau dalam 2–3 hari kerja.");
+        setRefundOpen(false);
+        setRefundReason("");
+      } else {
+        setRefundMessage(data.error ?? "Gagal mengirim permintaan refund.");
+      }
+    } catch {
+      setRefundMessage("Terjadi kesalahan.");
+    } finally {
+      setRefundLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -154,33 +185,87 @@ export default function OrderDetailPage() {
           )}
 
           {/* Actions */}
-          <div className="border-t border-gray-100 pt-4 flex gap-3">
-            {order.status === "paid" && (
-              <>
-                <a
-                  href={`${getApiBase()}/api/orders/${order.id}/invoice`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 text-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors"
-                >
-                  Unduh Invoice
-                </a>
-                <Link
-                  href="/belajar"
-                  className="flex-1 text-center px-4 py-2.5 border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors"
-                >
-                  Mulai Belajar
-                </Link>
-              </>
-            )}
-            {order.status === "pending" && (
-              <p className="text-sm text-yellow-600 bg-yellow-50 rounded-xl p-3 w-full text-center">
-                Menunggu konfirmasi pembayaran dari DOKU...
+          <div className="border-t border-gray-100 pt-4 flex flex-col gap-3">
+            {refundMessage && (
+              <p className={`text-sm rounded-xl p-3 text-center ${refundMessage.includes("berhasil") ? "text-green-700 bg-green-50" : "text-red-600 bg-red-50"}`}>
+                {refundMessage}
               </p>
+            )}
+            <div className="flex gap-3">
+              {order.status === "paid" && (
+                <>
+                  <a
+                    href={`${getApiBase()}/api/orders/${order.id}/invoice`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 text-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors"
+                  >
+                    Unduh Invoice
+                  </a>
+                  <Link
+                    href="/belajar"
+                    className="flex-1 text-center px-4 py-2.5 border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    Mulai Belajar
+                  </Link>
+                </>
+              )}
+              {order.status === "pending" && (
+                <p className="text-sm text-yellow-600 bg-yellow-50 rounded-xl p-3 w-full text-center">
+                  Menunggu konfirmasi pembayaran dari DOKU...
+                </p>
+              )}
+            </div>
+            {order.status === "paid" && (
+              <button
+                onClick={() => setRefundOpen(true)}
+                className="text-sm text-gray-400 hover:text-red-500 text-center transition-colors"
+              >
+                Ajukan Refund
+              </button>
             )}
           </div>
         </div>
       </div>
+
+      {/* Refund Modal */}
+      {refundOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6">
+            <h2 className="font-bold text-gray-900 text-lg mb-2">Ajukan Refund</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Jelaskan alasan Anda mengajukan refund. Proses peninjauan membutuhkan 2–3 hari kerja.
+            </p>
+            <form onSubmit={submitRefund} className="space-y-4">
+              <textarea
+                required
+                rows={4}
+                minLength={10}
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                placeholder="Alasan refund (minimal 10 karakter)..."
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRefundOpen(false)}
+                  className="flex-1 border border-gray-300 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={refundLoading}
+                  className="flex-1 bg-red-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {refundLoading ? "Mengirim..." : "Kirim Permohonan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -25,6 +25,9 @@ export default function AdminLmsTenantDetailPage() {
   const [adminEmail, setAdminEmail] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [adminMsg, setAdminMsg] = useState("");
+  const [upgradePlan, setUpgradePlan] = useState("");
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeMsg, setUpgradeMsg] = useState("");
 
   useEffect(() => {
     fetch(`/api/lms/tenants/${tenantId}`)
@@ -32,6 +35,30 @@ export default function AdminLmsTenantDetailPage() {
       .then((d) => { if (d.success) setTenant(d.data); })
       .finally(() => setLoading(false));
   }, [tenantId]);
+
+  async function upgradeTenantPlan(e: React.FormEvent) {
+    e.preventDefault();
+    if (!upgradePlan) return;
+    setUpgrading(true);
+    setUpgradeMsg("");
+    try {
+      const res = await fetch(`/api/lms/tenants/${tenantId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planType: upgradePlan }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTenant((prev) => prev ? { ...prev, planType: data.data.planType } : prev);
+        setUpgradeMsg(`Plan berhasil diubah ke ${data.data.planType}.`);
+        setUpgradePlan("");
+      } else {
+        setUpgradeMsg(data.error ?? "Gagal mengubah plan.");
+      }
+    } finally {
+      setUpgrading(false);
+    }
+  }
 
   async function assignAdmin(e: React.FormEvent) {
     e.preventDefault();
@@ -111,6 +138,27 @@ export default function AdminLmsTenantDetailPage() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-[#E5E5EA] p-6 mb-6">
+        <h2 className="text-base font-semibold text-[#1D1D1F] mb-4">Ubah Plan</h2>
+        <form onSubmit={upgradeTenantPlan} className="flex gap-3">
+          <select
+            value={upgradePlan}
+            onChange={(e) => setUpgradePlan(e.target.value)}
+            className="flex-1 border border-[#E5E5EA] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0077A8]"
+            required
+          >
+            <option value="">Pilih plan baru...</option>
+            {["trial", "starter", "pro", "enterprise"].filter((p) => p !== tenant.planType).map((p) => (
+              <option key={p} value={p} className="capitalize">{p}</option>
+            ))}
+          </select>
+          <button type="submit" disabled={upgrading} className="px-4 py-2 bg-[#0077A8] text-white text-sm rounded-xl hover:bg-[#005f87] disabled:opacity-50">
+            {upgrading ? "Mengubah..." : "Ubah Plan"}
+          </button>
+        </form>
+        {upgradeMsg && <p className="text-sm mt-2 text-[#0077A8]">{upgradeMsg}</p>}
       </div>
 
       <div className="bg-white rounded-2xl border border-[#E5E5EA] p-6 mb-6">

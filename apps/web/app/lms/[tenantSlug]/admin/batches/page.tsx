@@ -24,6 +24,8 @@ export default function LmsAdminBatchesPage() {
   const [inviteEmails, setInviteEmails] = useState("");
   const [inviteBatchId, setInviteBatchId] = useState("");
   const [inviting, setInviting] = useState(false);
+  const [csvParsed, setCsvParsed] = useState<string[]>([]);
+  const [csvError, setCsvError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -52,11 +54,28 @@ export default function LmsAdminBatchesPage() {
     if (res.ok) { setShowForm(false); setForm({ name: "", description: "" }); fetchData(); }
   }
 
+  function handleCsvUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    setCsvError(null);
+    setCsvParsed([]);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith(".csv")) { setCsvError("File harus berformat .csv"); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const rows = text.split(/\r?\n/).flatMap((row) => row.split(",")).map((v) => v.trim().replace(/^"|"$/g, "")).filter((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v));
+      if (rows.length === 0) { setCsvError("Tidak ada email valid ditemukan di file CSV."); return; }
+      setCsvParsed(rows);
+      setInviteEmails(rows.join("\n"));
+    };
+    reader.readAsText(file);
+  }
+
   async function sendInvites(e: React.FormEvent) {
     e.preventDefault();
     if (!tenantId || !inviteEmails.trim()) return;
     setInviting(true);
-    const emails = inviteEmails.split(/[\n,]+/).map((e) => e.trim()).filter(Boolean);
+    const emails = inviteEmails.split(/[\n,]+/).map((v) => v.trim()).filter(Boolean);
     const res = await fetch(`/api/lms/tenants/${tenantId}/invites`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -64,7 +83,11 @@ export default function LmsAdminBatchesPage() {
     });
     const data = await res.json();
     setInviting(false);
-    if (data.success) { alert(`Undangan terkirim: ${data.data.created.length}, dilewati: ${data.data.skipped.length}`); setInviteEmails(""); }
+    if (data.success) {
+      alert(`Undangan terkirim: ${data.data.created.length}, dilewati: ${data.data.skipped.length}`);
+      setInviteEmails("");
+      setCsvParsed([]);
+    }
   }
 
   return (
@@ -131,6 +154,32 @@ export default function LmsAdminBatchesPage() {
               {batches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           )}
+
+          {/* CSV upload */}
+          <div className="border border-dashed border-[#C7C7CC] rounded-xl p-4 bg-[#F5F5F7]">
+            <div className="text-xs font-medium text-[#3C3C43] mb-2">Import dari file CSV</div>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleCsvUpload}
+              className="text-xs text-[#6E6E73] file:mr-3 file:text-xs file:font-medium file:px-3 file:py-1 file:rounded-lg file:bg-white file:border file:border-[#E5E5EA] file:text-[#0077A8] hover:file:bg-[#E8F4F9] cursor-pointer"
+            />
+            {csvError && <p className="mt-2 text-xs text-red-600">{csvError}</p>}
+            {csvParsed.length > 0 && (
+              <p className="mt-2 text-xs text-green-700 font-medium">
+                ✓ {csvParsed.length} email valid ditemukan dari CSV
+              </p>
+            )}
+            <p className="mt-2 text-xs text-[#6E6E73]">
+              Format: satu kolom berisi alamat email. Kolom lain akan diabaikan.
+            </p>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#E5E5EA]" /></div>
+            <div className="relative flex justify-center"><span className="bg-white px-2 text-xs text-[#6E6E73]">atau ketik langsung</span></div>
+          </div>
+
           <textarea
             value={inviteEmails}
             onChange={(e) => setInviteEmails(e.target.value)}
@@ -138,7 +187,12 @@ export default function LmsAdminBatchesPage() {
             rows={5}
             className="w-full border border-[#E5E5EA] rounded-xl px-3 py-2 text-sm font-mono"
           />
-          <button type="submit" disabled={inviting} className="w-full py-2 bg-[#0077A8] text-white text-sm rounded-xl hover:bg-[#005f87] disabled:opacity-50">
+          {inviteEmails.trim() && (
+            <p className="text-xs text-[#6E6E73]">
+              {inviteEmails.split(/[\n,]+/).map((v) => v.trim()).filter(Boolean).length} email akan diundang
+            </p>
+          )}
+          <button type="submit" disabled={inviting || !inviteEmails.trim()} className="w-full py-2 bg-[#0077A8] text-white text-sm rounded-xl hover:bg-[#005f87] disabled:opacity-50">
             {inviting ? "Mengirim undangan..." : "Kirim Undangan"}
           </button>
         </form>

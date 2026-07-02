@@ -55,12 +55,36 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "EducationalOrganization",
+  name: "Jago Akademi",
+  url: "https://jagoakademi.com",
+  logo: "https://jagoakademi.com/logo.svg",
+  description: "Platform edukasi digital terlengkap Indonesia — E-Course, Event, LMS B2B, E-Book, dan Trainer Program.",
+  sameAs: [
+    "https://instagram.com/jagoakademi",
+    "https://linkedin.com/company/jagoakademi",
+  ],
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer support",
+    email: "support@jagoakademi.com",
+    availableLanguage: "Indonesian",
+  },
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="id" className={`${jakartaSans.variable} ${inter.variable}`} suppressHydrationWarning>
-      <head />
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+      </head>
       <body className="min-h-screen antialiased">
         {children}
       </body>
