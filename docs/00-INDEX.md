@@ -12,12 +12,23 @@
 |----|---------|------|---------|--------|
 | 1 | Business Requirement Document | [01-BRD.md](./01-BRD.md) | ~25 hal | ✅ Done |
 | 2 | Product Requirement Document | [02-PRD.md](./02-PRD.md) | ~35 hal | ✅ Done |
+| 2a | UX Research Report (Fase 2) | [02a-UX-RESEARCH-REPORT.md](./02a-UX-RESEARCH-REPORT.md) | ~20 hal | ✅ Done |
+| 2b | Competitive UX Analysis (Fase 2) | [02b-COMPETITIVE-ANALYSIS.md](./02b-COMPETITIVE-ANALYSIS.md) | ~15 hal | ✅ Done |
+| 2c | Information Architecture (Fase 2) | [02c-INFORMATION-ARCHITECTURE.md](./02c-INFORMATION-ARCHITECTURE.md) | ~12 hal | ✅ Done |
+| 2d | User Flow Diagrams (Fase 2) | [02d-USER-FLOWS.md](./02d-USER-FLOWS.md) | ~18 hal | ✅ Done |
+| 2e | JTBD Mapping (Fase 2) | [02e-JTBD-MAPPING.md](./02e-JTBD-MAPPING.md) | ~15 hal | ✅ Done |
 | 3 | System Architecture | [03-SYSTEM-ARCHITECTURE.md](./03-SYSTEM-ARCHITECTURE.md) | ~40 hal | ✅ Done |
 | 4 | User Journey & Flow | [04-USER-JOURNEY.md](./04-USER-JOURNEY.md) | ~30 hal | ✅ Done |
 | 5 | Implementation Roadmap | [05-IMPLEMENTATION-ROADMAP.md](./05-IMPLEMENTATION-ROADMAP.md) | ~40 hal | ✅ Done |
 | 6 | Design System & Visual Identity | [06-DESIGN-SYSTEM.md](./06-DESIGN-SYSTEM.md) | ~55 hal | ✅ Done |
+| 9 | Test Plan (Fase 9) | [09-TEST-PLAN.md](./09-TEST-PLAN.md) | ~12 hal | ✅ Done |
+| 10a | Launch Checklist (Fase 10) | [10-LAUNCH-CHECKLIST.md](./10-LAUNCH-CHECKLIST.md) | ~8 hal | ✅ Done |
+| 10a | Deployment Guide (Fase 10) | [10-DEPLOYMENT-GUIDE.md](./10-DEPLOYMENT-GUIDE.md) | ~10 hal | ✅ Done |
+| 10b | Soft Launch Strategy (Fase 10B) | [10B-SOFT-LAUNCH-STRATEGY.md](./10B-SOFT-LAUNCH-STRATEGY.md) | ~18 hal | ✅ Done |
+| 10c | Public Launch Playbook (Fase 10C) | [10C-PUBLIC-LAUNCH-PLAYBOOK.md](./10C-PUBLIC-LAUNCH-PLAYBOOK.md) | ~22 hal | ✅ Done |
+| 10d | Growth & Scale Strategy (Fase 10D) | [10D-GROWTH-SCALE-STRATEGY.md](./10D-GROWTH-SCALE-STRATEGY.md) | ~25 hal | ✅ Done |
 
-**Total dokumentasi: ~225 halaman** (6 dokumen)
+**Total dokumentasi: ~400 halaman** (18 dokumen)
 
 ---
 
