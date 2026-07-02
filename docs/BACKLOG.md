@@ -4,6 +4,14 @@
 
 | ID | Temuan | Ditemukan saat | Severity | Rekomendasi | Target Fase |
 |----|--------|----------------|----------|-------------|-------------|
+| **EPIC 8 — Content Integrity (audit live jagoakademi.com, 2 Jul 2026)** | | | | | |
+| BL-23 | **Statistik fiktif tayang di produksi**: Hero "50K+ Pelajar/200+ Kursus/4.9 rating" + trust "500+ trainer/50+ perusahaan/#1 Indonesia"; about "50.000+/500+/200+"; early-access "500+/50+"; e-course "1.000+ Skill". DB nyata KOSONG → menyesatkan + risiko PDP/hukum. | Audit live | 🔴 Blocker | TASK-052: angka dari API real; jika 0 → hide/empty-state/copy netral. | Pre-Soft-Launch |
+| BL-24 | **Testimoni & klien bernama tanpa consent**: home/e-course TestimonialsSection, clients page (Tokopedia/Astra/dll), nama orang (Rizky/Sari Dewi/Budi Santoso). | Audit live | 🔴 Blocker | TASK-052: empty-state "Segera hadir" sampai TASK-095 (testimoni real termoderasi). | Pre-Soft-Launch |
+| BL-25 | **Leaderboard XP fiktif** (Budi Santoso 2.450 XP dll) + gamifikasi TIDAK ada di blueprint. | Audit live | 🔴 Blocker | TASK-052 hide; TASK-054 keputusan scope gamifikasi (tambah task resmi / hapus). | Pre-Soft-Launch |
+| BL-26 | **Kursus contoh hardcoded** di `ECourseCatalog.tsx` (Ahmad Fauzi/Dewi Pratiwi dll, rating 4.9, students 12.5K) + `lib/e-course/data.ts` (studentCount 66.396 dll). | Audit live | 🔴 Blocker | TASK-052: tarik dari katalog real; kosong → empty-state. Data statis 3-level → hapus angka fiktif / gate. | Pre-Soft-Launch |
+| BL-27 | **Link ke halaman belum jadi**: /marketplace (label "Baru"), /lms, /trainer-program, /afiliasi, /demo, /kolaborasi, /klien, /event-sebelumnya, /faq, /hubungi-kami. | Audit live | 🔴 High | TASK-053: feature flag OFF + gate link (hide / "Segera Hadir"). | Pre-Soft-Launch |
+| BL-28 | **Klaim fitur belum ada di /e-course**: Learning Path (TASK-090), Community Lifetime (TASK-092), All-access subscription (TASK-093) — semua BELUM dibangun. | Audit live | 🟡 Medium | TASK-054: sembunyikan via flag sampai task selesai; CTA arahkan ke early-access. | Pre-Soft-Launch |
+| BL-29 | **Auth pages perlu verifikasi**: /masuk, /daftar, /lupa-password (fetch tanpa JS kosong — konfirmasi client-component vs rusak) + E2E auth vs live. | Audit live | 🔴 High | TASK-055: E2E auth hijau di live/preview; OAuth callback domain benar. | Pre-Soft-Launch |
 | BL-18 | **Tidak ada endpoint data-access/export** (hak akses PDP Art. 5-6). | TASK-051 | 🟡 Medium | Tambah `GET /api/users/me/export` (bundle JSON data user). | Phase 5 |
 | BL-19 | **Tidak ada retention policy** — `AuditLog` (IP/UA) + akun teranonimisasi menumpuk tanpa batas (PDP Art. 43). | TASK-051 | 🟡 Medium | Retention policy + job purge `AuditLog` > 12 bln (BullMQ scheduled). | Phase 5 |
 | BL-20 | **Consent tanpa versi kebijakan** — hanya `consentGivenAt`, tak bisa trigger re-consent saat policy berubah. | TASK-051 | 🔴 High (pre-launch) | Simpan `privacyPolicyVersion` saat consent. | Phase 5 (pre-launch) |

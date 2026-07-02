@@ -1,11 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, Users, Award, TrendingUp } from "lucide-react";
-
-const quickStats = [
-  { icon: Users, value: "50K+", label: "Member Aktif" },
-  { icon: BookOpen, value: "1.000+", label: "Materi Online" },
-  { icon: Award, value: "98%", label: "Lulus Bersertifikat" },
-];
+import { ArrowRight, BookOpen } from "lucide-react";
 
 const categories = [
   "Digital Marketing",
@@ -45,7 +39,7 @@ export function ECourseHero() {
                 </div>
                 <div className="text-center">
                   <p className="text-[#1D1D1F] font-bold text-lg font-display">E-Course Jago Akademi</p>
-                  <p className="text-[#6E6E73] text-sm mt-1">1.000+ Materi Profesional</p>
+                  <p className="text-[#6E6E73] text-sm mt-1">Materi Profesional Bersertifikat</p>
                 </div>
                 {/* Category pills */}
                 <div className="flex flex-wrap justify-center gap-2 mt-2 max-w-xs">
@@ -63,17 +57,6 @@ export function ECourseHero() {
               <div className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full bg-[#00d4ff]/8 blur-3xl" />
               <div className="absolute bottom-1/4 right-1/4 w-24 h-24 rounded-full bg-[#ff0066]/5 blur-3xl" />
             </div>
-
-            {/* Floating stat card */}
-            <div className="absolute -bottom-4 -right-4 bg-white border border-[#E5E5E5] rounded-xl p-3 shadow-e2 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[rgba(0,212,255,0.08)] flex items-center justify-center">
-                <TrendingUp size={14} className="text-[#0077A8]" />
-              </div>
-              <div>
-                <p className="text-[#1D1D1F] text-sm font-bold">2.000+</p>
-                <p className="text-[#6E6E73] text-xs">Berlangganan/minggu</p>
-              </div>
-            </div>
           </div>
 
           {/* Right: Content */}
@@ -85,57 +68,26 @@ export function ECourseHero() {
 
             {/* Heading */}
             <h1 className="text-4xl xl:text-5xl font-bold font-display tracking-tight leading-tight">
-              Kuasai Ratusan Skill,{" "}
+              Kuasai Skill Baru,{" "}
               <span className="text-gradient-brand">Bangun Portfolio</span>{" "}
               &amp; Bersertifikat
             </h1>
 
             {/* Paragraph */}
             <p className="text-[#636366] text-base leading-relaxed">
-              Akses semua materi sekali bayar. Lebih dari sekadar kursus — dapatkan
-              sertifikat resmi, bergabung komunitas eksklusif, dan buka peluang karier
-              impianmu bersama ribuan alumni Jago Akademi.
+              Akses materi sekali bayar. Lebih dari sekadar kursus — dapatkan
+              sertifikat resmi dan buka peluang karier bersama komunitas Jago Akademi.
             </p>
 
             {/* CTA buttons */}
             <div className="flex flex-wrap gap-3 pt-1">
-              <Link
-                href="/e-course/berlangganan"
-                className="btn btn-primary btn-lg"
-              >
-                Mulai Berlangganan!
+              <Link href="/daftar" className="btn btn-primary btn-lg">
+                Mulai Belajar
                 <ArrowRight size={16} />
               </Link>
-              <Link
-                href="/e-course/katalog"
-                className="btn btn-outline btn-lg"
-              >
+              <Link href="/e-course/katalog" className="btn btn-outline btn-lg">
                 Lihat Semua Materi
               </Link>
-              <Link
-                href="/e-course/promo"
-                className="btn btn-ghost btn-lg"
-              >
-                Dapatkan Promo
-              </Link>
-            </div>
-
-            {/* Social proof line */}
-            <p className="text-sm font-medium text-[#CC0052]">
-              ✦ 2.000+ Orang Berlangganan Setiap Minggu
-            </p>
-
-            {/* Quick stats */}
-            <div className="flex gap-6 pt-4 border-t border-[#E5E5E5]">
-              {quickStats.map(({ icon: Icon, value, label }) => (
-                <div key={label} className="flex items-center gap-2">
-                  <Icon size={14} className="text-[#0077A8]" />
-                  <div>
-                    <p className="text-[#1D1D1F] text-sm font-bold">{value}</p>
-                    <p className="text-[#6E6E73] text-xs">{label}</p>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
 

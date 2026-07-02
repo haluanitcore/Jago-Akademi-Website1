@@ -1,11 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Play, Star, Users, BookOpen, Zap } from "lucide-react";
-
-const floatingStats = [
-  { icon: Users, value: "50K+", label: "Pelajar Aktif", color: "cyan" },
-  { icon: BookOpen, value: "200+", label: "Kursus Premium", color: "pink" },
-  { icon: Star, value: "4.9", label: "Rating Rata-rata", color: "cyan" },
-];
+import { ArrowRight, Play, Zap } from "lucide-react";
 
 export function HeroSection() {
   return (
@@ -35,7 +29,7 @@ export function HeroSection() {
           <div className="inline-flex items-center gap-2 mb-8 animate-fade-in-up">
             <span className="badge badge-cyan">
               <Zap size={10} className="fill-current" />
-              Platform Edukasi #1 Indonesia
+              Platform Edukasi Digital Terintegrasi
             </span>
           </div>
 
@@ -67,33 +61,6 @@ export function HeroSection() {
             </Link>
           </div>
 
-          {/* Floating stats */}
-          <div className="grid grid-cols-3 gap-4 max-w-lg mx-auto animate-fade-in-up animate-delay-400">
-            {floatingStats.map(({ icon: Icon, value, label, color }) => (
-              <div
-                key={label}
-                className="card-dark p-4 text-center group"
-              >
-                <Icon
-                  size={18}
-                  className={`mx-auto mb-2 ${color === "cyan" ? "text-[#0077A8]" : "text-[#CC0052]"}`}
-                />
-                <p
-                  className={`text-xl font-bold font-display ${color === "cyan" ? "text-gradient-cyan" : "text-[#CC0052]"}`}
-                >
-                  {value}
-                </p>
-                <p className="text-xs text-[#6E6E73] mt-0.5">{label}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Trust line */}
-          <p className="mt-10 text-xs text-[#6E6E73] animate-fade-in-up animate-delay-500">
-            Dipercaya oleh{" "}
-            <span className="text-[#636366] font-medium">500+ trainer</span> dan{" "}
-            <span className="text-[#636366] font-medium">50+ perusahaan</span> di Indonesia
-          </p>
         </div>
       </div>
 

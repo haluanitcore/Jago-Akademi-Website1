@@ -6,11 +6,12 @@ export const metadata: Metadata = {
     "Jago Akademi adalah platform edukasi digital yang mengintegrasikan e-course, event, e-book, dan program trainer dalam satu ekosistem belajar.",
 };
 
+// Real product offerings (no fabricated metrics — TASK-052).
 const STATS = [
-  { value: "50.000+", label: "Pelajar Aktif" },
-  { value: "500+", label: "Trainer Bersertifikat" },
-  { value: "200+", label: "Kursus Tersedia" },
-  { value: "50+", label: "Klien Korporat" },
+  { value: "E-Course", label: "Kursus online bersertifikat" },
+  { value: "Event", label: "Webinar & workshop" },
+  { value: "LMS B2B", label: "Untuk perusahaan" },
+  { value: "Trainer", label: "Program sertifikasi" },
 ];
 
 const VALUES = [

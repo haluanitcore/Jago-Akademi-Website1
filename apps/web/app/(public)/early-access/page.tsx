@@ -62,9 +62,9 @@ export default function EarlyAccessPage() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-10">
           {[
-            { value: "500+", label: "Kursus tersedia" },
-            { value: "50+", label: "Trainer profesional" },
-            { value: "10+", label: "Unit bisnis" },
+            { value: "6", label: "Unit bisnis" },
+            { value: "Sertifikat", label: "Resmi & terverifikasi" },
+            { value: "Akses Awal", label: "Fitur & harga khusus" },
           ].map((stat) => (
             <div key={stat.label} className="bg-white rounded-2xl p-4 shadow-sm border border-[#F5F5F7]">
               <p className="text-2xl font-extrabold text-[#0077A8]">{stat.value}</p>
@@ -140,9 +140,9 @@ export default function EarlyAccessPage() {
         {/* Features */}
         <div className="mt-12 grid sm:grid-cols-2 gap-4 text-left">
           {[
-            { icon: "🎓", title: "E-Course On-demand", desc: "500+ kursus dari trainer profesional bersertifikat" },
+            { icon: "🎓", title: "E-Course On-demand", desc: "Kursus dari trainer profesional bersertifikat" },
             { icon: "📅", title: "Event & Webinar", desc: "Workshop live, bootcamp, dan networking event" },
-            { icon: "📚", title: "E-Book Library", desc: "Ribuan e-book panduan praktis" },
+            { icon: "📚", title: "E-Book Library", desc: "Koleksi e-book panduan praktis" },
             { icon: "🏢", title: "LMS untuk Perusahaan", desc: "Platform training karyawan terpadu" },
           ].map((f) => (
             <div key={f.title} className="flex gap-3 bg-white rounded-xl p-4 border border-[#F5F5F7]">

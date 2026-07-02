@@ -23,8 +23,7 @@ export function CTASection() {
           </h2>
 
           <p className="text-lg text-[#636366] mb-10 max-w-xl mx-auto">
-            Bergabunglah dengan 50.000+ profesional yang sudah membuktikan.
-            Daftar gratis, mulai belajar hari ini.
+            Daftar gratis dan mulai perjalanan belajarmu hari ini.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
