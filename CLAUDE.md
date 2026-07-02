@@ -40,9 +40,9 @@ TASK-000 → 001 → 002 → (003 ∥ 004 ∥ 011) → (012 ∥ 013) → [QUALIT
 ## Progress Tracker (per fase — SSOT §9.12)
 
 - [x] **TASK-000** — Baseline audit (`docs/BASELINE_AUDIT.md`)
-- [x] **Phase 1 STABILIZE** — TASK-001..004 ✅ (commit+tag, 52 type errors fixed, deps pinned, CI). Build+typecheck+lint green, 256/256 tests.
-- [ ] **Phase 2 QUALITY GATE** — TASK-010..013 (coverage, envelope, split lms, security P1)
-- [ ] **Phase 3 INFRA** — TASK-020..023 (deploy, DB, queue, observability)
+- [x] **Phase 1 STABILIZE** — TASK-001..004 ✅ (commit+tag, 52 type errors fixed, deps pinned, CI). Build+typecheck+lint green.
+- [x] **Phase 2 QUALITY GATE** — TASK-010..013 ✅ (coverage gate enforced, error-envelope migration, lms.ts split to 7 modules, security P1 CSP/HSTS/RBAC). **267/267 tests**, both builds green. Next.js audit = accepted risk (BL-15).
+- [ ] **Phase 3 INFRA** — TASK-020..023 (deploy [NEXT, prep-only + human-gated], DB, queue, observability)
 - [ ] **Phase 4 LIVE INTEGRATION** — TASK-030
 - [ ] 🚀 **Soft Launch (10B)** → Phase 5–6 → Public Launch (10C) → Scale (10D)
 
