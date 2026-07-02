@@ -40,7 +40,7 @@ TASK-000 → 001 → 002 → (003 ∥ 004 ∥ 011) → (012 ∥ 013) → [QUALIT
 ## Progress Tracker (per fase — SSOT §9.12)
 
 - [x] **TASK-000** — Baseline audit (`docs/BASELINE_AUDIT.md`)
-- [ ] **Phase 1 STABILIZE** — TASK-001..004 (commit, build fix, pin deps, CI)
+- [x] **Phase 1 STABILIZE** — TASK-001..004 ✅ (commit+tag, 52 type errors fixed, deps pinned, CI). Build+typecheck+lint green, 256/256 tests.
 - [ ] **Phase 2 QUALITY GATE** — TASK-010..013 (coverage, envelope, split lms, security P1)
 - [ ] **Phase 3 INFRA** — TASK-020..023 (deploy, DB, queue, observability)
 - [ ] **Phase 4 LIVE INTEGRATION** — TASK-030
