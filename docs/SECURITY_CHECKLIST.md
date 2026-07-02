@@ -25,9 +25,14 @@
 
 **No forward fix is available:** the advisory range covers up to `16.3.0-canary.5`; latest published is `16.2.10` (still in range) and `16.3.0` stable is **not released**. `npm audit fix` only offers a breaking downgrade to `next@9.3.3`.
 
-This is RISK-T1 / ADR-0001 (bleeding-edge stack) materializing as a security issue. **Options (decision required):**
-- **A. Accept + mitigate** (interim): edge rate-limiting (Nginx), enforce CSP, no untrusted middleware config, monitor for a patched release. Most advisories are DoS/cache-poisoning mitigable at the edge.
-- **B. Trigger ADR-0001 fallback** to **Next 15 LTS** (has patched releases) → clears the audit, but is a framework downgrade requiring re-validation.
+This is RISK-T1 / ADR-0001 (bleeding-edge stack) materializing as a security issue.
+
+**DECISION (2 Juli 2026): Option A — Accept + mitigate (interim).** Approved by reviewer.
+- Edge rate-limiting via Nginx (DoS advisories) — configure in TASK-020.
+- Enforce baseline CSP (added TASK-013); nonce upgrade tracked BL-16.
+- No untrusted/user-controlled middleware or proxy config (mitigates middleware-bypass advisories).
+- **Monitor** for a patched Next 16 release; re-evaluate weekly. If any advisory becomes actively exploited before a patch ships → **trigger ADR-0001 fallback to Next 15 LTS**.
+- Rejected for now: **B. Next 15 LTS fallback** — framework downgrade requiring full RSC/hydration + E2E re-validation; hold as the escalation path.
 
 Do **not** run `npm audit fix --force` (downgrades to next@9.3.3 — breaks the app).
 
