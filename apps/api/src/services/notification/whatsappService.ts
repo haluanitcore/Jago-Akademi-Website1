@@ -1,8 +1,9 @@
 import { env } from "../../config/env.js";
+import { logger } from "../../lib/logger.js";
 
 export async function sendWhatsApp(phone: string, message: string) {
   if (!env.FONNTE_TOKEN) {
-    console.log(`[wa:dev] To: ${phone} | Message: ${message}`);
+    logger.info("WhatsApp not sent — FONNTE_TOKEN unset", { phone });
     return;
   }
 
@@ -16,7 +17,7 @@ export async function sendWhatsApp(phone: string, message: string) {
   });
 
   if (!res.ok) {
-    console.error("[wa] Fonnte send failed:", await res.text());
+    logger.error("Fonnte send failed", { phone, status: res.status, body: await res.text() });
   }
 }
 

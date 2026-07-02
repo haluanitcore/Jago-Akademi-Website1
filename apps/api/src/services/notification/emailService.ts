@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { env } from "../../config/env.js";
+import { logger } from "../../lib/logger.js";
 
 let resendClient: Resend | null = null;
 
@@ -12,7 +13,7 @@ function getClient(): Resend | null {
 async function send(to: string, subject: string, html: string) {
   const client = getClient();
   if (!client) {
-    console.log(`[email:dev] To: ${to} | Subject: ${subject}`);
+    logger.info("email not sent — RESEND_API_KEY unset", { to, subject });
     return;
   }
   await client.emails.send({
@@ -43,6 +44,18 @@ export async function sendPaymentPending(to: string, name: string, orderId: stri
      <p>Order Anda sebesar <b>Rp ${amount.toLocaleString("id-ID")}</b> sedang menunggu pembayaran.</p>
      <p>Order ID: <code>${orderId}</code></p>
      <p><a href="${paymentUrl}">Klik di sini untuk menyelesaikan pembayaran</a></p>
+     <br><p>Salam,<br>Tim Jago Akademi</p>`
+  );
+}
+
+export async function sendVerificationEmail(to: string, name: string, token: string) {
+  await send(
+    to,
+    "Verifikasi Email Anda — Jago Akademi",
+    `<p>Halo <b>${name}</b>,</p>
+     <p>Terima kasih telah mendaftar di Jago Akademi. Klik tautan berikut untuk memverifikasi email Anda:</p>
+     <p><a href="${env.WEB_URL}/verifikasi-email?token=${token}">Verifikasi Email</a></p>
+     <p>Tautan ini berlaku selama 24 jam.</p>
      <br><p>Salam,<br>Tim Jago Akademi</p>`
   );
 }

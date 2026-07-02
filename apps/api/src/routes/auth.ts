@@ -12,10 +12,12 @@ import {
   REFRESH_COOKIE,
 } from "../services/auth/token.js";
 import { buildGoogleAuthUrl, exchangeGoogleCode } from "../services/auth/google.js";
+import { sendVerificationEmail } from "../services/notification/emailService.js";
 import { writeAudit } from "../services/audit/log.js";
+import { logger } from "../lib/logger.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { validateBody } from "../middleware/validateBody.js";
-import { AppError, successResponse, errorResponse } from "../types/index.js";
+import { AppError, successResponse } from "../types/index.js";
 import { env } from "../config/env.js";
 
 const router = Router();
@@ -111,7 +113,13 @@ router.post(
         userAgent: req.headers["user-agent"],
       });
 
-      // In dev: return token for testing. In prod: send via email.
+      // Best-effort: a failed/unconfigured mailer must not fail registration.
+      // sendVerificationEmail degrades to a console log until RESEND_API_KEY is set.
+      sendVerificationEmail(user.email, user.name, emailVerifyToken).catch((err: unknown) => {
+        logger.warn("verification email send failed", { err: String(err), userId: user.id });
+      });
+
+      // In dev: return token for testing. In prod the link goes out by email above.
       const devToken = env.NODE_ENV !== "production" ? emailVerifyToken : undefined;
 
       res.status(201).json(
