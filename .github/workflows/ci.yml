@@ -38,8 +38,8 @@ jobs:
       - name: Type-check
         run: npm run check-types
 
-      - name: Test (with coverage)
-        run: npm run test
+      - name: Test (with coverage + threshold gate)
+        run: npm run --workspace api test:coverage
 
       - name: Build
         run: npm run build
