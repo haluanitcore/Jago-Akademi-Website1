@@ -3,7 +3,7 @@ import { authenticate } from "../middleware/authenticate.js";
 import { prisma } from "../db/prisma.js";
 import { validateCoupon, incrementCouponUsage } from "../services/coupon/couponService.js";
 import { createDokuOrder } from "../services/payment/dokuService.js";
-import { sendPaymentPending } from "../services/notification/emailService.js";
+import { enqueueEmail } from "../jobs/queues.js";
 import { successResponse, errorResponse, AppError } from "../types/index.js";
 import { env } from "../config/env.js";
 import { z } from "zod";
@@ -151,8 +151,15 @@ router.post("/", authenticate, async (req, res, next) => {
       },
     });
 
-    // Non-blocking notification
-    sendPaymentPending(order.user.email, order.user.name, order.id, finalAmount, paymentUrl).catch(() => {});
+    // Non-blocking notification (queued in prod, inline in dev/test).
+    await enqueueEmail({
+      type: "payment-pending",
+      to: order.user.email,
+      name: order.user.name,
+      orderId: order.id,
+      amount: finalAmount,
+      paymentUrl,
+    });
 
     return res.json(successResponse({ orderId: order.id, paymentUrl, finalAmount }));
   } catch (err) {

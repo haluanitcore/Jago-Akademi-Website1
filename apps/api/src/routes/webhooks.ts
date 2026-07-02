@@ -1,9 +1,6 @@
 import { Router } from "express";
-import { prisma } from "../db/prisma.js";
 import { verifyDokuWebhook } from "../services/payment/dokuService.js";
-import { sendPaymentSuccess } from "../services/notification/emailService.js";
-import { notifyPaymentSuccess } from "../services/notification/whatsappService.js";
-import { sendOrderInvoice } from "../services/notification/emailService.js";
+import { enqueueWebhook } from "../jobs/queues.js";
 
 const router = Router();
 
@@ -30,116 +27,11 @@ router.post("/doku", async (req, res, next) => {
     const invoiceNumber = payload?.order?.invoice_number;
     const txStatus = payload?.transaction?.status;
 
-    if (!invoiceNumber) return res.json({ received: true });
-
-    // Find order by gatewayTxId
-    const transaction = await prisma.paymentTransaction.findFirst({
-      where: { gatewayTxId: invoiceNumber },
-    });
-
-    if (!transaction) return res.json({ received: true });
-
-    const order = await prisma.order.findUnique({
-      where: { id: transaction.orderId },
-      include: {
-        user: { select: { name: true, email: true, profile: { select: { phone: true } } } },
-        items: true,
-      },
-    });
-
-    if (!order) return res.json({ received: true });
-
-    if (txStatus === "SUCCESS") {
-      // Update order status
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { status: "paid", paidAt: new Date(), paymentMethod: payload?.channel?.id ?? "doku" },
-      });
-
-      await prisma.paymentTransaction.update({
-        where: { id: transaction.id },
-        data: { status: "success" },
-      });
-
-      // Grant access to purchased items
-      for (const item of order.items) {
-        if (item.itemType === "course") {
-          await prisma.courseEnrollment.upsert({
-            where: { courseId_userId: { courseId: item.itemId, userId: order.userId } },
-            create: { courseId: item.itemId, userId: order.userId },
-            update: {},
-          });
-        } else if (item.itemType === "event") {
-          await prisma.eventRegistration.upsert({
-            where: { eventId_userId: { eventId: item.itemId, userId: order.userId } },
-            create: { eventId: item.itemId, userId: order.userId, orderId: order.id, status: "confirmed" },
-            update: { status: "confirmed", orderId: order.id },
-          });
-          await prisma.event.update({
-            where: { id: item.itemId },
-            data: { totalSold: { increment: 1 } },
-          });
-        }
-      }
-
-      // Affiliate commission recording
-      if (order.referralCode) {
-        const affiliate = await prisma.affiliate.findFirst({
-          where: { code: order.referralCode, status: "active" },
-        });
-        if (affiliate) {
-          const commissionPct = Number(affiliate.commissionRate);
-          const commissionAmt = (Number(order.finalAmount) * commissionPct) / 100;
-          await prisma.affiliateCommission.create({
-            data: {
-              affiliateId: affiliate.id,
-              orderId: order.id,
-              referredUserId: order.userId,
-              commissionPct: affiliate.commissionRate,
-              grossAmount: order.finalAmount,
-              commissionAmt,
-              status: "pending",
-            },
-          });
-          await prisma.affiliate.update({
-            where: { id: affiliate.id },
-            data: {
-              totalConversions: { increment: 1 },
-              totalEarnings: { increment: commissionAmt },
-              balance: { increment: commissionAmt },
-            },
-          });
-        }
-      }
-
-      // Revenue split recording (70% trainer / 30% platform — logged for BI)
-      const revenueItems = order.items.filter((i) => i.itemType === "course" || i.itemType === "event");
-      if (revenueItems.length > 0) {
-        const gross = Number(order.finalAmount);
-        // Platform records split for internal reporting — trainer payout handled externally
-        void Promise.resolve().then(() => {
-          // trainer_share: gross * 0.7, platform_share: gross * 0.3
-          // Emit to analytics/BI pipeline here when available
-        });
-      }
-
-      // Notifications (fire and forget)
-      const courseName = order.items[0]?.itemTitle ?? "produk";
-      sendPaymentSuccess(order.user.email, order.user.name, order.id, courseName, Number(order.finalAmount)).catch(() => {});
-      sendOrderInvoice(order.user.email, order.user.name, order.id).catch(() => {});
-      const phone = order.user.profile?.phone;
-      if (phone) {
-        notifyPaymentSuccess(phone, order.user.name, courseName).catch(() => {});
-      }
-    } else if (txStatus === "FAILED" || txStatus === "EXPIRED") {
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { status: txStatus === "FAILED" ? "failed" : "expired" },
-      });
-      await prisma.paymentTransaction.update({
-        where: { id: transaction.id },
-        data: { status: "failed" },
-      });
+    // Fulfillment (DB update, enrollment, affiliate, notifications) is offloaded
+    // to the webhook queue so DOKU gets a fast ack; it is processed idempotently.
+    // With Redis disabled (dev/test) it runs inline within this await.
+    if (invoiceNumber && txStatus) {
+      await enqueueWebhook({ invoiceNumber, txStatus, channelId: payload?.channel?.id });
     }
 
     return res.json({ received: true });

@@ -1,3 +1,28 @@
+# Shared app environment for api + worker (TASK-022) — single source, no drift.
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://${POSTGRES_USER:-jagouser}:${POSTGRES_PASSWORD}@postgres:5432/jago_akademi
+  REDIS_URL: redis://redis:6379
+  WEB_URL: ${WEB_URL}
+  CORS_ORIGIN: ${WEB_URL}
+  JWT_SECRET: ${JWT_SECRET:?Required}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Required}
+  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+  GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+  GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
+  COOKIE_SECURE: "true"
+  RESEND_API_KEY: ${RESEND_API_KEY}
+  EMAIL_FROM: ${EMAIL_FROM}
+  EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Jago Akademi}
+  DOKU_CLIENT_ID: ${DOKU_CLIENT_ID}
+  DOKU_SECRET_KEY: ${DOKU_SECRET_KEY}
+  DOKU_BASE_URL: ${DOKU_BASE_URL:-https://api.doku.com}
+  MEILISEARCH_URL: http://meilisearch:7700
+  MEILISEARCH_KEY: ${MEILISEARCH_KEY}
+  UPLOAD_DIR: /app/uploads
+  MAX_FILE_SIZE_MB: "50"
+  SENTRY_DSN: ${SENTRY_DSN:-}
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -45,6 +70,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    image: ${API_IMAGE:-jago-api:local}
     restart: always
     depends_on:
       postgres:
@@ -54,29 +80,8 @@ services:
       redis:
         condition: service_healthy
     environment:
-      NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-jagouser}:${POSTGRES_PASSWORD}@postgres:5432/jago_akademi
-      REDIS_URL: redis://redis:6379
+      <<: *app-env
       PORT: 4000
-      WEB_URL: ${WEB_URL}
-      CORS_ORIGIN: ${WEB_URL}
-      JWT_SECRET: ${JWT_SECRET:?Required}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Required}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
-      COOKIE_SECURE: "true"
-      RESEND_API_KEY: ${RESEND_API_KEY}
-      EMAIL_FROM: ${EMAIL_FROM}
-      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Jago Akademi}
-      DOKU_CLIENT_ID: ${DOKU_CLIENT_ID}
-      DOKU_SECRET_KEY: ${DOKU_SECRET_KEY}
-      DOKU_BASE_URL: ${DOKU_BASE_URL:-https://api.doku.com}
-      MEILISEARCH_URL: http://meilisearch:7700
-      MEILISEARCH_KEY: ${MEILISEARCH_KEY}
-      UPLOAD_DIR: /app/uploads
-      MAX_FILE_SIZE_MB: "50"
-      SENTRY_DSN: ${SENTRY_DSN:-}
     volumes:
       - uploads:/app/uploads
     healthcheck:
@@ -84,6 +89,23 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # BullMQ worker (TASK-022) — reuses the api image, runs the worker entrypoint.
+  worker:
+    image: ${API_IMAGE:-jago-api:local}
+    restart: always
+    command: ["node", "dist/worker.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    environment:
+      <<: *app-env
+    volumes:
+      - uploads:/app/uploads
 
   web:
     build:

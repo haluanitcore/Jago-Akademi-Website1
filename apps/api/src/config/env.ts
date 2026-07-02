@@ -26,6 +26,8 @@ const envSchema = z.object({
   EMAIL_FROM_NAME: z.string().default("Jago Akademi"),
   // WhatsApp (Fonnte)
   FONNTE_TOKEN: z.string().optional(),
+  // Redis / BullMQ (TASK-022) — absent = queue disabled, jobs run inline (dev/test)
+  REDIS_URL: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

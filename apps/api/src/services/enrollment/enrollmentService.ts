@@ -1,6 +1,6 @@
 import { prisma } from "../../db/prisma.js";
 import { AppError } from "../../types/index.js";
-import { issueCertificate } from "../certificate/certificateService.js";
+import { enqueueCertificate } from "../../jobs/queues.js";
 
 export async function enrollInCourse(userId: string, courseId: string) {
   const course = await prisma.course.findUnique({ where: { id: courseId } });
@@ -119,8 +119,7 @@ async function recalculateCourseProgress(enrollmentId: string) {
   });
 
   if (justCompleted) {
-    issueCertificate(enrollment.userId, enrollment.courseId).catch(() => {
-      // Certificate generation is non-blocking; errors logged server-side
-    });
+    // Non-blocking: queued in prod, inline in dev/test; idempotent per (user, course).
+    await enqueueCertificate({ type: "issue", userId: enrollment.userId, courseId: enrollment.courseId });
   }
 }

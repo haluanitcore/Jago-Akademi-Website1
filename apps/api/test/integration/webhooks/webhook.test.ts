@@ -4,17 +4,13 @@ import { app } from "../../../src/app.js";
 
 vi.mock("../../../src/db/prisma.js", () => ({
   prisma: {
-    paymentTransaction: {
-      findFirst: vi.fn(),
-      update: vi.fn(),
-    },
-    order: {
-      findUnique: vi.fn(),
-      update: vi.fn(),
-    },
-    courseEnrollment: {
-      upsert: vi.fn(),
-    },
+    paymentTransaction: { findFirst: vi.fn(), update: vi.fn() },
+    order: { findUnique: vi.fn(), update: vi.fn() },
+    courseEnrollment: { upsert: vi.fn() },
+    eventRegistration: { upsert: vi.fn() },
+    event: { update: vi.fn() },
+    affiliate: { findFirst: vi.fn(), update: vi.fn() },
+    affiliateCommission: { create: vi.fn() },
   },
 }));
 
@@ -54,6 +50,11 @@ beforeEach(() => {
   vi.mocked(prisma.order.update).mockResolvedValue({} as never);
   vi.mocked(prisma.paymentTransaction.update).mockResolvedValue({} as never);
   vi.mocked(prisma.courseEnrollment.upsert).mockResolvedValue({} as never);
+  vi.mocked(prisma.eventRegistration.upsert).mockResolvedValue({} as never);
+  vi.mocked(prisma.event.update).mockResolvedValue({} as never);
+  vi.mocked(prisma.affiliate.findFirst).mockResolvedValue(null as never);
+  vi.mocked(prisma.affiliate.update).mockResolvedValue({} as never);
+  vi.mocked(prisma.affiliateCommission.create).mockResolvedValue({} as never);
 });
 
 const webhookHeaders = {
@@ -80,6 +81,67 @@ describe("POST /api/webhooks/doku", () => {
       expect.objectContaining({ data: expect.objectContaining({ status: "paid" }) })
     );
     expect(prisma.courseEnrollment.upsert).toHaveBeenCalled();
+  });
+
+  it("is idempotent: skips fulfillment when the order is already paid", async () => {
+    vi.mocked(prisma.order.findUnique).mockResolvedValue({ ...mockOrder, status: "paid" } as never);
+
+    const res = await request(app)
+      .post("/api/webhooks/doku")
+      .set(webhookHeaders)
+      .send({
+        order: { invoice_number: "JA-ORDER1" },
+        transaction: { status: "SUCCESS" },
+        channel: { id: "VIRTUAL_ACCOUNT_BCA" },
+      });
+
+    expect(res.status).toBe(200);
+    // No re-processing → no duplicate enrollment/commission/notification.
+    expect(prisma.order.update).not.toHaveBeenCalled();
+    expect(prisma.courseEnrollment.upsert).not.toHaveBeenCalled();
+  });
+
+  it("grants event registration and increments sold for event items", async () => {
+    vi.mocked(prisma.order.findUnique).mockResolvedValue({
+      ...mockOrder,
+      items: [{ itemType: "event", itemId: "event-1", itemTitle: "Webinar" }],
+      user: { name: "T", email: "t@t.com", profile: { phone: "628123" } },
+    } as never);
+
+    const res = await request(app)
+      .post("/api/webhooks/doku")
+      .set(webhookHeaders)
+      .send({ order: { invoice_number: "JA-ORDER1" }, transaction: { status: "SUCCESS" } });
+
+    expect(res.status).toBe(200);
+    expect(prisma.eventRegistration.upsert).toHaveBeenCalled();
+    expect(prisma.event.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ totalSold: { increment: 1 } }) }),
+    );
+  });
+
+  it("records an affiliate commission when the order has a referral code", async () => {
+    vi.mocked(prisma.order.findUnique).mockResolvedValue({
+      ...mockOrder,
+      referralCode: "REF10",
+    } as never);
+    vi.mocked(prisma.affiliate.findFirst).mockResolvedValue({
+      id: "aff-1",
+      code: "REF10",
+      status: "active",
+      commissionRate: 10,
+    } as never);
+
+    const res = await request(app)
+      .post("/api/webhooks/doku")
+      .set(webhookHeaders)
+      .send({ order: { invoice_number: "JA-ORDER1" }, transaction: { status: "SUCCESS" } });
+
+    expect(res.status).toBe(200);
+    expect(prisma.affiliateCommission.create).toHaveBeenCalled();
+    expect(prisma.affiliate.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ totalConversions: { increment: 1 } }) }),
+    );
   });
 
   it("handles FAILED payment", async () => {

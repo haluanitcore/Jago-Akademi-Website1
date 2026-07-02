@@ -1,5 +1,6 @@
 import { prisma } from "../../db/prisma.js";
-import { indexCourse, searchCourses, deleteCourseFromIndex } from "../search/meilisearch.js";
+import { searchCourses } from "../search/meilisearch.js";
+import { enqueueSearchIndex } from "../../jobs/queues.js";
 
 export type CourseListFilter = {
   categorySlug?: string;
@@ -143,11 +144,14 @@ export async function createCourse(trainerId: string, dto: CreateCourseDto) {
     include: { category: { select: { name: true, slug: true } } },
   });
 
-  await indexCourse({
-    ...course,
-    price: course.price.toString(),
-    avgRating: course.avgRating.toString(),
-    categoryName: course.category?.name,
+  await enqueueSearchIndex({
+    type: "index-course",
+    course: {
+      ...course,
+      price: course.price.toString(),
+      avgRating: course.avgRating.toString(),
+      categoryName: course.category?.name,
+    },
   });
 
   return course;
@@ -172,11 +176,14 @@ export async function updateCourse(id: string, dto: UpdateCourseDto) {
     include: { category: { select: { name: true, slug: true } } },
   });
 
-  await indexCourse({
-    ...course,
-    price: course.price.toString(),
-    avgRating: course.avgRating.toString(),
-    categoryName: course.category?.name,
+  await enqueueSearchIndex({
+    type: "index-course",
+    course: {
+      ...course,
+      price: course.price.toString(),
+      avgRating: course.avgRating.toString(),
+      categoryName: course.category?.name,
+    },
   });
 
   return course;
@@ -189,17 +196,20 @@ export async function publishCourse(id: string) {
     include: { category: { select: { name: true, slug: true } } },
   });
 
-  await indexCourse({
-    ...course,
-    price: course.price.toString(),
-    avgRating: course.avgRating.toString(),
-    categoryName: course.category?.name,
+  await enqueueSearchIndex({
+    type: "index-course",
+    course: {
+      ...course,
+      price: course.price.toString(),
+      avgRating: course.avgRating.toString(),
+      categoryName: course.category?.name,
+    },
   });
 
   return course;
 }
 
 export async function deleteCourse(id: string) {
-  await deleteCourseFromIndex(id);
+  await enqueueSearchIndex({ type: "delete-course", courseId: id });
   await prisma.course.delete({ where: { id } });
 }
