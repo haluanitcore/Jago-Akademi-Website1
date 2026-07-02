@@ -3,6 +3,7 @@ import { authenticate } from "../middleware/authenticate.js";
 import { prisma } from "../db/prisma.js";
 import { generateInvoicePDF } from "../services/invoice/invoiceService.js";
 import { successResponse, errorResponse, AppError } from "../types/index.js";
+import { z } from "zod";
 
 const router = Router();
 
@@ -76,6 +77,125 @@ router.get("/:orderId/invoice", async (req, res, next) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     return res.send(pdf);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Refund ───────────────────────────────────────────────────────────────────
+
+const refundSchema = z.object({
+  reason: z.string().min(10, "Alasan refund minimal 10 karakter."),
+});
+
+router.post("/:orderId/refund", async (req, res, next) => {
+  try {
+    const orderId = req.params.orderId as string;
+    const userId = req.user!.id;
+
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new AppError(404, "Order tidak ditemukan.");
+    if (order.userId !== userId) throw new AppError(403, "Akses ditolak.");
+    if (order.status !== "paid") throw new AppError(400, "Hanya order dengan status paid yang dapat direfund.");
+
+    const existing = await prisma.refund.findUnique({ where: { orderId } });
+    if (existing) throw new AppError(400, "Permintaan refund sudah ada untuk order ini.");
+
+    const body = refundSchema.safeParse(req.body);
+    if (!body.success) {
+      return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+    }
+
+    const refund = await prisma.refund.create({
+      data: {
+        orderId,
+        userId,
+        reason: body.data.reason,
+        amount: order.finalAmount,
+        status: "pending",
+      },
+    });
+
+    return res.status(201).json(successResponse(refund));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/:orderId/refund", async (req, res, next) => {
+  try {
+    const orderId = req.params.orderId as string;
+    const refund = await prisma.refund.findUnique({ where: { orderId } });
+    if (!refund) throw new AppError(404, "Refund tidak ditemukan.");
+    if (refund.userId !== req.user!.id && !req.user!.roles.includes("super_admin" as never)) {
+      throw new AppError(403, "Akses ditolak.");
+    }
+    return res.json(successResponse(refund));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Admin refund processing ──────────────────────────────────────────────────
+
+router.patch("/admin/refunds/:refundId", async (req, res, next) => {
+  try {
+    if (!req.user!.roles.includes("super_admin" as never)) throw new AppError(403, "Akses ditolak.");
+
+    const refundId = req.params.refundId as string;
+    const { status, adminNote } = req.body as { status: string; adminNote?: string };
+
+    if (!["approved", "rejected"].includes(status)) {
+      throw new AppError(400, "Status harus approved atau rejected.");
+    }
+
+    const refund = await prisma.refund.findUnique({ where: { id: refundId } });
+    if (!refund) throw new AppError(404, "Refund tidak ditemukan.");
+    if (refund.status !== "pending") throw new AppError(400, "Refund sudah diproses.");
+
+    const updated = await prisma.refund.update({
+      where: { id: refundId },
+      data: {
+        status,
+        adminNote: adminNote ?? null,
+        processedAt: new Date(),
+        processedBy: req.user!.id,
+      },
+    });
+
+    if (status === "approved") {
+      await prisma.order.update({ where: { id: refund.orderId }, data: { status: "refunded" } });
+    }
+
+    return res.json(successResponse(updated));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/admin/refunds", async (req, res, next) => {
+  try {
+    if (!req.user!.roles.includes("super_admin" as never)) throw new AppError(403, "Akses ditolak.");
+
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Number(req.query.limit) || 20);
+    const skip = (page - 1) * limit;
+    const status = req.query.status as string | undefined;
+
+    const where = status ? { status } : {};
+
+    const [refunds, total] = await Promise.all([
+      prisma.refund.findMany({
+        where,
+        include: { user: { select: { name: true, email: true } } },
+        orderBy: { requestedAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.refund.count({ where }),
+    ]);
+
+    return res.json(successResponse(refunds, { total, page, limit }));
   } catch (err) {
     next(err);
   }

@@ -26,6 +26,12 @@ import couponsRouter from "./routes/coupons.js";
 import webhooksRouter from "./routes/webhooks.js";
 import ebooksRouter from "./routes/ebooks.js";
 import lmsRouter from "./routes/lms.js";
+import eventsRouter from "./routes/events.js";
+import trainerRouter from "./routes/trainer.js";
+import reviewsRouter from "./routes/reviews.js";
+import blogRouter from "./routes/blog.js";
+import affiliateRouter from "./routes/affiliate.js";
+import subscriptionRouter from "./routes/subscription.js";
 
 export const app = express();
 
@@ -67,6 +73,12 @@ app.use("/api/coupons", couponsRouter);
 app.use("/api/webhooks", webhooksRouter);
 app.use("/api/ebooks", ebooksRouter);
 app.use("/api/lms", lmsRouter);
+app.use("/api/events", eventsRouter);
+app.use("/api/trainer", trainerRouter);
+app.use("/api/reviews", reviewsRouter);
+app.use("/api/blog", blogRouter);
+app.use("/api/affiliate", affiliateRouter);
+app.use("/api/subscription", subscriptionRouter);
 
 app.use(notFound);
 app.use(errorHandler);

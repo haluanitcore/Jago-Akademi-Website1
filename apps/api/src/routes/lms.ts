@@ -285,7 +285,8 @@ router.post("/invite/:token/accept", authenticate, async (req, res, next) => {
     }
 
     await prisma.lmsUserInvite.update({ where: { token }, data: { status: "accepted" } });
-    return res.json(successResponse({ tenantId: invite.tenantId }));
+    const tenant = await prisma.lmsTenant.findUnique({ where: { id: invite.tenantId }, select: { slug: true } });
+    return res.json(successResponse({ tenantId: invite.tenantId, tenantSlug: tenant?.slug ?? null }));
   } catch (err) {
     next(err);
   }
@@ -487,6 +488,7 @@ router.get("/tenants/:tenantId/reports/completion", authenticate, async (req, re
           ...(courseId ? { courseId } : {}),
         },
         include: {
+          user: { select: { id: true, name: true, email: true } },
           course: { select: { id: true, title: true } },
           progress: true,
           certificate: { select: { issuedAt: true } },
@@ -506,6 +508,8 @@ router.get("/tenants/:tenantId/reports/completion", authenticate, async (req, re
         const pct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
         return {
           userId: e.userId,
+          userName: e.user.name,
+          userEmail: e.user.email,
           courseId: e.courseId,
           courseTitle: e.course.title,
           totalLessons,
@@ -542,6 +546,7 @@ router.get("/tenants/:tenantId/reports/completion/csv", authenticate, async (req
       const enrollments = await prisma.lmsEnrollment.findMany({
         where: { tenantId },
         include: {
+          user: { select: { name: true, email: true } },
           course: { select: { title: true } },
           progress: true,
         },
@@ -556,10 +561,10 @@ router.get("/tenants/:tenantId/reports/completion/csv", authenticate, async (req
       const rows = enrollments.map((e) => {
         const total = lessonCountMap.get(e.courseId) ?? 0;
         const pct = total > 0 ? Math.round((e.progress.length / total) * 100) : 0;
-        return [e.userId, e.course.title, total, e.progress.length, pct, e.completedAt ? "Ya" : "Tidak"];
+        return [e.user.name, e.user.email, e.course.title, total, e.progress.length, pct, e.completedAt ? "Ya" : "Tidak"];
       });
 
-      const header = "User ID,Kursus,Total Pelajaran,Selesai,Persentase,Lulus\n";
+      const header = "Nama,Email,Kursus,Total Pelajaran,Selesai,Persentase,Lulus\n";
       const body = rows.map((r) => r.join(",")).join("\n");
       const csv = header + body;
 
@@ -608,6 +613,21 @@ router.get("/tenants/:tenantId/reports/completion/pdf", authenticate, async (req
       }
       doc.end();
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Public Branding (no auth) ───────────────────────────────────────────────
+
+router.get("/public/:tenantSlug", async (req, res, next) => {
+  try {
+    const tenant = await prisma.lmsTenant.findUnique({
+      where: { slug: req.params.tenantSlug },
+      select: { name: true, slug: true, logoUrl: true, primaryColor: true, isActive: true, trialEndsAt: true, planType: true },
+    });
+    if (!tenant) throw new AppError(404, "Tenant tidak ditemukan.");
+    return res.json(successResponse(tenant));
   } catch (err) {
     next(err);
   }
@@ -767,6 +787,67 @@ router.get("/portal/:tenantSlug/certificates", authenticate, async (req, res, ne
       orderBy: { issuedAt: "desc" },
     });
     return res.json(successResponse(certs));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Download LMS certificate as PDF (with tenant branding)
+router.get("/portal/:tenantSlug/certificates/:certId/download", authenticate, async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const { tenantSlug, certId } = req.params;
+    const tenant = await prisma.lmsTenant.findUnique({ where: { slug: tenantSlug } });
+    if (!tenant) throw new AppError(404, "Tenant tidak ditemukan.");
+
+    const cert = await prisma.lmsCertificate.findFirst({
+      where: { id: certId as string, tenantId: tenant.id, userId },
+      include: { user: { select: { name: true } } },
+    });
+    if (!cert) throw new AppError(404, "Sertifikat tidak ditemukan.");
+
+    const PDFDocument = (await import("pdfkit")).default;
+    const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 60 });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="sertifikat-${certId}.pdf"`);
+    doc.pipe(res);
+
+    const primary = tenant.primaryColor ?? "#2563eb";
+
+    // Background stripe
+    doc.rect(0, 0, doc.page.width, 20).fill(primary);
+    doc.rect(0, doc.page.height - 20, doc.page.width, 20).fill(primary);
+
+    // Tenant name header
+    doc.fillColor(primary).fontSize(22).font("Helvetica-Bold")
+      .text(tenant.name, 0, 50, { align: "center" });
+
+    // Certificate title
+    doc.fillColor("#1D1D1F").fontSize(30).font("Helvetica-Bold")
+      .text("SERTIFIKAT PENYELESAIAN", 0, 95, { align: "center" });
+
+    // Recipient
+    doc.fontSize(13).font("Helvetica").fillColor("#6E6E73")
+      .text("Diberikan kepada:", 0, 155, { align: "center" });
+    doc.fontSize(26).font("Helvetica-Bold").fillColor("#1D1D1F")
+      .text(cert.user.name, 0, 175, { align: "center" });
+
+    // Course
+    doc.fontSize(13).font("Helvetica").fillColor("#6E6E73")
+      .text("atas keberhasilan menyelesaikan kursus:", 0, 215, { align: "center" });
+    doc.fontSize(18).font("Helvetica-Bold").fillColor(primary)
+      .text(cert.courseTitle, 60, 238, { align: "center", width: doc.page.width - 120 });
+
+    // Issue date
+    const dateStr = new Date(cert.issuedAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+    doc.fontSize(12).font("Helvetica").fillColor("#6E6E73")
+      .text(`Diterbitkan pada ${dateStr}`, 0, 290, { align: "center" });
+
+    // Certificate ID
+    doc.fontSize(9).fillColor("#C0C0C0")
+      .text(`ID Sertifikat: ${cert.id}`, 0, doc.page.height - 50, { align: "center" });
+
+    doc.end();
   } catch (err) {
     next(err);
   }

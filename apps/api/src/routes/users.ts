@@ -7,6 +7,51 @@ import { REFRESH_COOKIE } from "../services/auth/token.js";
 
 const router = Router();
 
+// PATCH /api/users/me — update name, avatarUrl, and profile (bio, headline, linkedin, location)
+router.patch(
+  "/me",
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.user!;
+      const { name, avatarUrl, bio, headline, linkedin, location } = req.body as {
+        name?: string;
+        avatarUrl?: string;
+        bio?: string;
+        headline?: string;
+        linkedin?: string;
+        location?: string;
+      };
+
+      const user = await prisma.user.update({
+        where: { id },
+        data: {
+          ...(name !== undefined ? { name } : {}),
+          ...(avatarUrl !== undefined ? { avatarUrl } : {}),
+        },
+        select: { id: true, name: true, email: true, avatarUrl: true },
+      });
+
+      if (bio !== undefined || headline !== undefined || linkedin !== undefined || location !== undefined) {
+        await prisma.userProfile.upsert({
+          where: { userId: id },
+          create: { userId: id, bio, headline, linkedin, location },
+          update: {
+            ...(bio !== undefined ? { bio } : {}),
+            ...(headline !== undefined ? { headline } : {}),
+            ...(linkedin !== undefined ? { linkedin } : {}),
+            ...(location !== undefined ? { location } : {}),
+          },
+        });
+      }
+
+      res.json(successResponse(user));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 // DELETE /api/users/me — PDP right to erasure (anonymize, not hard-delete)
 router.delete(
   "/me",

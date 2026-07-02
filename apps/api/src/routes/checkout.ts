@@ -11,9 +11,10 @@ import { z } from "zod";
 const router = Router();
 
 const checkoutSchema = z.object({
-  itemType: z.enum(["course", "ebook"]),
+  itemType: z.enum(["course", "ebook", "event"]),
   itemId: z.string().min(1),
   couponCode: z.string().optional(),
+  referralCode: z.string().optional(),
 });
 
 router.post("/", authenticate, async (req, res, next) => {
@@ -22,7 +23,7 @@ router.post("/", authenticate, async (req, res, next) => {
     if (!body.success) {
       return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
     }
-    const { itemType, itemId, couponCode } = body.data;
+    const { itemType, itemId, couponCode, referralCode } = body.data;
     const userId = req.user!.id;
 
     // Get item details
@@ -41,11 +42,34 @@ router.post("/", authenticate, async (req, res, next) => {
 
       itemTitle = course.title;
       price = Number(course.price);
-    } else {
+    } else if (itemType === "ebook") {
       const ebook = await prisma.eBook.findUnique({ where: { id: itemId } });
       if (!ebook || ebook.status !== "published") throw new AppError(404, "E-Book tidak ditemukan.");
       itemTitle = ebook.title;
       price = ebook.salePrice ? Number(ebook.salePrice) : Number(ebook.price);
+    } else {
+      const event = await prisma.event.findUnique({ where: { id: itemId } });
+      if (!event || event.status !== "published") throw new AppError(404, "Event tidak ditemukan.");
+
+      const alreadyRegistered = await prisma.eventRegistration.findUnique({
+        where: { eventId_userId: { eventId: itemId, userId } },
+      });
+      if (alreadyRegistered) throw new AppError(400, "Anda sudah terdaftar di event ini.");
+
+      if (event.quota && event.totalSold >= event.quota) {
+        throw new AppError(400, "Kapasitas event sudah penuh.");
+      }
+
+      itemTitle = event.title;
+      price = event.salePrice ? Number(event.salePrice) : Number(event.price);
+
+      if (price === 0) {
+        // Free event — register immediately, skip payment
+        await prisma.eventRegistration.create({
+          data: { eventId: itemId, userId, status: "confirmed" },
+        });
+        return res.json(successResponse({ orderId: null, paymentUrl: null, finalAmount: 0, free: true }));
+      }
     }
 
     // Apply coupon
@@ -61,6 +85,21 @@ router.post("/", authenticate, async (req, res, next) => {
     }
 
     // Create order
+    // Validate referral code
+    let resolvedReferralCode: string | undefined;
+    if (referralCode) {
+      const affiliate = await prisma.affiliate.findFirst({
+        where: { code: referralCode, status: "active" },
+      });
+      if (affiliate && affiliate.userId !== userId) {
+        resolvedReferralCode = referralCode;
+        await prisma.affiliate.update({
+          where: { id: affiliate.id },
+          data: { totalClicks: { increment: 1 } },
+        });
+      }
+    }
+
     const order = await prisma.order.create({
       data: {
         userId,
@@ -69,6 +108,7 @@ router.post("/", authenticate, async (req, res, next) => {
         finalAmount,
         status: "pending",
         couponId: couponId ?? null,
+        referralCode: resolvedReferralCode ?? null,
         expiredAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
         items: {
           create: {

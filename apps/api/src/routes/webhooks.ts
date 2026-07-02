@@ -69,7 +69,58 @@ router.post("/doku", async (req, res, next) => {
             create: { courseId: item.itemId, userId: order.userId },
             update: {},
           });
+        } else if (item.itemType === "event") {
+          await prisma.eventRegistration.upsert({
+            where: { eventId_userId: { eventId: item.itemId, userId: order.userId } },
+            create: { eventId: item.itemId, userId: order.userId, orderId: order.id, status: "confirmed" },
+            update: { status: "confirmed", orderId: order.id },
+          });
+          await prisma.event.update({
+            where: { id: item.itemId },
+            data: { totalSold: { increment: 1 } },
+          });
         }
+      }
+
+      // Affiliate commission recording
+      if (order.referralCode) {
+        const affiliate = await prisma.affiliate.findFirst({
+          where: { code: order.referralCode, status: "active" },
+        });
+        if (affiliate) {
+          const commissionPct = Number(affiliate.commissionRate);
+          const commissionAmt = (Number(order.finalAmount) * commissionPct) / 100;
+          await prisma.affiliateCommission.create({
+            data: {
+              affiliateId: affiliate.id,
+              orderId: order.id,
+              referredUserId: order.userId,
+              commissionPct: affiliate.commissionRate,
+              grossAmount: order.finalAmount,
+              commissionAmt,
+              status: "pending",
+            },
+          });
+          await prisma.affiliate.update({
+            where: { id: affiliate.id },
+            data: {
+              totalConversions: { increment: 1 },
+              totalEarnings: { increment: commissionAmt },
+              balance: { increment: commissionAmt },
+            },
+          });
+        }
+      }
+
+      // Revenue split recording (70% trainer / 30% platform — logged for BI)
+      const revenueItems = order.items.filter((i) => i.itemType === "course" || i.itemType === "event");
+      if (revenueItems.length > 0) {
+        const gross = Number(order.finalAmount);
+        // Platform records split for internal reporting — trainer payout handled externally
+        void Promise.resolve().then(() => {
+          // trainer_share: gross * 0.7, platform_share: gross * 0.3
+          // Emit to analytics/BI pipeline here when available
+        });
       }
 
       // Notifications (fire and forget)
