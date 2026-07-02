@@ -36,10 +36,16 @@ model User {
   enrollments     CourseEnrollment[]
   orders          Order[]
   certificates    Certificate[]
-  affiliate        Affiliate?
-  referred         AffiliateCommission[] @relation("ReferredUserRelation")
-  quizSubmissions  QuizSubmission[]
-  lmsBatchMembers  LmsBatchMember[]
+  affiliate          Affiliate?
+  referred           AffiliateCommission[] @relation("ReferredUserRelation")
+  quizSubmissions    QuizSubmission[]
+  lmsBatchMembers    LmsBatchMember[]
+  eventRegistrations EventRegistration[]
+  refunds            Refund[]
+  reviews            Review[]
+  trainerPayouts     TrainerPayout[]
+  blogPosts          BlogPost[]            @relation("BlogPostAuthor")
+  subscription       Subscription?
 
   @@index([email])
   @@index([deletedAt])
@@ -393,6 +399,7 @@ model Affiliate {
 
   user        User                  @relation(fields: [userId], references: [id])
   commissions AffiliateCommission[]
+  withdrawals AffiliateWithdrawal[]
 
   @@map("affiliates")
 }
@@ -589,4 +596,161 @@ model LmsUserInvite {
 
   @@unique([tenantId, email])
   @@map("lms_user_invites")
+}
+
+// ─── Events ──────────────────────────────────────────────────────────────────
+
+model Event {
+  id          String    @id @default(uuid())
+  slug        String    @unique
+  title       String
+  description String?   @db.Text
+  type        String    @default("online") // online | offline | hybrid
+  status      String    @default("draft") // draft | published | cancelled
+  startDate   DateTime
+  endDate     DateTime?
+  location    String?
+  venue       String?
+  price       Decimal   @default(0.00) @db.Decimal(12, 2)
+  salePrice   Decimal?  @db.Decimal(12, 2)
+  quota       Int?
+  totalSold   Int       @default(0)
+  coverUrl    String?
+  speakerName String?
+  speakerBio  String?   @db.Text
+  isFeatured  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  registrations EventRegistration[]
+
+  @@map("events")
+}
+
+model EventRegistration {
+  id         String    @id @default(uuid())
+  eventId    String
+  userId     String
+  orderId    String?
+  ticketCode String    @unique @default(uuid())
+  status     String    @default("pending") // pending | confirmed | cancelled | attended
+  attendedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  event Event @relation(fields: [eventId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@map("event_registrations")
+}
+
+model Refund {
+  id          String    @id @default(uuid())
+  orderId     String    @unique
+  userId      String
+  reason      String    @db.Text
+  status      String    @default("pending") // pending | approved | rejected
+  amount      Decimal   @db.Decimal(12, 2)
+  adminNote   String?
+  requestedAt DateTime  @default(now())
+  processedAt DateTime?
+  processedBy String?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("refunds")
+}
+
+// ─── Phase 8: Trainer Hub ─────────────────────────────────────────────────────
+
+model TrainerPayout {
+  id          String    @id @default(uuid())
+  trainerId   String
+  amount      Decimal   @db.Decimal(12, 2)
+  bankName    String
+  accountNo   String
+  accountName String
+  status      String    @default("pending") // pending | approved | rejected | paid
+  note        String?
+  requestedAt DateTime  @default(now())
+  processedAt DateTime?
+  processedBy String?
+
+  trainer User @relation(fields: [trainerId], references: [id])
+
+  @@map("trainer_payouts")
+}
+
+// ─── Phase 8: Review & Rating ─────────────────────────────────────────────────
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  itemType  String   // course | event | ebook
+  itemId    String
+  rating    Int      // 1–5
+  content   String?  @db.Text
+  status    String   @default("published") // published | hidden
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, itemType, itemId])
+  @@map("reviews")
+}
+
+// ─── Phase 8: Blog CMS ───────────────────────────────────────────────────────
+
+model BlogPost {
+  id          String    @id @default(uuid())
+  slug        String    @unique
+  title       String
+  excerpt     String?   @db.Text
+  content     String    @db.Text
+  coverUrl    String?
+  category    String?
+  tags        String[]
+  status      String    @default("draft") // draft | published
+  authorId    String
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  author User @relation("BlogPostAuthor", fields: [authorId], references: [id])
+
+  @@map("blog_posts")
+}
+
+// ─── Phase 8: Affiliate Withdrawal ───────────────────────────────────────────
+
+model AffiliateWithdrawal {
+  id          String    @id @default(uuid())
+  affiliateId String
+  amount      Decimal   @db.Decimal(12, 2)
+  bankName    String
+  accountNo   String
+  accountName String
+  status      String    @default("pending") // pending | approved | rejected | paid
+  processedAt DateTime?
+  requestedAt DateTime  @default(now())
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id])
+
+  @@map("affiliate_withdrawals")
+}
+
+// ─── Phase 8: Subscription ────────────────────────────────────────────────────
+
+model Subscription {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  planType  String   // monthly | annual
+  status    String   @default("active") // active | cancelled | expired
+  startedAt DateTime @default(now())
+  expiresAt DateTime
+  orderId   String?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("subscriptions")
 }
