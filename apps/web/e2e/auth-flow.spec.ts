@@ -54,4 +54,37 @@ test.describe("Auth Flow", () => {
     const url = page.url();
     expect(url).toMatch(/masuk|trainer-hub/);
   });
+
+  test("Google sign-in button targets the API OAuth endpoint on /masuk", async ({ page }) => {
+    await page.goto("/masuk");
+    const google = page.locator("a[href*='/api/auth/google']");
+    await expect(google).toBeVisible();
+  });
+
+  test("Google sign-up button targets the API OAuth endpoint on /daftar", async ({ page }) => {
+    await page.goto("/daftar");
+    const google = page.locator("a[href*='/api/auth/google']");
+    await expect(google).toBeVisible();
+  });
+
+  test("consent links point to existing legal pages, not dead routes", async ({ page }) => {
+    await page.goto("/daftar");
+    await expect(page.locator("a[href='/privacy']")).toBeVisible();
+    await expect(page.locator("a[href='/terms']")).toBeVisible();
+    // The old, non-existent routes must not reappear.
+    await expect(page.locator("a[href='/kebijakan-privasi']")).toHaveCount(0);
+    await expect(page.locator("a[href='/syarat-ketentuan']")).toHaveCount(0);
+  });
+
+  test("OAuth callback route exists and handles an error without 404", async ({ page }) => {
+    const res = await page.goto("/auth/callback?error=account_disabled");
+    expect(res?.status()).toBeLessThan(400);
+    await expect(page.getByText(/dinonaktifkan/i)).toBeVisible();
+    await expect(page.locator("a[href*='/masuk']")).toBeVisible();
+  });
+
+  test("OAuth callback without a token shows an invalid-session message", async ({ page }) => {
+    await page.goto("/auth/callback");
+    await expect(page.getByText(/Sesi masuk tidak valid/i)).toBeVisible();
+  });
 });

@@ -44,7 +44,8 @@ export default function DaftarPage() {
         </div>
         <h2 className="text-lg font-semibold text-[#1D1D1F]">Registrasi berhasil!</h2>
         <p className="text-sm text-[#6E6E73]">
-          Kami telah mengirimkan tautan verifikasi ke <strong>{email}</strong>. Silakan cek inbox Anda.
+          Akun untuk <strong>{email}</strong> berhasil dibuat. Silakan masuk untuk
+          mulai menggunakan Jago Akademi.
         </p>
         <Link href="/masuk" className="btn-primary inline-block mt-2">
           Ke halaman masuk
@@ -130,11 +131,11 @@ export default function DaftarPage() {
           />
           <label htmlFor="consent" className="text-sm text-[#3C3C43] cursor-pointer leading-snug">
             Saya menyetujui{" "}
-            <Link href="/kebijakan-privasi" className="text-[#0077A8] hover:underline" target="_blank">
+            <Link href="/privacy" className="text-[#0077A8] hover:underline" target="_blank">
               Kebijakan Privasi
             </Link>{" "}
             dan{" "}
-            <Link href="/syarat-ketentuan" className="text-[#0077A8] hover:underline" target="_blank">
+            <Link href="/terms" className="text-[#0077A8] hover:underline" target="_blank">
               Syarat &amp; Ketentuan
             </Link>{" "}
             Jago Akademi, termasuk pemrosesan data pribadi saya sesuai UU PDP.
