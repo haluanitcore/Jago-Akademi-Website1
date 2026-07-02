@@ -165,7 +165,7 @@ describe("POST /api/events/admin", () => {
     });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain("Slug");
+    expect(res.body.error.message).toContain("Slug");
   });
 
   it("returns 400 when required fields missing", async () => {
@@ -217,7 +217,7 @@ describe("POST /api/events/admin/checkin", () => {
     const res = await request(app).post("/api/events/admin/checkin").send({ ticketCode: "TKT-001" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain("sudah pernah");
+    expect(res.body.error.message).toContain("sudah pernah");
   });
 
   it("returns 400 when ticket not confirmed", async () => {
@@ -230,6 +230,6 @@ describe("POST /api/events/admin/checkin", () => {
     const res = await request(app).post("/api/events/admin/checkin").send({ ticketCode: "TKT-001" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain("belum confirmed");
+    expect(res.body.error.message).toContain("belum confirmed");
   });
 });

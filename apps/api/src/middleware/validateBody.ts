@@ -9,7 +9,7 @@ export function validateBody<T>(schema: ZodSchema<T>) {
       const message = result.error.errors
         .map((e) => `${e.path.join(".")}: ${e.message}`)
         .join("; ");
-      return next(new AppError(400, message));
+      return next(new AppError(400, message, "VALIDATION_ERROR"));
     }
     req.body = result.data as typeof req.body;
     next();

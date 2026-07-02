@@ -95,7 +95,7 @@ describe("Input validation — schema rejection", () => {
     m.review.aggregate.mockResolvedValue({ _avg: { rating: null }, _count: { id: 0 } });
     const res = await request(app).get("/api/reviews");
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/itemType|itemId/i);
+    expect(res.body.error.message).toMatch(/itemType|itemId/i);
   });
 
   it("GET /api/subscription/plans → 401 (all subscription routes require auth)", async () => {
@@ -126,7 +126,7 @@ describe("Error response — no sensitive data leakage", () => {
     const res = await request(app).get("/api/this-route-does-not-exist-xyz");
     expect(res.status).toBe(404);
     expect(res.body.stack).toBeUndefined();
-    expect(res.body.error).not.toMatch(/at Object\.|at Module\./);
+    expect(res.body.error.message).not.toMatch(/at Object\.|at Module\./);
   });
 
   it("health endpoint does not expose env vars", async () => {

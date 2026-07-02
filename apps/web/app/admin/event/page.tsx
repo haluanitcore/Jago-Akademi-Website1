@@ -87,7 +87,7 @@ export default function AdminEventPage() {
         setCheckinResult(data.data);
         setTicketCode("");
       } else {
-        setCheckinError(data.error ?? "Gagal check-in.");
+        setCheckinError(data.error?.message ?? "Gagal check-in.");
       }
     } catch {
       setCheckinError("Terjadi kesalahan.");
@@ -120,7 +120,7 @@ export default function AdminEventPage() {
         setForm({ slug: "", title: "", type: "online", status: "draft", startDate: "", price: "0", quota: "", speakerName: "", description: "" });
         loadEvents(token);
       } else {
-        setCreateError(data.error ?? "Gagal membuat event.");
+        setCreateError(data.error?.message ?? "Gagal membuat event.");
       }
     } catch {
       setCreateError("Terjadi kesalahan.");

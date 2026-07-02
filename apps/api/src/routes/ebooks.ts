@@ -83,7 +83,7 @@ const ebookSchema = z.object({
 
 function requireAdmin(req: Parameters<typeof authenticate>[0], res: Parameters<typeof authenticate>[1], next: Parameters<typeof authenticate>[2]) {
   if (!req.user?.roles.includes("super_admin" as never)) {
-    return res.status(403).json(errorResponse("Akses ditolak."));
+    return res.status(403).json(errorResponse("FORBIDDEN", "Akses ditolak."));
   }
   next();
 }
@@ -91,7 +91,7 @@ function requireAdmin(req: Parameters<typeof authenticate>[0], res: Parameters<t
 router.post("/", authenticate, requireAdmin, async (req, res, next) => {
   try {
     const body = ebookSchema.safeParse(req.body);
-    if (!body.success) return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+    if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
     const ebook = await prisma.eBook.create({ data: body.data });
     return res.status(201).json(successResponse(ebook));
   } catch (err) {
@@ -102,7 +102,7 @@ router.post("/", authenticate, requireAdmin, async (req, res, next) => {
 router.patch("/:id", authenticate, requireAdmin, async (req, res, next) => {
   try {
     const body = ebookSchema.partial().safeParse(req.body);
-    if (!body.success) return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+    if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
     const ebook = await prisma.eBook.update({ where: { id: req.params.id }, data: body.data });
     return res.json(successResponse(ebook));
   } catch (err) {

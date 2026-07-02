@@ -85,7 +85,7 @@ export default function AdminBlogPage() {
         setEditingPost(null);
         fetchPosts();
       } else {
-        setMsg(data.error ?? "Gagal memperbarui artikel.");
+        setMsg(data.error?.message ?? "Gagal memperbarui artikel.");
       }
     } else {
       const res = await fetch("/api/blog/admin/posts", {
@@ -100,7 +100,7 @@ export default function AdminBlogPage() {
         setForm({ title: "", slug: "", excerpt: "", content: "", coverUrl: "", category: "", tags: "", status: "draft" });
         fetchPosts();
       } else {
-        setMsg(data.error ?? "Gagal membuat artikel.");
+        setMsg(data.error?.message ?? "Gagal membuat artikel.");
       }
     }
     setSubmitting(false);

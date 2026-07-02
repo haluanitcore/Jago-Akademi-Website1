@@ -163,7 +163,7 @@ router.post("/admin", authenticate, async (req, res, next) => {
 
     const body = eventSchema.safeParse(req.body);
     if (!body.success) {
-      return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+      return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
     }
 
     const existing = await prisma.event.findUnique({ where: { slug: body.data.slug } });
@@ -194,7 +194,7 @@ router.patch("/admin/:id", authenticate, async (req, res, next) => {
 
     const body = eventSchema.partial().safeParse(req.body);
     if (!body.success) {
-      return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+      return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
     }
 
     const updated = await prisma.event.update({

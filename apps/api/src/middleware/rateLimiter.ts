@@ -7,7 +7,7 @@ export const generalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, res) => {
-    res.status(429).json(errorResponse("Terlalu banyak permintaan. Coba lagi dalam 15 menit."));
+    res.status(429).json(errorResponse("RATE_LIMITED", "Terlalu banyak permintaan. Coba lagi dalam 15 menit."));
   },
 });
 
@@ -17,6 +17,6 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, res) => {
-    res.status(429).json(errorResponse("Terlalu banyak percobaan login. Coba lagi dalam 15 menit."));
+    res.status(429).json(errorResponse("RATE_LIMITED", "Terlalu banyak percobaan login. Coba lagi dalam 15 menit."));
   },
 });

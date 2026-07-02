@@ -20,7 +20,7 @@ export default function CoursePlayerEntryPage() {
     })
       .then((r) => r.json())
       .then(async (body) => {
-        if (!body.success) throw new Error(body.error);
+        if (!body.success) throw new Error(body.error?.message ?? "Terjadi kesalahan.");
         const course = body.data;
         const firstSection = course.sections?.[0];
         const firstLesson = firstSection?.lessons?.[0];

@@ -3,7 +3,7 @@ import { ZodError } from "zod";
 import { AppError, errorResponse } from "../types/index.js";
 
 export const notFound = (_req: Request, res: Response): void => {
-  res.status(404).json(errorResponse("Route not found"));
+  res.status(404).json(errorResponse("NOT_FOUND", "Route not found"));
 };
 
 export const errorHandler: ErrorRequestHandler = (
@@ -13,13 +13,14 @@ export const errorHandler: ErrorRequestHandler = (
   _next: NextFunction,
 ): void => {
   if (err instanceof AppError && err.isOperational) {
-    res.status(err.statusCode).json(errorResponse(err.message));
+    res.status(err.statusCode).json(errorResponse(err.code, err.message));
     return;
   }
 
   if (err instanceof ZodError) {
-    const message = err.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join("; ");
-    res.status(400).json(errorResponse(message));
+    const details = err.errors.map((e) => ({ path: e.path.join("."), message: e.message }));
+    const message = details.map((d) => `${d.path}: ${d.message}`).join("; ");
+    res.status(400).json(errorResponse("VALIDATION_ERROR", message, details));
     return;
   }
 
@@ -27,5 +28,5 @@ export const errorHandler: ErrorRequestHandler = (
     console.error("[error]", err);
   }
 
-  res.status(500).json(errorResponse("Terjadi kesalahan server. Silakan coba lagi."));
+  res.status(500).json(errorResponse("INTERNAL_ERROR", "Terjadi kesalahan server. Silakan coba lagi."));
 };

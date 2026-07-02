@@ -12,7 +12,7 @@ router.post("/validate", authenticate, async (req, res, next) => {
   try {
     const { code, subtotal } = req.body as { code: string; subtotal: number };
     if (!code || typeof subtotal !== "number") {
-      return res.status(400).json(errorResponse("code dan subtotal diperlukan."));
+      return res.status(400).json(errorResponse("BAD_REQUEST", "code dan subtotal diperlukan."));
     }
     const result = await validateCoupon(code, subtotal);
     return res.json(successResponse(result));
@@ -25,7 +25,7 @@ router.post("/validate", authenticate, async (req, res, next) => {
 
 function requireAdmin(req: Parameters<typeof authenticate>[0], res: Parameters<typeof authenticate>[1], next: Parameters<typeof authenticate>[2]) {
   if (!req.user?.roles.includes("super_admin" as never)) {
-    return res.status(403).json(errorResponse("Akses ditolak."));
+    return res.status(403).json(errorResponse("FORBIDDEN", "Akses ditolak."));
   }
   next();
 }
@@ -62,13 +62,13 @@ router.get("/", authenticate, requireAdmin, async (req, res, next) => {
 router.post("/", authenticate, requireAdmin, async (req, res, next) => {
   try {
     const body = couponSchema.safeParse(req.body);
-    if (!body.success) return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+    if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
 
     const coupon = await prisma.coupon.create({ data: body.data });
     return res.status(201).json(successResponse(coupon));
   } catch (err: unknown) {
     if ((err as { code?: string }).code === "P2002") {
-      return res.status(409).json(errorResponse("Kode kupon sudah digunakan."));
+      return res.status(409).json(errorResponse("CONFLICT", "Kode kupon sudah digunakan."));
     }
     next(err);
   }
@@ -77,7 +77,7 @@ router.post("/", authenticate, requireAdmin, async (req, res, next) => {
 router.patch("/:id", authenticate, requireAdmin, async (req, res, next) => {
   try {
     const body = couponSchema.partial().safeParse(req.body);
-    if (!body.success) return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+    if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
 
     const coupon = await prisma.coupon.update({ where: { id: req.params.id }, data: body.data });
     return res.json(successResponse(coupon));

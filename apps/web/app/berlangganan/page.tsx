@@ -52,7 +52,7 @@ export default function BerlanggananPage() {
       setCurrentSub({ ...data.data, isActive: true, isExpired: false });
       setMsg(`Berlangganan paket ${planType} berhasil!`);
     } else {
-      setMsg(data.error ?? "Gagal berlangganan.");
+      setMsg(data.error?.message ?? "Gagal berlangganan.");
     }
     setSubscribing(null);
   }

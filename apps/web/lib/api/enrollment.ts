@@ -52,7 +52,7 @@ async function apiFetch<T>(path: string, token: string, options?: RequestInit): 
     },
   });
   const body = await res.json();
-  if (!body.success) throw new Error(body.error ?? "Request failed");
+  if (!body.success) throw new Error(body.error?.message ?? "Request failed");
   return body.data as T;
 }
 

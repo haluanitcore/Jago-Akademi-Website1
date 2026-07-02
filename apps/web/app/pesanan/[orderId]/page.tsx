@@ -59,7 +59,7 @@ export default function OrderDetailPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.success) setOrder(data.data);
-        else setError(data.error ?? "Pesanan tidak ditemukan.");
+        else setError(data.error?.message ?? "Pesanan tidak ditemukan.");
         setLoading(false);
       })
       .catch(() => {
@@ -104,7 +104,7 @@ export default function OrderDetailPage() {
         setRefundOpen(false);
         setRefundReason("");
       } else {
-        setRefundMessage(data.error ?? "Gagal mengirim permintaan refund.");
+        setRefundMessage(data.error?.message ?? "Gagal mengirim permintaan refund.");
       }
     } catch {
       setRefundMessage("Terjadi kesalahan.");

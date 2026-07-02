@@ -30,7 +30,7 @@ export default function EarlyAccessPage() {
         setSubmitted(true);
       } else {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Terjadi kesalahan. Silakan coba lagi.");
+        setError(data.error?.message ?? "Terjadi kesalahan. Silakan coba lagi.");
       }
     } catch {
       // Fallback: mark as success to avoid drop-off if API is not ready

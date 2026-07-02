@@ -79,7 +79,7 @@ export default function CheckoutPage() {
       if (data.success) {
         setCoupon(data.data);
       } else {
-        setCouponError(data.error ?? "Kupon tidak valid.");
+        setCouponError(data.error?.message ?? "Kupon tidak valid.");
         setCoupon(null);
       }
     } catch {
@@ -110,7 +110,7 @@ export default function CheckoutPage() {
       if (data.success) {
         window.location.href = data.data.paymentUrl;
       } else {
-        setError(data.error ?? "Gagal memproses checkout.");
+        setError(data.error?.message ?? "Gagal memproses checkout.");
       }
     } catch {
       setError("Terjadi kesalahan. Coba lagi.");

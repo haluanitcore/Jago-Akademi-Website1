@@ -21,7 +21,7 @@ router.post("/", authenticate, async (req, res, next) => {
   try {
     const body = checkoutSchema.safeParse(req.body);
     if (!body.success) {
-      return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+      return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
     }
     const { itemType, itemId, couponCode, referralCode } = body.data;
     const userId = req.user!.id;

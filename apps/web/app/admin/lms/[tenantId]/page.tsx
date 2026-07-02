@@ -53,7 +53,7 @@ export default function AdminLmsTenantDetailPage() {
         setUpgradeMsg(`Plan berhasil diubah ke ${data.data.planType}.`);
         setUpgradePlan("");
       } else {
-        setUpgradeMsg(data.error ?? "Gagal mengubah plan.");
+        setUpgradeMsg(data.error?.message ?? "Gagal mengubah plan.");
       }
     } finally {
       setUpgrading(false);
@@ -78,7 +78,7 @@ export default function AdminLmsTenantDetailPage() {
         body: JSON.stringify({ userId: userData.data.id }),
       });
       const data = await res.json();
-      setAdminMsg(data.success ? "Admin berhasil ditambahkan." : (data.error ?? "Gagal."));
+      setAdminMsg(data.success ? "Admin berhasil ditambahkan." : (data.error?.message ?? "Gagal."));
     } finally {
       setAssigning(false);
     }

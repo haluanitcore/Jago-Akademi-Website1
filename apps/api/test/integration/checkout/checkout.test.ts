@@ -115,7 +115,7 @@ describe("POST /api/checkout", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
-    expect(res.body.error).toContain("sudah terdaftar");
+    expect(res.body.error.message).toContain("sudah terdaftar");
   });
 
   it("applies coupon when valid coupon code is provided", async () => {

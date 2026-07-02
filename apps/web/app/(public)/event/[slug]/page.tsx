@@ -123,7 +123,7 @@ export default function EventDetailPage() {
           setMessage("Berhasil mendaftar! Tiket Anda ada di dashboard.");
           setRegistration({ id: "new", status: "confirmed", ticketCode: "" });
         } else {
-          setError(data.error ?? "Gagal mendaftar.");
+          setError(data.error?.message ?? "Gagal mendaftar.");
         }
       } catch {
         setError("Terjadi kesalahan.");

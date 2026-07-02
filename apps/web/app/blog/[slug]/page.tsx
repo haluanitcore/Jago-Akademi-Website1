@@ -73,7 +73,7 @@ export default function BlogDetailPage() {
       setReviews((prev) => [data.data, ...prev]);
       setReviewMsg("Ulasan berhasil dikirim.");
     } else {
-      setReviewMsg(data.error ?? "Gagal mengirim ulasan.");
+      setReviewMsg(data.error?.message ?? "Gagal mengirim ulasan.");
     }
     setSubmitting(false);
   }

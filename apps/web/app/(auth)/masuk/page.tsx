@@ -20,7 +20,7 @@ export default function MasukPage() {
     setLoading(false);
 
     if (!result.success) {
-      setError(result.error);
+      setError(result.error?.message ?? "Terjadi kesalahan.");
       return;
     }
 

@@ -65,7 +65,7 @@ export default function EBookActions({ ebookId, price }: Props) {
       if (data.success) {
         window.location.href = data.data.paymentUrl;
       } else {
-        setError(data.error ?? "Gagal memproses pembelian.");
+        setError(data.error?.message ?? "Gagal memproses pembelian.");
       }
     } catch {
       setError("Terjadi kesalahan. Coba lagi.");

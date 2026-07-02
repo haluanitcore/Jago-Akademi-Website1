@@ -87,7 +87,7 @@ export default function AffiliateDashboardPage() {
       setForm({ amount: "", bankName: "", accountNo: "", accountName: "" });
       setMsg("Permintaan penarikan berhasil dikirim.");
     } else {
-      setMsg(data.error ?? "Gagal mengirim permintaan.");
+      setMsg(data.error?.message ?? "Gagal mengirim permintaan.");
     }
     setSubmitting(false);
   }

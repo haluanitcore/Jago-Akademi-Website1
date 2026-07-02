@@ -31,7 +31,7 @@ export default function ProfilPage() {
     })
       .then((r) => r.json())
       .then((body) => {
-        if (!body.success) throw new Error(body.error);
+        if (!body.success) throw new Error(body.error?.message ?? "Terjadi kesalahan.");
         setUser(body.data);
         setName(body.data.name);
       })
@@ -57,7 +57,7 @@ export default function ProfilPage() {
         }
       );
       const body = await res.json();
-      if (!body.success) throw new Error(body.error);
+      if (!body.success) throw new Error(body.error?.message ?? "Terjadi kesalahan.");
       setSuccess(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal menyimpan.");

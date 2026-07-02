@@ -12,7 +12,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<ApiResult<
     const json = (await res.json()) as ApiResult<T>;
     return json;
   } catch {
-    return { success: false, error: "Tidak dapat terhubung ke server." };
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Tidak dapat terhubung ke server." } };
   }
 }
 

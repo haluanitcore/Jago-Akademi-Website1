@@ -91,7 +91,7 @@ describe("POST /api/orders/:orderId/refund", () => {
       .send({ reason: "Tidak bisa hadir karena sakit mendadak" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain("paid");
+    expect(res.body.error.message).toContain("paid");
   });
 
   it("returns 400 when refund already exists", async () => {
@@ -102,7 +102,7 @@ describe("POST /api/orders/:orderId/refund", () => {
       .send({ reason: "Tidak bisa hadir karena sakit mendadak" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain("sudah ada");
+    expect(res.body.error.message).toContain("sudah ada");
   });
 
   it("returns 400 when reason is too short", async () => {
@@ -111,7 +111,7 @@ describe("POST /api/orders/:orderId/refund", () => {
       .send({ reason: "singkat" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain("10 karakter");
+    expect(res.body.error.message).toContain("10 karakter");
   });
 
   it("returns 403 when order belongs to another user", async () => {

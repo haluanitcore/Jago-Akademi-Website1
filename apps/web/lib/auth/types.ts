@@ -38,6 +38,9 @@ export type AuthResponse = {
   user: { id: string; email: string; name: string };
 };
 
+/** Structured API error, mirrors the backend envelope (TASK-011). */
+export type ApiError = { code: string; message: string; details?: unknown };
+
 export type ApiResult<T> =
   | { success: true; data: T }
-  | { success: false; error: string };
+  | { success: false; error: ApiError };

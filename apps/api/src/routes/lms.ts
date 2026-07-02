@@ -14,7 +14,7 @@ function requireSuperAdmin(
   next: Parameters<typeof authenticate>[2],
 ) {
   if (!req.user?.roles.includes("super_admin" as never)) {
-    return res.status(403).json(errorResponse("Akses ditolak."));
+    return res.status(403).json(errorResponse("FORBIDDEN", "Akses ditolak."));
   }
   next();
 }
@@ -26,13 +26,13 @@ async function requireLmsAdmin(
 ) {
   const { tenantId } = req.params;
   const userId = req.user?.id;
-  if (!userId || !tenantId) return res.status(403).json(errorResponse("Akses ditolak."));
+  if (!userId || !tenantId) return res.status(403).json(errorResponse("FORBIDDEN", "Akses ditolak."));
   const isSuperAdmin = req.user?.roles.includes("super_admin" as never);
   if (isSuperAdmin) return next();
   const role = await prisma.userRole.findFirst({
     where: { userId, role: "lms_admin", tenantId },
   });
-  if (!role) return res.status(403).json(errorResponse("Akses ditolak."));
+  if (!role) return res.status(403).json(errorResponse("FORBIDDEN", "Akses ditolak."));
   next();
 }
 
@@ -75,7 +75,7 @@ router.get("/tenants", authenticate, requireSuperAdmin, async (req, res, next) =
 router.post("/tenants", authenticate, requireSuperAdmin, async (req, res, next) => {
   try {
     const body = tenantSchema.safeParse(req.body);
-    if (!body.success) return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+    if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
     const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
     const tenant = await prisma.lmsTenant.create({
       data: { ...body.data, trialEndsAt },
@@ -83,7 +83,7 @@ router.post("/tenants", authenticate, requireSuperAdmin, async (req, res, next) 
     return res.status(201).json(successResponse(tenant));
   } catch (err: unknown) {
     if ((err as { code?: string }).code === "P2002") {
-      return res.status(409).json(errorResponse("Slug atau domain sudah digunakan."));
+      return res.status(409).json(errorResponse("CONFLICT", "Slug atau domain sudah digunakan."));
     }
     next(err);
   }
@@ -97,7 +97,7 @@ router.get("/tenants/:tenantId", authenticate, async (req, res, next) => {
       const role = await prisma.userRole.findFirst({
         where: { userId: req.user!.id, role: "lms_admin", tenantId },
       });
-      if (!role) return res.status(403).json(errorResponse("Akses ditolak."));
+      if (!role) return res.status(403).json(errorResponse("FORBIDDEN", "Akses ditolak."));
     }
     const tenant = await prisma.lmsTenant.findUnique({
       where: { id: tenantId },
@@ -115,7 +115,7 @@ router.get("/tenants/:tenantId", authenticate, async (req, res, next) => {
 router.patch("/tenants/:tenantId", authenticate, requireSuperAdmin, async (req, res, next) => {
   try {
     const body = tenantSchema.partial().safeParse(req.body);
-    if (!body.success) return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+    if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
     const tenant = await prisma.lmsTenant.update({
       where: { id: req.params.tenantId },
       data: body.data,
@@ -131,7 +131,7 @@ router.post("/tenants/:tenantId/admins", authenticate, requireSuperAdmin, async 
   try {
     const tenantId = req.params.tenantId as string;
     const { userId } = req.body as { userId: string };
-    if (!userId) return res.status(400).json(errorResponse("userId diperlukan."));
+    if (!userId) return res.status(400).json(errorResponse("BAD_REQUEST", "userId diperlukan."));
     await prisma.userRole.upsert({
       where: { userId_role_tenantId: { userId, role: "lms_admin", tenantId } },
       create: { userId, role: "lms_admin", tenantId },
@@ -172,7 +172,7 @@ router.post("/tenants/:tenantId/batches", authenticate, async (req, res, next) =
   try {
     await requireLmsAdmin(req, res, async () => {
       const body = batchSchema.safeParse(req.body);
-      if (!body.success) return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+      if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
       const batch = await prisma.lmsBatch.create({
         data: { ...body.data, tenantId: req.params.tenantId as string },
       });
@@ -187,7 +187,7 @@ router.patch("/tenants/:tenantId/batches/:batchId", authenticate, async (req, re
   try {
     await requireLmsAdmin(req, res, async () => {
       const body = batchSchema.partial().safeParse(req.body);
-      if (!body.success) return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+      if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
       const batch = await prisma.lmsBatch.update({
         where: { id: req.params.batchId },
         data: body.data,
@@ -221,7 +221,7 @@ router.post("/tenants/:tenantId/invites", authenticate, async (req, res, next) =
     await requireLmsAdmin(req, res, async () => {
       const { emails, batchId } = req.body as { emails: string[]; batchId?: string };
       if (!Array.isArray(emails) || emails.length === 0) {
-        return res.status(400).json(errorResponse("emails harus berupa array dan tidak kosong."));
+        return res.status(400).json(errorResponse("BAD_REQUEST", "emails harus berupa array dan tidak kosong."));
       }
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
       const created: string[] = [];
@@ -327,7 +327,7 @@ router.post("/tenants/:tenantId/courses", authenticate, async (req, res, next) =
   try {
     await requireLmsAdmin(req, res, async () => {
       const body = courseSchema.safeParse(req.body);
-      if (!body.success) return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+      if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
       const course = await prisma.lmsCourse.create({
         data: { ...body.data, tenantId: req.params.tenantId as string },
       });
@@ -342,7 +342,7 @@ router.patch("/tenants/:tenantId/courses/:courseId", authenticate, async (req, r
   try {
     await requireLmsAdmin(req, res, async () => {
       const body = courseSchema.partial().safeParse(req.body);
-      if (!body.success) return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+      if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
       const course = await prisma.lmsCourse.update({
         where: { id: req.params.courseId, tenantId: req.params.tenantId },
         data: body.data,
@@ -374,7 +374,7 @@ router.post("/tenants/:tenantId/courses/:courseId/lessons", authenticate, async 
   try {
     await requireLmsAdmin(req, res, async () => {
       const body = lessonSchema.safeParse(req.body);
-      if (!body.success) return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+      if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
       const lesson = await prisma.lmsLesson.create({
         data: { ...body.data, courseId: req.params.courseId as string },
       });
@@ -389,7 +389,7 @@ router.patch("/tenants/:tenantId/courses/:courseId/lessons/:lessonId", authentic
   try {
     await requireLmsAdmin(req, res, async () => {
       const body = lessonSchema.partial().safeParse(req.body);
-      if (!body.success) return res.status(400).json(errorResponse(body.error.issues[0]?.message ?? "Validasi gagal."));
+      if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
       const lesson = await prisma.lmsLesson.update({
         where: { id: req.params.lessonId },
         data: body.data,
@@ -422,7 +422,7 @@ router.post("/tenants/:tenantId/courses/:courseId/lessons/:lessonId/quizzes", au
         answer: number;
       };
       if (!question || !Array.isArray(options) || options.length < 2 || typeof answer !== "number") {
-        return res.status(400).json(errorResponse("question, options (min 2), dan answer diperlukan."));
+        return res.status(400).json(errorResponse("BAD_REQUEST", "question, options (min 2), dan answer diperlukan."));
       }
       const quiz = await prisma.lmsQuiz.create({
         data: { lessonId: req.params.lessonId as string, question, options, answer },
@@ -443,7 +443,7 @@ router.post("/tenants/:tenantId/courses/:courseId/assign", authenticate, async (
         dueDate?: string;
         isMandatory?: boolean;
       };
-      if (!batchId) return res.status(400).json(errorResponse("batchId diperlukan."));
+      if (!batchId) return res.status(400).json(errorResponse("BAD_REQUEST", "batchId diperlukan."));
 
       const courseId = req.params.courseId as string;
       const tenantId = req.params.tenantId as string;

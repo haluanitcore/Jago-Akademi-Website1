@@ -90,7 +90,7 @@ export default function AdminKuponPage() {
         setForm(EMPTY_FORM);
         fetchCoupons();
       } else {
-        setError(data.error ?? "Gagal menyimpan kupon.");
+        setError(data.error?.message ?? "Gagal menyimpan kupon.");
       }
     } catch {
       setError("Terjadi kesalahan.");

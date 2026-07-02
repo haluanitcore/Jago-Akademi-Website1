@@ -28,7 +28,7 @@ export default function AdminDashboardPage() {
       .then((r) => r.json())
       .then((body) => {
         if (body.success) setStats(body.data);
-        else setError(body.error ?? "Gagal memuat statistik.");
+        else setError(body.error?.message ?? "Gagal memuat statistik.");
       })
       .catch(() => setError("Terjadi kesalahan jaringan."))
       .finally(() => setLoading(false));

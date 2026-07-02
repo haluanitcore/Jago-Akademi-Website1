@@ -17,7 +17,7 @@ export default function LupaPasswordPage() {
     const result = await forgotPassword(email);
     setLoading(false);
     if (!result.success) {
-      setError(result.error);
+      setError(result.error?.message ?? "Terjadi kesalahan.");
       return;
     }
     setSubmitted(true);

@@ -28,7 +28,7 @@ export default function CourseAnalyticsPage() {
       .then((r) => r.json())
       .then((d) => {
         if (d.success) setData(d.data);
-        else setError(d.error ?? "Gagal memuat data.");
+        else setError(d.error?.message ?? "Gagal memuat data.");
       })
       .catch(() => setError("Gagal memuat data."))
       .finally(() => setLoading(false));
