@@ -29,7 +29,6 @@ export default function LmsAdminBatchesPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const tenantRes = await fetch(`/api/lms/tenants?slug=${tenantSlug}`).catch(() => null);
     const tenantDetail = await fetch(`/api/lms/portal/me`);
     const meData = await tenantDetail.json();
     const myTenant = meData.data?.find((t: { slug: string; id: string }) => t.slug === tenantSlug);

@@ -81,8 +81,6 @@ export default function VideoPlayer({ src, title, onProgress }: Props) {
     else document.exitFullscreen?.();
   }
 
-  const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
-
   return (
     <div
       className="relative bg-black rounded-xl overflow-hidden group"

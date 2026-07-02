@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -58,9 +59,9 @@ export default async function VerifyCertPage({
           <p className="text-sm text-[#6E6E73]">
             Kode sertifikat <strong>{params.certId}</strong> tidak valid atau belum diterbitkan.
           </p>
-          <a href="/" className="text-sm text-[#0077A8] hover:underline">
+          <Link href="/" className="text-sm text-[#0077A8] hover:underline">
             Kembali ke beranda
-          </a>
+          </Link>
         </div>
       </main>
     );
@@ -128,9 +129,9 @@ export default async function VerifyCertPage({
 
         <p className="text-center text-xs text-[#6E6E73] border-t border-[#F2F2F7] pt-4">
           Verifikasi resmi oleh{" "}
-          <a href="/" className="text-[#0077A8] hover:underline">
+          <Link href="/" className="text-[#0077A8] hover:underline">
             Jago Akademi
-          </a>
+          </Link>
         </p>
       </div>
     </main>

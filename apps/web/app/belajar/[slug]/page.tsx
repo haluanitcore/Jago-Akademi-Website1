@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { getEnrollment } from "../../../lib/api/enrollment";
 
 export default function CoursePlayerEntryPage() {
   const router = useRouter();
