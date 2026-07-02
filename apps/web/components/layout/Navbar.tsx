@@ -16,12 +16,12 @@ const navLinks = [
     children: [
       { label: "E-Book", href: "/ebook", desc: "Buku digital berkualitas" },
       { label: "Trainer Program", href: "/trainer-program", desc: "Jadilah trainer profesional" },
-      { label: "Paket LMS", href: "/lms", desc: "LMS untuk institusi & perusahaan" },
+      { label: "Paket LMS", href: "/clients", desc: "LMS untuk institusi & perusahaan" },
       { label: "Marketplace Materi", href: "/marketplace", desc: "Rekaman & modul event" },
     ],
   },
   { label: "Blog", href: "/blog" },
-  { label: "Tentang", href: "/tentang-kami" },
+  { label: "Tentang", href: "/about" },
 ];
 
 export function Navbar() {

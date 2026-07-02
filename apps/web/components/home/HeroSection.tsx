@@ -53,11 +53,11 @@ export function HeroSection() {
               Mulai Belajar Gratis
               <ArrowRight size={18} />
             </Link>
-            <Link href="/demo" className="btn btn-ghost btn-lg w-full sm:w-auto group">
+            <Link href="/e-course" className="btn btn-ghost btn-lg w-full sm:w-auto group">
               <span className="w-9 h-9 flex items-center justify-center rounded-full bg-[rgba(0,212,255,0.08)] border border-[rgba(0,119,168,0.2)] group-hover:bg-[rgba(0,212,255,0.14)] transition-colors">
                 <Play size={14} aria-hidden="true" className="text-[#0077A8] fill-current translate-x-0.5" />
               </span>
-              Lihat Demo
+              Jelajahi E-Course
             </Link>
           </div>
 

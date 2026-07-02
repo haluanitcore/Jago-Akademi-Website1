@@ -1,0 +1,29 @@
+/**
+ * Feature flags (TASK-053). Default OFF for anything not yet built, so unbuilt
+ * features/links never surface in production. Enable per-env with
+ * `NEXT_PUBLIC_FEATURE_*=true` once the corresponding task ships.
+ *
+ * These are inlined at build time (NEXT_PUBLIC_*), so toggling requires a rebuild.
+ */
+const on = (v: string | undefined): boolean => v === "true" || v === "1";
+
+export const features = {
+  // Business-unit landing pages (currently "Segera Hadir" placeholders)
+  marketplace: on(process.env.NEXT_PUBLIC_FEATURE_MARKETPLACE),
+  trainerProgram: on(process.env.NEXT_PUBLIC_FEATURE_TRAINER_PROGRAM),
+  lmsLanding: on(process.env.NEXT_PUBLIC_FEATURE_LMS_LANDING),
+  collaboration: on(process.env.NEXT_PUBLIC_FEATURE_COLLABORATION),
+  affiliate: on(process.env.NEXT_PUBLIC_FEATURE_AFFILIATE),
+
+  // EPIC 7 features — post-Soft-Launch (TASK-090/092/093...)
+  allAccess: on(process.env.NEXT_PUBLIC_FEATURE_ALL_ACCESS),
+  learningPath: on(process.env.NEXT_PUBLIC_FEATURE_LEARNING_PATH),
+  community: on(process.env.NEXT_PUBLIC_FEATURE_COMMUNITY),
+  gamification: on(process.env.NEXT_PUBLIC_FEATURE_GAMIFICATION),
+} as const;
+
+export type FeatureKey = keyof typeof features;
+
+export function isEnabled(key: FeatureKey): boolean {
+  return features[key];
+}

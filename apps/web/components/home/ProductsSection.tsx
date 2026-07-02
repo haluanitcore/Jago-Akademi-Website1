@@ -35,13 +35,13 @@ const products = [
     href: "/trainer-program",
     desc: "Jadilah trainer bersertifikat. Program intensif untuk membangun personal brand dan karier mengajar.",
     color: "pink",
-    tag: "Eksklusif",
+    tag: "Segera",
   },
   {
     icon: Monitor,
     label: "Paket LMS",
-    href: "/lms",
-    desc: "Solusi LMS white-label untuk institusi, korporat, dan lembaga pelatihan. Setup cepat, harga terjangkau.",
+    href: "/clients",
+    desc: "Solusi LMS untuk institusi, korporat, dan lembaga pelatihan. Kelola batch, tugaskan kursus, pantau progres.",
     color: "cyan",
     tag: null,
   },
@@ -51,7 +51,7 @@ const products = [
     href: "/marketplace",
     desc: "Akses rekaman event, modul presentasi, dan materi training langsung dari sumbernya.",
     color: "pink",
-    tag: "Baru",
+    tag: "Segera",
   },
 ];
 
