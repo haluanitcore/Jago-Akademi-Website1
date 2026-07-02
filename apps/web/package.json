@@ -17,10 +17,10 @@
     "@radix-ui/react-navigation-menu": "^1.2.16",
     "@radix-ui/react-slot": "^1.3.0",
     "@repo/ui": "*",
-    "framer-motion": "^12.40.0",
+    "framer-motion": "12.40.0",
     "next": "16.2.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
