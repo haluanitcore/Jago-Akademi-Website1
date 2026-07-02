@@ -11,7 +11,15 @@ export const ROLES = [
 
 export type Role = (typeof ROLES)[number];
 
-export type PaginationMeta = { total: number; page: number; limit: number };
+export type PaginationMeta = {
+  total: number;
+  page: number;
+  limit: number;
+  // Optional aggregate stats for list endpoints (e.g. reviews avg rating).
+  // TASK-011 will formalize a richer, per-endpoint meta contract.
+  avgRating?: number;
+  totalReviews?: number;
+};
 
 export type ApiResponse<T = undefined> =
   | { success: true; data: T; meta?: PaginationMeta }

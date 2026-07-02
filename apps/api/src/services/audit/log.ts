@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma.js";
 
 type AuditPayload = {
@@ -20,13 +21,13 @@ const REDACTED_KEYS = new Set([
   "password",
 ]);
 
-function redact(obj: Record<string, unknown>): Record<string, unknown> {
+function redact(obj: Record<string, unknown>): Prisma.InputJsonValue {
   return Object.fromEntries(
     Object.entries(obj).map(([k, v]) => [
       k,
       REDACTED_KEYS.has(k) ? "[REDACTED]" : v,
     ]),
-  );
+  ) as Prisma.InputJsonValue;
 }
 
 export async function writeAudit(payload: AuditPayload): Promise<void> {

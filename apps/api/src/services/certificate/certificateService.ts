@@ -30,7 +30,7 @@ export async function generateCertificatePDF(
 ): Promise<Buffer> {
   const verifyUrl = `${env.WEB_URL}/verify/${certCode}`;
   const qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 120 });
-  const qrBuffer = Buffer.from(qrDataUrl.split(",")[1], "base64");
+  const qrBuffer = Buffer.from(qrDataUrl.split(",")[1] ?? "", "base64");
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 0 });

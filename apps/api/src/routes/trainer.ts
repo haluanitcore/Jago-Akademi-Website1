@@ -22,7 +22,7 @@ router.get("/dashboard", requireTrainer, async (req: Request, res: Response, nex
     const trainerId = req.user!.id;
 
     const courses = await prisma.course.findMany({
-      where: { instructorId: trainerId },
+      where: { trainerId },
       select: {
         id: true, title: true, status: true, price: true,
         _count: { select: { enrollments: true } },
@@ -34,13 +34,13 @@ router.get("/dashboard", requireTrainer, async (req: Request, res: Response, nex
     const [totalEnrollments, revenueAgg, pendingPayouts] = await Promise.all([
       prisma.courseEnrollment.count({ where: { courseId: { in: courseIds } } }),
       prisma.orderItem.aggregate({
-        _sum: { price: true },
-        where: { courseId: { in: courseIds }, order: { status: "paid" } },
+        _sum: { totalPrice: true },
+        where: { itemType: "course", itemId: { in: courseIds }, order: { status: "paid" } },
       }),
       prisma.trainerPayout.count({ where: { trainerId, status: "pending" } }),
     ]);
 
-    const totalRevenue = Number(revenueAgg._sum.price ?? 0);
+    const totalRevenue = Number(revenueAgg._sum.totalPrice ?? 0);
     const netRevenue = totalRevenue * 0.7; // 70% trainer share
 
     return res.json(successResponse({
@@ -70,7 +70,7 @@ router.get("/courses/:courseId/analytics", requireTrainer, async (req: Request, 
     const { courseId } = req.params;
 
     const course = await prisma.course.findFirst({
-      where: { id: courseId, instructorId: trainerId },
+      where: { id: courseId, trainerId },
       include: {
         sections: { include: { lessons: true } },
         enrollments: {
@@ -82,12 +82,12 @@ router.get("/courses/:courseId/analytics", requireTrainer, async (req: Request, 
     });
     if (!course) throw new AppError(404, "Kursus tidak ditemukan.");
 
-    const totalLessons = course.sections.reduce((s, sec) => s + sec.lessons.length, 0);
+    const totalLessons = course.sections.reduce((sum, sec) => sum + sec.lessons.length, 0);
 
     const [revenueAgg, reviewAgg] = await Promise.all([
       prisma.orderItem.aggregate({
-        _sum: { price: true },
-        where: { courseId, order: { status: "paid" } },
+        _sum: { totalPrice: true },
+        where: { itemType: "course", itemId: courseId, order: { status: "paid" } },
       }),
       prisma.review.aggregate({
         _avg: { rating: true },
@@ -107,8 +107,8 @@ router.get("/courses/:courseId/analytics", requireTrainer, async (req: Request, 
       completionRate: course.enrollments.length > 0
         ? Math.round((completedCount / course.enrollments.length) * 100)
         : 0,
-      grossRevenue: Number(revenueAgg._sum.price ?? 0),
-      netRevenue: Number(revenueAgg._sum.price ?? 0) * 0.7,
+      grossRevenue: Number(revenueAgg._sum.totalPrice ?? 0),
+      netRevenue: Number(revenueAgg._sum.totalPrice ?? 0) * 0.7,
       avgRating: Number(reviewAgg._avg.rating ?? 0),
       reviewCount: reviewAgg._count.id,
     }));

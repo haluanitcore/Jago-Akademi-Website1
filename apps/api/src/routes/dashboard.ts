@@ -55,7 +55,7 @@ router.get("/", authenticate, async (req: Request, res: Response, next: NextFunc
 
     const totalEnrolled = enrollments.length;
     const totalCompleted = enrollments.filter((e) => e.isCompleted).length;
-    const totalInProgress = enrollments.filter((e) => !e.isCompleted && e.progressPct > 0).length;
+    const totalInProgress = enrollments.filter((e) => !e.isCompleted && Number(e.progressPct) > 0).length;
 
     res.json(
       successResponse({

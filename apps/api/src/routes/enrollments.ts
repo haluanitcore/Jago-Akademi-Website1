@@ -41,7 +41,7 @@ router.get("/", authenticate, async (req: Request, res: Response, next: NextFunc
 // GET /api/enrollments/:courseId — single enrollment with course structure
 router.get("/:courseId", authenticate, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const enrollment = await getEnrollment(req.user!.id, req.params.courseId);
+    const enrollment = await getEnrollment(req.user!.id, req.params.courseId!);
     res.json(successResponse(enrollment));
   } catch (err) {
     next(err);

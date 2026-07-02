@@ -40,6 +40,8 @@ model User {
   referred           AffiliateCommission[] @relation("ReferredUserRelation")
   quizSubmissions    QuizSubmission[]
   lmsBatchMembers    LmsBatchMember[]
+  lmsEnrollments     LmsEnrollment[]
+  lmsCertificates    LmsCertificate[]
   eventRegistrations EventRegistration[]
   refunds            Refund[]
   reviews            Review[]
@@ -549,6 +551,7 @@ model LmsEnrollment {
 
   tenant      LmsTenant        @relation(fields: [tenantId], references: [id])
   course      LmsCourse        @relation(fields: [courseId], references: [id])
+  user        User             @relation(fields: [userId], references: [id])
   progress    LmsProgress[]
   certificate LmsCertificate?
 
@@ -578,6 +581,7 @@ model LmsCertificate {
   issuedAt     DateTime @default(now())
 
   enrollment LmsEnrollment @relation(fields: [enrollmentId], references: [id])
+  user       User          @relation(fields: [userId], references: [id])
 
   @@map("lms_certificates")
 }

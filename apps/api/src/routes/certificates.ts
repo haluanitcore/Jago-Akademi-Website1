@@ -87,6 +87,7 @@ router.get("/:code/download", authenticate, async (req: Request, res: Response, 
 router.post("/issue/:courseId", authenticate, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { courseId } = req.params;
+    if (!courseId) return next(new AppError(400, "courseId wajib."));
     const userId = req.user!.id;
 
     const enrollment = await prisma.courseEnrollment.findUnique({

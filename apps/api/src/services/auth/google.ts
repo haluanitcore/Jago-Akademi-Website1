@@ -52,7 +52,7 @@ export async function exchangeGoogleCode(
 
   return {
     email: payload.email,
-    name: payload.name ?? payload.email.split("@")[0],
+    name: payload.name ?? payload.email.split("@")[0] ?? payload.email,
     avatarUrl: payload.picture ?? null,
     googleSub: payload.sub,
   };

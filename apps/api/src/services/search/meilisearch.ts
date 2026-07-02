@@ -1,11 +1,11 @@
-import { MeiliSearch } from "meilisearch";
+import { Meilisearch } from "meilisearch";
 import { env } from "../../config/env.js";
 
-let _client: MeiliSearch | null = null;
+let _client: Meilisearch | null = null;
 
-export function getMeiliClient(): MeiliSearch {
+export function getMeiliClient(): Meilisearch {
   if (!_client) {
-    _client = new MeiliSearch({
+    _client = new Meilisearch({
       host: env.MEILISEARCH_URL,
       apiKey: env.MEILISEARCH_KEY,
     });

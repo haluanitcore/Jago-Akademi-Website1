@@ -20,12 +20,14 @@ router.get("/:lessonId", authenticate, async (req: Request, res: Response, next:
             question: true,
             options: true,
             sortOrder: true,
-            // answer is intentionally excluded from the GET response
+            answer: true,
           },
         },
       },
     });
     if (!quiz) return next(new AppError(404, "Quiz tidak ditemukan."));
+    // Strip `answer` before returning so correct answers never reach the client,
+    // regardless of how the questions were fetched.
     const safeQuiz = {
       ...quiz,
       questions: quiz.questions.map(({ answer: _answer, ...q }) => q),
@@ -48,6 +50,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { lessonId } = req.params;
+      if (!lessonId) return next(new AppError(400, "lessonId wajib."));
       const { answers } = req.body as { answers: Record<string, number> };
 
       const quiz = await prisma.quiz.findUnique({

@@ -38,7 +38,7 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
 // GET /api/courses/:slug
 router.get("/:slug", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const course = await getCourseBySlug(req.params.slug);
+    const course = await getCourseBySlug(req.params.slug!);
     if (!course) return next(new AppError(404, "Kursus tidak ditemukan."));
     if (course.status !== "published" && !req.user?.roles?.includes("super_admin" as never)) {
       return next(new AppError(404, "Kursus tidak ditemukan."));
@@ -110,7 +110,7 @@ router.put(
   validateBody(updateSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const course = await updateCourse(req.params.id, req.body);
+      const course = await updateCourse(req.params.id!, req.body);
 
       await writeAudit({
         actorId: req.user!.id,
@@ -137,7 +137,7 @@ router.patch(
   authorize("super_admin"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const course = await publishCourse(req.params.id);
+      const course = await publishCourse(req.params.id!);
 
       await writeAudit({
         actorId: req.user!.id,
@@ -163,7 +163,7 @@ router.delete(
   authorize("super_admin"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await deleteCourse(req.params.id);
+      await deleteCourse(req.params.id!);
 
       await writeAudit({
         actorId: req.user!.id,

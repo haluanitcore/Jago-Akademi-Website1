@@ -7,7 +7,6 @@ export async function enrollInCourse(userId: string, courseId: string) {
   if (!course || course.status !== "published") {
     throw new AppError(404, "Kursus tidak ditemukan.");
   }
-  if (course.deletedAt) throw new AppError(404, "Kursus tidak ditemukan.");
 
   const existing = await prisma.courseEnrollment.findUnique({
     where: { courseId_userId: { courseId, userId } },
