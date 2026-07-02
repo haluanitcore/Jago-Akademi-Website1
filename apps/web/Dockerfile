@@ -7,27 +7,35 @@ WORKDIR /app
 
 COPY package.json package-lock.json* ./
 COPY apps/web/package.json ./apps/web/
+COPY apps/api/package.json ./apps/api/
 COPY packages/ ./packages/
 
-RUN npm ci --workspace=apps/web
+# NODE_ENV=development ensures devDependencies (tailwindcss, etc.) are installed
+# node:22-alpine sets NODE_ENV=production by default which skips devDeps
+RUN NODE_ENV=development npm ci
 
 # ─── Build ────────────────────────────────────────────────────────────────────
 FROM base AS builder
 WORKDIR /app
 
+# Copy both root and workspace node_modules (next binary lives in apps/web/node_modules)
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+
+# Copy source files AFTER node_modules to avoid overwriting them
+COPY package.json package-lock.json* ./
 COPY apps/web ./apps/web
 COPY packages ./packages
-
-WORKDIR /app/apps/web
 
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_GA_ID
 ARG NEXT_PUBLIC_APP_NAME
 
-RUN npm run build
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Run from root using npm workspace flag — npm sets correct PATH for workspace binaries
+RUN npm run build -w apps/web
 
 # ─── Production image ─────────────────────────────────────────────────────────
 FROM base AS runner

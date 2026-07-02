@@ -26,15 +26,22 @@ RUN npm run build
 
 # ─── Production image ─────────────────────────────────────────────────────────
 FROM base AS runner
-WORKDIR /app
+# Run from the api workspace dir so Node module resolution finds node_modules
+WORKDIR /app/apps/api
 
 ENV NODE_ENV=production
+
+# Prisma requires openssl at runtime for libquery_engine
+RUN apk add --no-cache openssl libc6-compat
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 apiuser
 
-COPY --from=builder --chown=apiuser:nodejs /app/apps/api/dist ./dist
+# Copy both root hoisted node_modules AND workspace node_modules
+# express and other deps may be in either location
+COPY --from=builder --chown=apiuser:nodejs /app/node_modules /app/node_modules
 COPY --from=builder --chown=apiuser:nodejs /app/apps/api/node_modules ./node_modules
+COPY --from=builder --chown=apiuser:nodejs /app/apps/api/dist ./dist
 COPY --from=builder --chown=apiuser:nodejs /app/apps/api/prisma ./prisma
 
 USER apiuser
