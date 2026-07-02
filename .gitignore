@@ -8,9 +8,13 @@ node_modules
 # Local env files
 .env
 .env.local
+.env.production
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Stray local artifacts
+Claude Dekstop/
 
 # Testing
 coverage
