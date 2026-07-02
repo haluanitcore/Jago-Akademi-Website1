@@ -127,7 +127,7 @@ describe("POST /api/orders/:orderId/refund", () => {
 
 describe("PATCH /api/orders/admin/refunds/:refundId", () => {
   beforeEach(() => {
-    vi.mocked(authenticate).mockImplementation((req, _res, next) => {
+    vi.mocked(authenticate).mockImplementation(async (req, _res, next) => {
       (req as never as { user: unknown }).user = { id: "admin-1", email: "admin@test.com", name: "Admin", roles: ["super_admin"] };
       next();
     });

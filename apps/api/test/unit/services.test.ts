@@ -108,7 +108,7 @@ describe("invoiceService.generateInvoicePDF", () => {
       ],
     };
 
-    const result = await generateInvoicePDF(mockOrder as Parameters<typeof generateInvoicePDF>[0]);
+    const result = await generateInvoicePDF(mockOrder as unknown as Parameters<typeof generateInvoicePDF>[0]);
     expect(Buffer.isBuffer(result)).toBe(true);
     expect(result.length).toBeGreaterThan(0);
   });
@@ -136,7 +136,7 @@ describe("invoiceService.generateInvoicePDF", () => {
       ],
     };
 
-    const result = await generateInvoicePDF(mockOrderWithCoupon as Parameters<typeof generateInvoicePDF>[0]);
+    const result = await generateInvoicePDF(mockOrderWithCoupon as unknown as Parameters<typeof generateInvoicePDF>[0]);
     expect(Buffer.isBuffer(result)).toBe(true);
   });
 });

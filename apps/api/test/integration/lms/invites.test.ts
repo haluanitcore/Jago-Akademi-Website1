@@ -18,6 +18,9 @@ vi.mock("../../../src/db/prisma.js", () => ({
     lmsEnrollment: {
       upsert: vi.fn(),
     },
+    lmsTenant: {
+      findUnique: vi.fn(),
+    },
     userRole: {
       findFirst: vi.fn(),
     },
@@ -52,6 +55,7 @@ beforeEach(() => {
   vi.mocked(prisma.lmsBatchMember.upsert).mockResolvedValue({} as never);
   vi.mocked(prisma.lmsCourseAssignment.findMany).mockResolvedValue([]);
   vi.mocked(prisma.lmsEnrollment.upsert).mockResolvedValue({} as never);
+  vi.mocked(prisma.lmsTenant.findUnique).mockResolvedValue({ slug: "tenant-slug" } as never);
   vi.mocked(prisma.userRole.findFirst).mockResolvedValue({ role: "super_admin" } as never);
 });
 

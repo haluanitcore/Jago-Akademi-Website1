@@ -24,7 +24,7 @@ vi.mock("../../src/middleware/authenticate.js", () => ({
 }));
 
 const { prisma } = await import("../../src/db/prisma.js");
-const m = prisma as typeof prisma & Record<string, ReturnType<typeof vi.fn>>;
+const m = prisma as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>;
 
 // ─── Public event routes ───────────────────────────────────────────────────────
 

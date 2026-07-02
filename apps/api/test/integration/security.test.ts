@@ -26,7 +26,7 @@ vi.mock("../../src/db/prisma.js", () => ({
 // Intentionally NO mock for authenticate — tests real middleware behavior
 
 const { prisma } = await import("../../src/db/prisma.js");
-const m = prisma as typeof prisma & Record<string, Record<string, ReturnType<typeof vi.fn>>>;
+const m = prisma as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>;
 
 // ─── 401: Unauthenticated access ──────────────────────────────────────────────
 
@@ -45,7 +45,7 @@ describe("Authentication enforcement — 401 on missing JWT", () => {
   for (const [method, path] of PROTECTED) {
     it(`${method} ${path} → 401 without token`, async () => {
       // Clear all cookies / authorization headers
-      const res = await (request(app) as Record<string, (url: string) => request.Test>)[method.toLowerCase()](path);
+      const res = await (request(app) as unknown as Record<string, (url: string) => request.Test>)[method.toLowerCase()](path);
       expect([401, 403]).toContain(res.status);
     });
   }

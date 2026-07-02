@@ -27,7 +27,7 @@ vi.mock("../../../src/middleware/authenticate.js", () => ({
 }));
 
 const { prisma } = await import("../../../src/db/prisma.js");
-const mockPrisma = prisma as typeof prisma & Record<string, Record<string, ReturnType<typeof vi.fn>>>;
+const mockPrisma = prisma as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>;
 
 describe("GET /api/trainer/dashboard", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -37,7 +37,7 @@ describe("GET /api/trainer/dashboard", () => {
       { id: "c1", title: "Kursus A", status: "published", price: 299000, _count: { enrollments: 12 } },
     ]);
     mockPrisma.courseEnrollment.count.mockResolvedValue(12);
-    mockPrisma.orderItem.aggregate.mockResolvedValue({ _sum: { price: 3000000 } });
+    mockPrisma.orderItem.aggregate.mockResolvedValue({ _sum: { totalPrice: 3000000 } });
     mockPrisma.trainerPayout.count.mockResolvedValue(0);
 
     const res = await request(app).get("/api/trainer/dashboard");

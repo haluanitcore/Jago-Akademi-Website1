@@ -26,7 +26,7 @@ vi.mock("../../src/services/audit/log.js", () => ({
 }));
 
 const { prisma } = await import("../../src/db/prisma.js");
-const m = prisma as typeof prisma & Record<string, ReturnType<typeof vi.fn>>;
+const m = prisma as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>;
 
 // ─── Dashboard ─────────────────────────────────────────────────────────────────
 
@@ -77,7 +77,7 @@ describe("DELETE /api/users/me", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("anonymizes user account and clears cookies", async () => {
-    (m.$transaction as ReturnType<typeof vi.fn>).mockResolvedValue([
+    (m.$transaction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
       { id: "user-1", email: "deleted+user-1@jagoakademi.invalid" },
       { count: 1 },
       { count: 1 },

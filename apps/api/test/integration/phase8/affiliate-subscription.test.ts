@@ -20,7 +20,7 @@ vi.mock("../../../src/middleware/authenticate.js", () => ({
 }));
 
 const { prisma } = await import("../../../src/db/prisma.js");
-const mockPrisma = prisma as typeof prisma & Record<string, Record<string, ReturnType<typeof vi.fn>>>;
+const mockPrisma = prisma as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>;
 
 describe("GET /api/affiliate/me", () => {
   beforeEach(() => vi.clearAllMocks());

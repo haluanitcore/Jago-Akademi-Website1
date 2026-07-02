@@ -14,7 +14,7 @@ const mockMeiliClient = {
 };
 
 vi.mock("meilisearch", () => ({
-  MeiliSearch: class {
+  Meilisearch: class {
     index(name: string) { return mockIndex; }
   },
 }));
