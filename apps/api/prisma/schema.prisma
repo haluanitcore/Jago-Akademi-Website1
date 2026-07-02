@@ -253,6 +253,8 @@ model CourseEnrollment {
   user   User   @relation(fields: [userId], references: [id])
 
   @@unique([courseId, userId])
+  // Hot path (TASK-021): student dashboard "my courses" lookups by user.
+  @@index([userId])
   @@map("course_enrollments")
 }
 
@@ -293,6 +295,9 @@ model Order {
   transactions PaymentTransaction[]
   commissions  AffiliateCommission[]
 
+  // Hot path (TASK-021): order history & admin filtering by user/status/time.
+  @@index([userId, status, createdAt])
+  @@index([status, createdAt])
   @@map("orders")
 }
 
@@ -325,6 +330,8 @@ model PaymentTransaction {
 
   order Order @relation(fields: [orderId], references: [id])
 
+  // Hot path (TASK-021): webhook reconciliation by order + status.
+  @@index([orderId, status])
   @@map("payment_transactions")
 }
 
@@ -556,6 +563,9 @@ model LmsEnrollment {
   certificate LmsCertificate?
 
   @@unique([courseId, userId])
+  // Hot path (TASK-021): tenant-wide completion reports + student portal.
+  @@index([tenantId])
+  @@index([userId])
   @@map("lms_enrollments")
 }
 

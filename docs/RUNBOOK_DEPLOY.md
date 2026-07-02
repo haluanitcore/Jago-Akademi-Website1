@@ -100,7 +100,7 @@ EOF
 ```bash
 cd /opt/jago-akademi
 docker compose -f docker-compose.prod.yml build        # ± beberapa menit
-docker compose -f docker-compose.prod.yml run --rm api npx prisma migrate deploy   # perlu migrations (TASK-021); untuk bootstrap awal boleh `prisma db push` SEKALI
+docker compose -f docker-compose.prod.yml run --rm api npx prisma migrate deploy   # migrations ter-commit (TASK-021); DB lama hasil `db push` → baseline dulu, lihat RUNBOOK_DB.md §1
 docker compose -f docker-compose.prod.yml up -d --wait
 docker compose -f docker-compose.prod.yml ps           # semua "healthy"
 ```
