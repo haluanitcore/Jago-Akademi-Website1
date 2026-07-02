@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Self-contained server build for the Docker runner image (TASK-020).
+  // apps/web/Dockerfile copies .next/standalone — without this the image build fails.
+  output: "standalone",
+
   async redirects() {
     return [
       { source: "/kursus", destination: "/e-course", permanent: true },
