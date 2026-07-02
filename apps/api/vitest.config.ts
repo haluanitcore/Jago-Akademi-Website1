@@ -28,8 +28,9 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "lcov"],
       include: ["src/**/*.ts"],
-      // Entry points that connect to Redis / exit on import cannot be unit-tested.
-      exclude: ["src/index.ts", "src/worker.ts"],
+      // Entry/init modules that only run in production (server bootstrap, worker,
+      // Sentry init) cannot be meaningfully unit-tested.
+      exclude: ["src/index.ts", "src/worker.ts", "src/instrument.ts"],
       // Ratchet gate (TASK-010): global thresholds are pinned at the verified
       // baseline so coverage can never regress. Raise these numbers as tests are
       // added — never lower them. Per-file thresholds lock in already-strong

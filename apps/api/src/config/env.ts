@@ -28,6 +28,10 @@ const envSchema = z.object({
   FONNTE_TOKEN: z.string().optional(),
   // Redis / BullMQ (TASK-022) — absent = queue disabled, jobs run inline (dev/test)
   REDIS_URL: z.string().optional(),
+  // Observability (TASK-023)
+  SENTRY_DSN: z.string().optional(),
+  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).optional(),
+  APP_VERSION: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

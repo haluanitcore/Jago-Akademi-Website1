@@ -4,6 +4,7 @@
 
 | ID | Temuan | Ditemukan saat | Severity | Rekomendasi | Target Fase |
 |----|--------|----------------|----------|-------------|-------------|
+| BL-17 | **Web Sentry belum ada** — TASK-023 menambah observability API (Sentry+pino+/ready). Sisi web (Next.js) belum diinstrumentasi (butuh `@sentry/nextjs` + `instrumentation.ts` + sentry configs). | TASK-023 | 🟡 Medium | Install `@sentry/nextjs`, wire client/server/edge config + `NEXT_PUBLIC_SENTRY_DSN`, verifikasi build. | Phase 5 (pra public launch) |
 | BL-01 | **5 apps di monorepo** (`admin`, `api`, `lms`, `trainer`, `web`), bukan 2. `apps/admin`, `apps/lms`, `apps/trainer` hanya scaffold `create-next-app` default (1 boilerplate `page.tsx` masing-masing). Fungsi asli admin/lms/trainer ada di dalam `apps/web`. | TASK-001 | 🟡 Medium | Hapus 3 scaffold mati atau putuskan repurpose. SSOT hanya mengakui `apps/api` + `apps/web`. Konfirmasi stakeholder. | Phase 2 (cleanup) |
 | BL-02 | **52 type error API** (`trainer.ts` 21, `lms.ts` 14, dll) — referensi field/relasi Prisma yang tidak ada di schema. | TASK-000 | 🔴 High | Diselesaikan di **TASK-002**. | Phase 1 |
 | BL-03 | **Bug runtime `lms.ts:288`** — `POST /api/lms/invite/:token/accept` → 500. | TASK-000 | 🔴 High | Fix + regression test di **TASK-002**. | Phase 1 |

@@ -26,3 +26,22 @@ describe("GET /api/health", () => {
     expect(res.headers["content-type"]).toMatch(/application\/json/);
   });
 });
+
+describe("GET /api/ready", () => {
+  it("returns a readiness envelope with per-dependency status", async () => {
+    const res = await request(app).get("/api/ready");
+
+    // 503 here because DB/search are unreachable in the unit test environment.
+    expect([200, 503]).toContain(res.status);
+    expect(res.body).toHaveProperty("deps");
+    expect(res.body.deps).toHaveProperty("db");
+    expect(res.body.deps).toHaveProperty("search");
+    // Redis is "skipped" when the queue is disabled (no REDIS_URL under tests).
+    expect(res.body.deps.redis).toBe("skipped");
+  });
+
+  it("sets an X-Request-Id response header (correlation)", async () => {
+    const res = await request(app).get("/api/health");
+    expect(res.headers["x-request-id"]).toBeDefined();
+  });
+});

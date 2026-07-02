@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import path from "node:path";
 
 import { env } from "./config/env.js";
+import { httpLogger } from "./middleware/httpLogger.js";
 import { generalLimiter, authLimiter } from "./middleware/rateLimiter.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 import healthRouter from "./routes/health.js";
@@ -37,6 +38,9 @@ export const app = express();
 
 // Trust proxy for correct IP behind load balancer / Cloudflare
 app.set("trust proxy", 1);
+
+// Request logging + X-Request-Id correlation (TASK-023) — before everything else.
+app.use(httpLogger);
 
 app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
 // Capture raw body for webhook signature verification

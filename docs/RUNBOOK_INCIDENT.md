@@ -1,0 +1,68 @@
+# RUNBOOK — Incident Response & Observability (TASK-023)
+
+> How production is observed and how to respond when it breaks. Code is in place (Sentry, pino, /health, /ready); external monitors + alert rules are 🖐️ human-gated setup.
+
+## Observability stack
+
+| Signal | Where | Notes |
+|--------|-------|-------|
+| Errors | **Sentry** (api) | Unexpected 5xx captured in `errorHandler` with `requestId` tag + release. No-op if `SENTRY_DSN` unset. |
+| Logs | **pino** JSON → stdout | `X-Request-Id` correlates every line of a request. PII redacted. Collect via Docker log driver / Loki. |
+| Liveness | `GET /api/health` | Process up. Used by container healthcheck. |
+| Readiness | `GET /api/ready` | Checks DB + Meilisearch (+ Redis when queue enabled). 503 if a required dep is down. |
+| Uptime | external monitor 🖐️ | e.g. UptimeRobot/BetterStack hitting `/api/health` + `https://jagoakademi.com`. |
+
+## 🖐️ Alerts to configure (post-deploy)
+
+Configure in Sentry + the uptime monitor:
+
+| Alert | Condition | Severity |
+|-------|-----------|----------|
+| API down | `/api/health` fails 2× consecutively | P1 |
+| Not ready | `/api/ready` returns 503 > 3 min | P1 |
+| Error spike | Sentry error rate > 10/min OR new issue in `payment`/`auth` | P1/P2 |
+| Latency | p95 > 2 s for 5 min | P2 |
+| Payment failures | `webhook`/`checkout` 5xx > 3 in 10 min | P1 |
+| Queue backlog | Redis `bull:*:wait` depth > 500 | P2 |
+| Disk/DB | Postgres disk > 85% | P2 |
+
+## Severity & SLA
+
+| Sev | Definition | Response | Resolution target |
+|-----|------------|----------|-------------------|
+| **P1** | Outage / payments broken / data loss risk | 15 min | 2 h |
+| **P2** | Degraded (slow, partial feature down) | 1 h | 1 business day |
+| **P3** | Minor bug, workaround exists | 1 business day | next sprint |
+| **P4** | Cosmetic / low impact | best effort | backlog |
+
+## Response flow (P1/P2)
+
+1. **Acknowledge** the alert; declare severity; open an incident channel.
+2. **Assess:** `GET /api/ready` → which dep is down? `docker compose ps` → unhealthy service? Sentry → error signature + `requestId`.
+3. **Correlate logs:** `docker compose logs api --since 15m | grep <requestId>`.
+4. **Mitigate first, fix second:**
+   - App bug in last deploy → **rollback** (RUNBOOK_DEPLOY §8).
+   - DB down → check `postgres` health/disk; restore from backup only if corrupted (RUNBOOK_DB §3).
+   - Redis down → queue degrades to inline automatically; restart `redis`.
+   - Payment webhook failing → DOKU retries; verify signature/secret; replay from `bull:webhook:failed`.
+5. **Verify** recovery: `/api/ready` 200 + smoke test + error rate normal.
+6. **Post-incident:** write a short postmortem (timeline, root cause, action items); add a regression test; file BACKLOG items.
+
+## Common commands
+
+```bash
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs -f api worker
+curl -fsS https://api.jagoakademi.com/api/ready | jq
+docker compose -f docker-compose.prod.yml exec redis redis-cli LLEN bull:webhook:failed
+```
+
+## Validation Checklist (TASK-023)
+
+- [x] Sentry init (dedicated `instrument.ts`, imported first) + unexpected-error capture in errorHandler
+- [x] pino structured logging + `X-Request-Id` correlation (httpLogger) + PII redaction
+- [x] `/api/health` (liveness) + `/api/ready` (readiness: DB/search/redis) with tests
+- [x] Incident runbook + severity/SLA + alert-rule spec
+- [ ] 🖐️ SENTRY_DSN set in prod; a test error appears in Sentry
+- [ ] 🖐️ Uptime monitor + alert rules configured and firing
+- [ ] Web Sentry (@sentry/nextjs) — tracked BL-17
