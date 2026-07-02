@@ -37,15 +37,16 @@ Manual sebelum migrate: `COMPOSE_DIR=/opt/jago-akademi ./scripts/backup.sh`
 
 Restore ke database **scratch** (bukan menimpa produksi) untuk membuktikan backup valid:
 
+Automated via **`scripts/restore.sh`** — restores the latest backup into a scratch
+DB, verifies schema (≥ 40 tables) + row counts, then drops it (never touches prod):
+
 ```bash
 cd /opt/jago-akademi
-LATEST=$(ls -t backups/jago-*.sql.gz | head -1) && echo "restoring $LATEST"
-docker compose -f docker-compose.prod.yml exec -T postgres createdb -U jagouser jago_restore_test
-gunzip -c "$LATEST" | docker compose -f docker-compose.prod.yml exec -T postgres psql -U jagouser -d jago_restore_test
-# verifikasi:
-docker compose -f docker-compose.prod.yml exec -T postgres psql -U jagouser -d jago_restore_test -c "select count(*) from users; select count(*) from courses;"
-docker compose -f docker-compose.prod.yml exec -T postgres dropdb -U jagouser jago_restore_test
+COMPOSE_DIR=/opt/jago-akademi ./scripts/restore.sh
+# → "restore drill PASSED — backup is valid; scratch DB dropped"
 ```
+
+Run this **once now** to prove the backup (Validation Checklist), then quarterly.
 
 **Restore produksi sungguhan (bencana)** 🖐️: stop api+worker → `dropdb`/`createdb` → restore dump → `migrate resolve` bila perlu → start. Jangan improvisasi — ikuti urutan ini.
 
@@ -53,13 +54,21 @@ docker compose -f docker-compose.prod.yml exec -T postgres dropdb -U jagouser ja
 
 Index hot-path (TASK-021): `orders(userId,status,createdAt)`, `orders(status,createdAt)`, `payment_transactions(orderId,status)`, `course_enrollments(userId)`, `lms_enrollments(tenantId)`, `lms_enrollments(userId)`.
 
+Run **`scripts/index-audit.sql`** — lists the indexes (reliable even on empty DB)
+and EXPLAINs the hot queries:
+
 ```bash
-docker compose -f docker-compose.prod.yml exec -T postgres psql -U jagouser -d jago_akademi -c \
- "EXPLAIN ANALYZE SELECT * FROM orders WHERE \"userId\"='x' AND status='paid' ORDER BY \"createdAt\" DESC LIMIT 20;"
-# harap: Index Scan using orders_userId_status_createdAt_idx
+docker compose -f docker-compose.prod.yml exec -T postgres \
+  psql -U jagouser -d jago_akademi -f - < scripts/index-audit.sql
 ```
 
+> On an empty/small DB Postgres may still choose `Seq Scan` (cheaper) — the
+> **index-present list (A)** is the reliable check now; re-check `EXPLAIN` (B)
+> once real data volume exists.
+
 ## 5. Seed produksi (minimal)
+
+> 🔴 **VERIFIED live (2 Jul 2026):** production DB migrated but **EMPTY** — `/api/categories` = `[]`, `/api/courses` total 0. **Seeding (or admin content creation) is REQUIRED before Soft Launch** so the catalog isn't blank.
 
 `prisma/seed.ts` = admin + kategori + konten demo. Jalankan **sekali** dari mesin dev dengan tunnel SSH ke prod:
 
@@ -77,9 +86,11 @@ npx tsx prisma/seed.ts
 ## Validation Checklist (TASK-021)
 
 - [x] Folder `prisma/migrations/` + baseline init ter-commit (41 tabel, 44 index)
-- [x] Index hot-path §3.4 ada di schema + SQL
-- [x] `scripts/backup.sh` + cron template + retensi + R2 opsional
-- [x] Prosedur restore drill terdokumentasi
-- [ ] 🖐️ `migrate deploy` sukses di prod (butuh host — bagian gate TASK-020/021)
-- [ ] 🖐️ Backup cron aktif + restore drill dijalankan sekali
+- [x] Index hot-path §3.4 ada di schema + SQL + `scripts/index-audit.sql`
+- [x] `scripts/backup.sh` (cron + retensi + R2) + **`scripts/restore.sh`** (drill otomatis)
+- [x] ✅ **`migrate deploy` sukses di prod** — verified live `/api/ready` → `db: ok`
+- [ ] 🖐️ Backup cron aktif (`scripts/backup.sh` + `/etc/cron.d/jago-backup`)
+- [ ] 🖐️ Restore drill dijalankan sekali (`./scripts/restore.sh` → PASSED)
+- [ ] 🖐️ Index audit dijalankan (`scripts/index-audit.sql` → indexes present)
+- [ ] 🔴 🖐️ **Seed produksi** — DB verified EMPTY, wajib sebelum Soft Launch (§5)
 - [ ] 🖐️ `EXPLAIN` menunjukkan index terpakai
