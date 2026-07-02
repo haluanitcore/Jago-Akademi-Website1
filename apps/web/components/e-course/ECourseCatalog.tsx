@@ -120,12 +120,6 @@ export function ECourseCatalog() {
                 );
               })}
             </div>
-            <div className="text-center mt-8">
-              <Link href="/e-course/katalog" className="btn btn-outline btn-lg inline-flex">
-                Lihat Semua Materi
-                <ArrowRight size={16} />
-              </Link>
-            </div>
           </>
         )}
       </div>

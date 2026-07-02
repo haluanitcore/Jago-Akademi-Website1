@@ -6,6 +6,7 @@ import {
   getLessonBySlug,
   getAllLessonParams,
 } from "@/lib/e-course/utils";
+import { features } from "@/lib/features";
 import { LessonHero } from "@/components/e-course/lesson/LessonHero";
 import { VideoChapterList } from "@/components/e-course/lesson/VideoChapterList";
 import { SubscriptionLock } from "@/components/e-course/shared/SubscriptionLock";
@@ -15,8 +16,11 @@ type Props = {
   params: Promise<{ kategori: string; topik: string; materi: string }>;
 };
 
+// Gated behind the Learning Path feature (TASK-090, not yet built).
+export const dynamicParams = false;
+
 export function generateStaticParams() {
-  return getAllLessonParams();
+  return features.learningPath ? getAllLessonParams() : [];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

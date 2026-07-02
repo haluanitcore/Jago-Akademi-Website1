@@ -85,8 +85,8 @@ export function ECourseHero() {
                 Mulai Belajar
                 <ArrowRight size={16} />
               </Link>
-              <Link href="/e-course/katalog" className="btn btn-outline btn-lg">
-                Lihat Semua Materi
+              <Link href="/early-access" className="btn btn-outline btn-lg">
+                Gabung Early Access
               </Link>
             </div>
           </div>

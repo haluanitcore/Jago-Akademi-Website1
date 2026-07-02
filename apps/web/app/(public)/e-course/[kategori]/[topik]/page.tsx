@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { features } from "@/lib/features";
 import { getCategoryBySlug, getTopicBySlug, getAllTopicParams } from "@/lib/e-course/utils";
 import { TopicHero } from "@/components/e-course/topic/TopicHero";
 import { TopicSearch } from "@/components/e-course/topic/TopicSearch";
@@ -9,8 +10,11 @@ type Props = {
   params: Promise<{ kategori: string; topik: string }>;
 };
 
+// Gated behind the Learning Path feature (TASK-090, not yet built).
+export const dynamicParams = false;
+
 export function generateStaticParams() {
-  return getAllTopicParams();
+  return features.learningPath ? getAllTopicParams() : [];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

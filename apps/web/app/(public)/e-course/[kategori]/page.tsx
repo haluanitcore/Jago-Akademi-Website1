@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { features } from "@/lib/features";
 import { getCategoryBySlug, getAllCategoryParams } from "@/lib/e-course/utils";
 import { CategoryHero } from "@/components/e-course/category/CategoryHero";
 import { CategoryInfoCards } from "@/components/e-course/category/CategoryInfoCards";
@@ -11,8 +12,12 @@ type Props = {
   params: Promise<{ kategori: string }>;
 };
 
+// Gated behind the Learning Path feature (TASK-090, not yet built) — no pages
+// are generated while the flag is OFF, and on-demand requests 404 (see below).
+export const dynamicParams = false;
+
 export function generateStaticParams() {
-  return getAllCategoryParams();
+  return features.learningPath ? getAllCategoryParams() : [];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

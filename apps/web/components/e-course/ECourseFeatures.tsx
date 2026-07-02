@@ -11,18 +11,18 @@ const features = [
   },
   {
     icon: Layers,
-    title: "Kombinasi Strategi, Praktek & Portfolio",
-    desc: "Belajar sambil Praktek dengan ragam case study, worksheet, dan proyek nyata yang bisa langsung kamu tampilkan.",
+    title: "Materi Praktis & Studi Kasus",
+    desc: "Belajar sambil praktik lewat studi kasus dan worksheet aplikatif yang bisa langsung kamu terapkan.",
   },
   {
     icon: Users,
-    title: "Gabung Komunitas Diskusi secara Lifetime",
-    desc: "Bangun network profesional, saling sharing ilmu dan pengalaman bersama ribuan member aktif Jago Akademi.",
+    title: "Akses Sekali Bayar",
+    desc: "Bayar sekali, akses materi kapan saja tanpa batas waktu — belajar sesuai ritmemu.",
   },
   {
     icon: Trophy,
-    title: "Ratusan Ribu Member. Terbukti Berdampak",
-    desc: "Member Jago Akademi telah terbukti diterima di perusahaan nasional dan multinasional terkemuka.",
+    title: "Kurikulum Relevan Industri",
+    desc: "Disusun bersama praktisi berpengalaman agar selalu relevan dengan kebutuhan dunia kerja.",
   },
 ];
 
