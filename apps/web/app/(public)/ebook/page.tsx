@@ -1,4 +1,9 @@
 import Link from "next/link";
+import { Library } from "lucide-react";
+import { Section, SectionHeader } from "@/components/ui/Section";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Reveal } from "@/components/ui/Reveal";
+import { MediaPlaceholder } from "@/components/shared/MediaPlaceholder";
 
 type EBook = {
   id: string;
@@ -30,65 +35,73 @@ export default async function EBookPage() {
   const ebooks = await getEBooks();
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero */}
-      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white py-16 px-4">
-        <div className="max-w-5xl mx-auto text-center">
-          <h1 className="text-4xl font-bold mb-4">Toko E-Book</h1>
-          <p className="text-blue-100 text-lg max-w-xl mx-auto">
-            Referensi digital berkualitas untuk mendukung perjalanan belajar Anda.
-          </p>
-        </div>
-      </div>
+    <div className="pt-16">
+      <Section>
+        <SectionHeader
+          eyebrow="E-Book"
+          title={
+            <>
+              Referensi <span className="text-accent">praktis</span> untuk kerja
+            </>
+          }
+          lede="Panduan dan template digital siap pakai untuk mendukung perjalanan belajarmu."
+        />
 
-      <div className="max-w-6xl mx-auto px-4 py-12">
         {ebooks.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
-            <div className="text-5xl mb-4">📚</div>
-            <p className="text-lg">E-Book akan segera hadir.</p>
-          </div>
+          <EmptyState
+            icon={Library}
+            title="Belum ada e-book"
+            description="Koleksi e-book sedang disiapkan. Gabung early access agar jadi yang pertama tahu saat rilis."
+            action={
+              <Link href="/early-access" className="btn btn-primary">
+                Gabung Early Access
+              </Link>
+            }
+          />
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-            {ebooks.map((book) => {
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
+            {ebooks.map((book, i) => {
               const displayPrice = book.salePrice ?? book.price;
               return (
-                <Link
-                  key={book.id}
-                  href={`/ebook/${book.slug}`}
-                  className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
-                >
-                  <div className="aspect-[3/4] bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center overflow-hidden">
-                    {book.coverUrl ? (
-                      <img src={book.coverUrl} alt={book.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    ) : (
-                      <span className="text-5xl">📖</span>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <p className="text-xs text-blue-600 font-medium mb-1">{book.category ?? "E-Book"}</p>
-                    <h3 className="font-semibold text-gray-900 text-sm leading-tight line-clamp-2 mb-2">
-                      {book.title}
-                    </h3>
-                    {book.author && (
-                      <p className="text-xs text-gray-400 mb-2">{book.author}</p>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-gray-900 text-sm">
-                        Rp {Number(displayPrice).toLocaleString("id-ID")}
-                      </span>
-                      {book.salePrice && (
-                        <span className="text-xs text-gray-400 line-through">
-                          Rp {Number(book.price).toLocaleString("id-ID")}
-                        </span>
+                <Reveal key={book.id} delay={(i % 4) * 0.05}>
+                  <Link href={`/ebook/${book.slug}`} className="card group flex h-full flex-col overflow-hidden !p-0">
+                    <div className="border-b border-[var(--border-subtle)]">
+                      {book.coverUrl ? (
+                        <img
+                          src={book.coverUrl}
+                          alt={book.title}
+                          className="aspect-[3/4] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                        />
+                      ) : (
+                        <MediaPlaceholder type="foto" ratio="3:4" showRatio={false} className="!rounded-none !border-0" />
                       )}
                     </div>
-                  </div>
-                </Link>
+                    <div className="flex flex-1 flex-col gap-1.5 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--brand-cyan-strong)]">
+                        {book.category ?? "E-Book"}
+                      </p>
+                      <h3 className="font-display text-sm font-bold leading-snug text-[var(--text-primary)] line-clamp-2">
+                        {book.title}
+                      </h3>
+                      {book.author && <p className="text-xs text-[var(--text-muted)]">{book.author}</p>}
+                      <div className="mt-auto flex items-center gap-2 pt-2">
+                        <span className="text-sm font-bold text-[var(--text-primary)]">
+                          Rp {Number(displayPrice).toLocaleString("id-ID")}
+                        </span>
+                        {book.salePrice && (
+                          <span className="text-xs text-[var(--text-muted)] line-through">
+                            Rp {Number(book.price).toLocaleString("id-ID")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                </Reveal>
               );
             })}
           </div>
         )}
-      </div>
+      </Section>
     </div>
   );
 }

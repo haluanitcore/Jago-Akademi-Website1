@@ -1,4 +1,9 @@
 import Link from "next/link";
+import { CalendarDays, MapPin, Mic2, Users } from "lucide-react";
+import { Section, SectionHeader } from "@/components/ui/Section";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Reveal } from "@/components/ui/Reveal";
+import { MediaPlaceholder } from "@/components/shared/MediaPlaceholder";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -54,87 +59,95 @@ export default async function EventListPage() {
   const { data: events, meta } = await getEvents();
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero */}
-      <div className="bg-gradient-to-br from-violet-600 to-purple-700 text-white py-16 px-4">
-        <div className="max-w-5xl mx-auto text-center">
-          <h1 className="text-4xl font-bold mb-4">Event & Workshop</h1>
-          <p className="text-violet-100 text-lg max-w-xl mx-auto">
-            Tingkatkan keahlian melalui event langsung bersama praktisi terbaik.
-          </p>
-        </div>
-      </div>
+    <div className="pt-16">
+      <Section>
+        <SectionHeader
+          eyebrow="Event & Workshop"
+          title={
+            <>
+              Belajar langsung dari <span className="text-accent">praktisi</span>
+            </>
+          }
+          lede="Webinar dan workshop intensif untuk mengasah keahlian bersama ahli di bidangnya."
+        />
 
-      <div className="max-w-6xl mx-auto px-4 py-12">
         {events.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
-            <div className="text-5xl mb-4">🗓️</div>
-            <p className="text-lg">Event akan segera hadir.</p>
-          </div>
+          <EmptyState
+            icon={CalendarDays}
+            title="Belum ada event terjadwal"
+            description="Event dan workshop akan segera hadir. Gabung early access agar tak ketinggalan jadwalnya."
+            action={
+              <Link href="/early-access" className="btn btn-primary">
+                Gabung Early Access
+              </Link>
+            }
+          />
         ) : (
           <>
-            <p className="text-sm text-gray-500 mb-8">{meta.total} event tersedia</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {events.map((ev) => (
-                <Link
-                  key={ev.id}
-                  href={`/event/${ev.slug}`}
-                  className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
-                >
-                  {/* Cover */}
-                  <div className="aspect-video bg-gradient-to-br from-violet-50 to-purple-100 flex items-center justify-center overflow-hidden">
-                    {ev.coverUrl ? (
-                      <img src={ev.coverUrl} alt={ev.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-4xl">🎤</span>
-                    )}
-                  </div>
-
-                  <div className="p-5">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-medium">
-                        {TYPE_LABEL[ev.type] ?? ev.type}
-                      </span>
-                      {ev.isFeatured && (
-                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">
-                          Featured
-                        </span>
+            <p className="mb-6 text-sm text-[var(--text-muted)]">{meta.total} event tersedia</p>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {events.map((ev, i) => (
+                <Reveal key={ev.id} delay={(i % 3) * 0.05}>
+                  <Link
+                    href={`/event/${ev.slug}`}
+                    className="card group flex h-full flex-col overflow-hidden !p-0"
+                  >
+                    <div className="border-b border-[var(--border-subtle)]">
+                      {ev.coverUrl ? (
+                        <img src={ev.coverUrl} alt={ev.title} className="aspect-video w-full object-cover" />
+                      ) : (
+                        <MediaPlaceholder type="foto" ratio="16:9" showRatio={false} className="!rounded-none !border-0" />
                       )}
                     </div>
 
-                    <h2 className="font-semibold text-gray-900 line-clamp-2 mb-2 group-hover:text-violet-600 transition-colors">
-                      {ev.title}
-                    </h2>
+                    <div className="flex flex-1 flex-col gap-2 p-5">
+                      <div className="flex items-center gap-2">
+                        <span className="badge badge-cyan">{TYPE_LABEL[ev.type] ?? ev.type}</span>
+                        {ev.isFeatured && <span className="badge badge-pink">Unggulan</span>}
+                      </div>
 
-                    {ev.speakerName && (
-                      <p className="text-sm text-gray-500 mb-2">🎙️ {ev.speakerName}</p>
-                    )}
+                      <h2 className="font-display text-base font-bold leading-snug text-[var(--text-primary)] transition-colors line-clamp-2 group-hover:text-[var(--brand-cyan-strong)]">
+                        {ev.title}
+                      </h2>
 
-                    <p className="text-sm text-gray-600 mb-3">
-                      📅 {formatDate(ev.startDate)}
-                    </p>
-
-                    {ev.type !== "online" && ev.venue && (
-                      <p className="text-sm text-gray-500 mb-3 line-clamp-1">📍 {ev.venue}</p>
-                    )}
-
-                    <div className="flex items-center justify-between mt-auto">
-                      <span className="font-bold text-violet-600 text-sm">
-                        {formatPrice(ev.price, ev.salePrice)}
-                      </span>
-                      {ev.quota && (
-                        <span className="text-xs text-gray-400">
-                          {ev.quota - ev.totalSold} tempat tersisa
+                      <div className="mt-1 flex flex-col gap-1.5 text-[13px] text-[var(--text-secondary)]">
+                        {ev.speakerName && (
+                          <span className="inline-flex items-center gap-1.5">
+                            <Mic2 size={13} aria-hidden="true" className="text-[var(--text-muted)]" />
+                            {ev.speakerName}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1.5">
+                          <CalendarDays size={13} aria-hidden="true" className="text-[var(--text-muted)]" />
+                          {formatDate(ev.startDate)}
                         </span>
-                      )}
+                        {ev.type !== "online" && ev.venue && (
+                          <span className="inline-flex items-center gap-1.5 line-clamp-1">
+                            <MapPin size={13} aria-hidden="true" className="text-[var(--text-muted)]" />
+                            {ev.venue}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-auto flex items-center justify-between border-t border-[var(--border-subtle)] pt-3">
+                        <span className="text-sm font-bold text-[var(--brand-cyan-strong)]">
+                          {formatPrice(ev.price, ev.salePrice)}
+                        </span>
+                        {ev.quota && (
+                          <span className="inline-flex items-center gap-1 text-xs text-[var(--text-muted)]">
+                            <Users size={12} aria-hidden="true" />
+                            {ev.quota - ev.totalSold} tersisa
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </Reveal>
               ))}
             </div>
           </>
         )}
-      </div>
+      </Section>
     </div>
   );
 }
