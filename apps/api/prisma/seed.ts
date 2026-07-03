@@ -13,6 +13,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 
 const prisma = new PrismaClient();
 
@@ -20,8 +21,17 @@ async function main() {
   console.log("🌱 Seeding Jago Akademi production data...");
 
   // ─── Super Admin ───────────────────────────────────────────────────────────
+  // Fail-closed (TD-33): NEVER fall back to a hardcoded password. The seed
+  // refuses to run without an explicit, strong SEED_ADMIN_PASSWORD.
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "admin@jagoakademi.com";
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "Admin@2024!";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminPassword || adminPassword.length < 12) {
+    console.error(
+      "FATAL: SEED_ADMIN_PASSWORD env var is required (min 12 chars). " +
+        "Refusing to seed an admin account with a default/weak password.",
+    );
+    process.exit(1);
+  }
 
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
@@ -65,13 +75,17 @@ async function main() {
 
   const trainerIds: string[] = [];
   for (const t of trainers) {
+    // Fail-closed: each demo trainer gets a random unguessable password —
+    // these accounts are not meant to be logged into; an admin can reset
+    // credentials later if a real person takes the account over.
+    const randomPassword = randomBytes(24).toString("base64url");
     const trainer = await prisma.user.upsert({
       where: { email: t.email },
       update: {},
       create: {
         email: t.email,
         name: t.name,
-        passwordHash: await bcrypt.hash("Trainer@2024!", 12),
+        passwordHash: await bcrypt.hash(randomPassword, 12),
         isVerified: true,
         isActive: true,
         authProvider: "local",
@@ -260,8 +274,8 @@ async function main() {
   console.log(`✓ ${blogPosts.length} blog posts seeded`);
 
   console.log("\n✅ Seeding complete!");
-  console.log(`   Admin login: ${adminEmail} / ${adminPassword}`);
-  console.log("   Please change the admin password immediately after first login.");
+  console.log(`   Admin email: ${adminEmail} (password = your SEED_ADMIN_PASSWORD)`);
+  console.log("   Change the admin password after first login. Demo trainer accounts have random passwords.");
 }
 
 main()
