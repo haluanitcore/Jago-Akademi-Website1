@@ -29,8 +29,8 @@ export default function ResetPasswordForm() {
   if (success) {
     return (
       <div className="text-center space-y-3">
-        <div className="w-12 h-12 mx-auto rounded-full bg-green-100 flex items-center justify-center">
-          <svg aria-hidden="true" className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="w-12 h-12 mx-auto rounded-full bg-[var(--surface-accent-soft)] flex items-center justify-center">
+          <svg aria-hidden="true" className="w-6 h-6 text-[var(--brand-cyan-strong)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>

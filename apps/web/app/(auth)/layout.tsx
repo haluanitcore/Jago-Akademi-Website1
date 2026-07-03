@@ -6,20 +6,31 @@ export const metadata: Metadata = {
   title: { default: "Jago Akademi", template: "%s | Jago Akademi" },
 };
 
+/**
+ * Auth shell (design refresh, Jul 2026) — centered editorial card on the
+ * page surface: white card, default border, radius-xl, e2 elevation, and a
+ * restrained 2px brand-cyan top rule for character. No gradients.
+ */
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--surface-page)] p-4 py-10">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 text-[#1D1D1F] hover:text-[#0077A8] transition-colors">
+        <div className="mb-8 text-center">
+          <Link
+            href="/"
+            className="inline-flex min-h-10 items-center gap-2 text-[var(--text-primary)] transition-colors hover:text-[var(--brand-cyan-strong)]"
+          >
             <img src="/logo.svg" alt="Jago Akademi" className="h-8 w-auto" />
           </Link>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-[#E5E5EA] p-8">
-          {children}
+
+        <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-default)] bg-[var(--surface-card)] shadow-e2">
+          <div aria-hidden="true" className="h-0.5 w-full bg-[var(--brand-cyan)]" />
+          <div className="p-8 sm:p-10">{children}</div>
         </div>
-        <p className="text-center text-xs text-[#6E6E73] mt-6">
-          &copy; {new Date().getFullYear()} Jago Akademi. Hak cipta dilindungi.
+
+        <p className="mt-6 text-center text-xs text-[var(--text-muted)]">
+          &copy; {new Date().getFullYear()} Jago Akademi &middot; Belajar. Berlatih. Berkarier.
         </p>
       </div>
     </div>
