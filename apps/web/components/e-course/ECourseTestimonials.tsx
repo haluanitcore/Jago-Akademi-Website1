@@ -1,28 +1,26 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, MessagesSquare } from "lucide-react";
+import { Section } from "@/components/ui/Section";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 /**
- * Pre-launch empty-state (TASK-052). Real, moderated member stories replace this
- * once available (TASK-095) — no fabricated names/companies.
+ * Pre-launch member-stories placeholder (TASK-052 / BL-24). Real, moderated,
+ * consenting member stories replace this (TASK-095) — never fabricated names.
  */
 export function ECourseTestimonials() {
   return (
-    <section className="relative overflow-hidden">
-      <div className="bg-[rgba(0,119,168,0.04)] border-t border-[rgba(0,119,168,0.08)]">
-        <div className="max-w-[1152px] mx-auto px-8 py-12 text-center">
-          <h2 className="text-2xl font-bold font-display">
-            Cerita Member E-Course{" "}
-            <span className="text-gradient-brand">Segera Hadir</span>
-          </h2>
-          <p className="text-[#636366] text-sm mt-3 max-w-md mx-auto">
-            Mulai belajar hari ini dan jadilah salah satu cerita sukses pertama di Jago Akademi.
-          </p>
-          <Link href="/daftar" className="btn btn-primary btn-lg mt-6 inline-flex">
+    <Section>
+      <EmptyState
+        icon={MessagesSquare}
+        title="Cerita member segera hadir"
+        description="Mulai belajar hari ini — kisah suksesmu bisa jadi yang pertama tampil di sini."
+        action={
+          <Link href="/daftar" className="btn btn-primary">
             Mulai Belajar
-            <ArrowRight size={16} />
+            <ArrowRight size={16} aria-hidden="true" />
           </Link>
-        </div>
-      </div>
-    </section>
+        }
+      />
+    </Section>
   );
 }

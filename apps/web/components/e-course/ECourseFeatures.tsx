@@ -1,158 +1,64 @@
-"use client";
+import { GraduationCap, Layers, CreditCard, Trophy } from "lucide-react";
+import { Section, SectionHeader } from "@/components/ui/Section";
+import { Reveal } from "@/components/ui/Reveal";
 
-import { useState } from "react";
-import { GraduationCap, Layers, Users, Trophy, ChevronRight } from "lucide-react";
-
-const features = [
+const FEATURES = [
   {
     icon: GraduationCap,
-    title: "Belajar Fleksibel dan Bersertifikat",
-    desc: "Disusun bertahap dari level dasar hingga lanjutan. Belajar kapan saja, di mana saja, sesuai ritme kamu.",
+    title: "Belajar fleksibel & bersertifikat",
+    body: "Disusun bertahap dari dasar hingga lanjutan. Belajar kapan saja, di mana saja, sesuai ritmemu.",
   },
   {
     icon: Layers,
-    title: "Materi Praktis & Studi Kasus",
-    desc: "Belajar sambil praktik lewat studi kasus dan worksheet aplikatif yang bisa langsung kamu terapkan.",
+    title: "Materi praktis & studi kasus",
+    body: "Belajar sambil praktik lewat studi kasus dan worksheet aplikatif yang bisa langsung diterapkan.",
   },
   {
-    icon: Users,
-    title: "Akses Sekali Bayar",
-    desc: "Bayar sekali, akses materi kapan saja tanpa batas waktu — belajar sesuai ritmemu.",
+    icon: CreditCard,
+    title: "Akses sekali bayar",
+    body: "Bayar sekali, akses materi kapan saja tanpa batas waktu — tanpa langganan bulanan.",
   },
   {
     icon: Trophy,
-    title: "Kurikulum Relevan Industri",
-    desc: "Disusun bersama praktisi berpengalaman agar selalu relevan dengan kebutuhan dunia kerja.",
+    title: "Kurikulum relevan industri",
+    body: "Dirancang bersama praktisi berpengalaman agar selalu relevan dengan kebutuhan dunia kerja.",
   },
-];
+] as const;
 
+/** Why E-Course — editorial 2×2 feature grid with lucide icons (no fake visuals). */
 export function ECourseFeatures() {
-  const [active, setActive] = useState(0);
-
-  const ActiveIcon = features[active]?.icon ?? GraduationCap;
-
   return (
-    <section className="py-16 bg-[#FAFAFA]">
-      <div className="max-w-[1152px] mx-auto px-8">
+    <Section tone="sunken">
+      <SectionHeader
+        eyebrow="Kenapa E-Course"
+        title={
+          <>
+            Dirancang untuk <span className="text-accent">skill</span> yang terpakai
+          </>
+        }
+        lede="Bukan sekadar tontonan — setiap materi mengarah ke hasil yang bisa kamu buktikan."
+      />
 
-        {/* Heading */}
-        <h2 className="text-2xl font-bold font-display text-center mb-10">
-          Solusi #1 Kuasai Ratusan{" "}
-          <span className="text-gradient-brand">Skill Profesional</span>
-        </h2>
-
-        {/* Two-column layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-
-          {/* Left: Feature list */}
-          <div className="flex flex-col gap-3">
-            {features.map((f, i) => {
-              const Icon = f.icon;
-              const isActive = i === active;
-              return (
-                <button
-                  key={f.title}
-                  type="button"
-                  onClick={() => setActive(i)}
-                  className={[
-                    "w-full text-left rounded-lg border transition-all duration-200 cursor-pointer",
-                    isActive
-                      ? "border-[rgba(0,119,168,0.4)] bg-[rgba(0,119,168,0.05)] shadow-e1"
-                      : "border-[#E5E5E5] bg-white hover:border-[rgba(0,119,168,0.2)] hover:bg-[rgba(0,119,168,0.03)]",
-                  ].join(" ")}
-                >
-                  <div className="flex items-start gap-4 p-4">
-                    <div
-                      className={[
-                        "w-10 h-10 rounded-lg flex items-center justify-center flex-none transition-colors",
-                        isActive ? "bg-[rgba(0,212,255,0.1)]" : "bg-[#F5F5F7]",
-                      ].join(" ")}
-                    >
-                      <Icon
-                        size={18}
-                        className={isActive ? "text-[#0077A8]" : "text-[#6E6E73]"}
-                      />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p
-                          className={[
-                            "font-semibold text-base",
-                            isActive ? "text-[#1D1D1F]" : "text-[#636366]",
-                          ].join(" ")}
-                        >
-                          {f.title}
-                        </p>
-                        <ChevronRight
-                          size={14}
-                          className={[
-                            "flex-none transition-transform",
-                            isActive ? "text-[#0077A8] rotate-90" : "text-[#6E6E73]",
-                          ].join(" ")}
-                        />
-                      </div>
-                      {isActive && (
-                        <p className="text-[#636366] text-xs mt-1.5 leading-relaxed">
-                          {f.desc}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Right: Visual */}
-          <div className="relative aspect-square max-w-md mx-auto w-full rounded-2xl overflow-hidden bg-gradient-to-br from-[rgba(0,119,168,0.06)] to-[rgba(0,119,168,0.02)] border border-[rgba(0,119,168,0.1)] shadow-e2">
-            {/* Grid bg */}
-            <div
-              className="absolute inset-0 opacity-[0.04]"
-              style={{
-                backgroundImage: `linear-gradient(rgba(0,119,168,1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,119,168,1) 1px, transparent 1px)`,
-                backgroundSize: "32px 32px",
-              }}
-            />
-
-            {/* Active feature visual */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 p-8">
-              <div className="w-20 h-20 rounded-2xl bg-[rgba(0,212,255,0.08)] border border-[rgba(0,119,168,0.2)] flex items-center justify-center shadow-e1">
-                <ActiveIcon size={40} className="text-[#0077A8]" />
-              </div>
-
-              <div className="text-center">
-                <p className="text-[#1D1D1F] font-bold font-display text-lg leading-snug">
-                  {features[active]?.title}
-                </p>
-                <p className="text-[#636366] text-sm mt-2 leading-relaxed">
-                  {features[active]?.desc}
-                </p>
-              </div>
-
-              {/* Step indicators */}
-              <div className="flex gap-2">
-                {features.map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setActive(i)}
-                    className={[
-                      "h-1.5 rounded-full transition-all duration-300",
-                      i === active ? "w-8 bg-[#0077A8]" : "w-1.5 bg-[#E5E5E5]",
-                    ].join(" ")}
-                    aria-label={`Pilih fitur ${i + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Soft glow */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full bg-[#00d4ff]/6 blur-3xl pointer-events-none" />
-          </div>
-
-        </div>
+      <div className="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2">
+        {FEATURES.map((f, i) => {
+          const Icon = f.icon;
+          return (
+            <Reveal key={f.title} delay={(i % 2) * 0.06}>
+              <article className="flex gap-4">
+                <span className="flex h-11 w-11 flex-none items-center justify-center rounded-[var(--radius-md)] border border-[rgba(0,119,168,0.15)] bg-[var(--surface-accent-soft)] text-[var(--brand-cyan-strong)]">
+                  <Icon size={20} strokeWidth={1.75} aria-hidden="true" />
+                </span>
+                <div>
+                  <h3 className="font-display text-lg font-bold tracking-tight text-[var(--text-primary)]">
+                    {f.title}
+                  </h3>
+                  <p className="mt-1.5 text-[15px] leading-relaxed text-[var(--text-secondary)]">{f.body}</p>
+                </div>
+              </article>
+            </Reveal>
+          );
+        })}
       </div>
-    </section>
+    </Section>
   );
 }

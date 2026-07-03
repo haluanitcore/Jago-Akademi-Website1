@@ -20,9 +20,9 @@ export default function ECoursePage() {
   return (
     <>
       <ECourseHero />
-      <ECourseTestimonials />
       <ECourseFeatures />
       <ECourseCatalog />
+      <ECourseTestimonials />
     </>
   );
 }
