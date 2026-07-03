@@ -43,16 +43,18 @@ TASK-000 → 001 → 002 → (003 ∥ 004 ∥ 011) → (012 ∥ 013) → [QUALIT
 - [x] **Phase 1 STABILIZE** — TASK-001..004 ✅ (commit+tag, 52 type errors fixed, deps pinned, CI). Build+typecheck+lint green.
 - [x] **Phase 2 QUALITY GATE** — TASK-010..013 ✅ (coverage gate enforced, error-envelope migration, lms.ts split to 7 modules, security P1 CSP/HSTS/RBAC). **267/267 tests**, both builds green. Next.js audit = accepted risk (BL-15).
 - [x] **Phase 3 INFRA (code)** — TASK-020..023 ✅ code complete: deploy config+CD+runbooks, DB baseline migration+indexes+backup, BullMQ queue+worker, observability (Sentry/pino/requestId//ready). **281/281 tests**. 🖐️ Host execution (deploy, `migrate deploy`) awaits reviewer.
-- [x] **Phase 4 prep** — TASK-030 verification matrix authored (`docs/INTEGRATION_VERIFICATION.md`). 🖐️ Execution needs live host + sandbox money.
+- [x] **Phase 4 prep** — TASK-030 non-payment integrations verified (email/WA degrade-safe, DOKU webhook signature+idempotency, Meilisearch live). Matrix `docs/INTEGRATION_VERIFICATION.md`. 🖐️ Live payment (uang nyata) DEFERRED.
+- [x] **EPIC 8 — Pre-launch content integrity** — TASK-052..055 ✅ (hapus data fiktif, feature-flag gating, auth flow fix). BL-35 CSS-outage fix ✅ (`d8e4dba`).
+- [x] **Release consolidation (3 Jul 2026)** — `main` di-fast-forward dari integration branch `chore/deploy-hardening` + fold SSOT v2.2.0. **main = superset linear semua feature branch** (lihat TD-35). ⚠️ **Deploy HARUS dari `main` terkonsolidasi** — bukan `task/*`/branch lama (yang tak punya fix BL-35). **main belum di-push** (menunggu konfirmasi reviewer).
 - [ ] 🚀 **Soft Launch (10B)** → Phase 5–6 → Public Launch (10C) → Scale (10D) — after host deploy + live verification (human-gated)
 
 ### 🖐️ Awaiting reviewer (human-gated, SSOT §9.6)
-1. Deploy to host + DNS/SSL — `docs/RUNBOOK_DEPLOY.md`
-2. `prisma migrate deploy` + backup cron + restore drill — `docs/RUNBOOK_DB.md`
-3. Set `SENTRY_DSN` + uptime/alert monitors — `docs/RUNBOOK_INCIDENT.md`
-4. Run live integration matrix (DOKU sandbox→prod) — `docs/INTEGRATION_VERIFICATION.md`
-5. Soft Launch Go/No-Go (Playbook 10B)
-6. Push branches when ready (nothing pushed yet)
+1. **Push `main` terkonsolidasi** (belum di-push) — lalu rebuild web `--no-cache` + redeploy dari `main` (fix BL-35) — `docs/RUNBOOK_DEPLOY.md` §5.1
+2. Deploy to host + DNS/SSL — `docs/RUNBOOK_DEPLOY.md`
+3. `prisma migrate deploy` + backup cron + restore drill — `docs/RUNBOOK_DB.md`
+4. Set `SENTRY_DSN` + uptime/alert monitors — `docs/RUNBOOK_INCIDENT.md`
+5. Run live integration matrix (DOKU sandbox→prod) — `docs/INTEGRATION_VERIFICATION.md`
+6. Soft Launch Go/No-Go (Playbook 10B)
 
 ## Perintah Cepat
 

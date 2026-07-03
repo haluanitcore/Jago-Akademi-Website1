@@ -1,6 +1,8 @@
 # RUNBOOK — Production Deployment (TASK-020)
 
 > Eksekusi runbook ini adalah **aksi human-gated** (SSOT §9.6): butuh kredensial host, DNS, dan SSL milik Anda. Claude Code menyiapkan seluruh config; Anda (atau operator) menjalankan langkah bertanda 🖐️. Setelah first-deploy sukses, deploy rutin berjalan otomatis via `.github/workflows/deploy.yml` (dengan approval gate GitHub Environment).
+>
+> **⚠️ Sumber image yang benar (TD-35):** Build/deploy HARUS dari **`main` terkonsolidasi** (superset linear hasil ff dari integration branch `chore/deploy-hardening`). **JANGAN** deploy dari `task/*` atau `main` kuno — hanya `main` terkonsolidasi yang memuat fix BL-35 (CSS). Deploy dari branch lain = UI berantakan (regresi BL-35).
 
 ## Arsitektur runtime
 

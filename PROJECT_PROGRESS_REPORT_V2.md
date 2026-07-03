@@ -350,6 +350,11 @@ jago-akademi-monorepo/
 
 > **Alasan tidak pindah ke Nest/Fastify:** rework besar tanpa ROI pra-launch. Express + layering modular sudah cukup. Tandai sebagai "revisit post-scale".
 
+> **⚠️ Realita struktur saat ini (3 Jul 2026 — drift D1, audit `docs/AUDIT_REPORT.md`):** Diagram di atas adalah **target**. Kondisi nyata `apps/`:
+> - **`apps/web`** (Next.js 16) + **`apps/api`** (Express+Prisma) = dua app nyata & aktif.
+> - **Worker** BullMQ **belum jadi `apps/worker` terpisah** — dijalankan sebagai **proses `apps/api` mode worker** (entrypoint worker di `apps/api/src`), sesuai opsi "apps/api worker mode" (GAP-06). `apps/worker` tetap rencana, belum ada direktori.
+> - **`apps/admin`, `apps/lms`, `apps/trainer` = 3 stub `create-next-app` MATI** (≈23 file boilerplate/app, tak tersentuh sejak commit awal). Fungsi admin/LMS/trainer sebenarnya ada di dalam `apps/web` (`app/admin` 11 hlm, `app/lms`, `app/trainer-hub`). **Dijadwalkan dihapus** (LANGKAH cleanup; lihat BACKLOG BL-01). Jangan jadikan acuan arsitektur.
+
 ### 3.2 Layered / Modular Architecture (Backend)
 
 **CHANGE → Terapkan 3 lapis ringan konsisten di semua modul:**
@@ -647,6 +652,7 @@ Phase 1 STABILIZE ─→ Phase 2 QUALITY GATE ─→ Phase 3 INFRA & PLATFORM �
 - **Expected Output:** Codebase terbukti buildable.
 
 #### TASK-003 · Pin dependency exact + compatibility matrix
+- **⚠️ Status (3 Jul 2026 — drift D4):** **BELUM TUNTAS untuk `apps/web`.** `apps/api` sudah pin-exact, tetapi `apps/web/package.json` masih memuat ~18 range caret (`next: ^16.2.10`, Radix `^`, dll) → build web non-reproducible. Sisa pekerjaan di-track sebagai bagian LANGKAH cleanup (pin exact `apps/web` + commit lockfile). Jangan anggap TASK-003 selesai penuh sampai `apps/web` bebas caret.
 - **Objective:** Netralkan risiko bleeding-edge (GAP-03/CRIT-06).
 - **Background:** Next 16.2 + React 19.2 sangat baru.
 - **Technical Context:** `package.json` semua workspace; lockfile npm.
@@ -1274,6 +1280,7 @@ Acuan tunggal proyek: **git commit date** (objektif). Untuk dokumen manusia, gun
 | TD-32 | **BL-17 Web Sentry ditunda ke Phase 5** | API Sentry cukup untuk visibilitas launch | — |
 | TD-33 | **Hardening pra-paid (WAJIB sebelum jual berbayar):** BL-34 signature DOKU constant-time + seed fail-closed (tanpa fallback password hardcode) | Keamanan pembayaran & kredensial | Review kode payment terpisah; TASK-030/seed |
 | TD-34 | **Build frontend WAJIB meng-install devDependencies** (Tailwind = devDep, dibutuhkan saat build, bukan runtime) + **guard build-time** yang menggagalkan build bila utility CSS hilang | Cegah ulang BL-35 (CSS produksi kosong karena `npm ci` di Alpine default `NODE_ENV=production` men-skip devDeps → `@tailwindcss/postcss` tak jalan) | `apps/web/Dockerfile`: `npm ci --include=dev` + grep `.flex{` pasca-build → exit 1 bila absen |
+| TD-35 | **Konsolidasi rilis: `main` = sumber rilis tunggal.** `chore/deploy-hardening` berperan sebagai **integration branch** (superset linear semua feature branch) **sampai di-fast-forward ke `main`**. Deploy produksi HARUS dari `main` terkonsolidasi, bukan feature branch. (drift D3) | Hilangkan "hidden correct branch" — sebelumnya fix BL-35 hanya ada di `chore/deploy-hardening` sehingga deploy dari `task/030`/`main` kuno = UI rusak | ff `main` ← `chore/deploy-hardening` + cherry-pick doc branch; branch protection + CI hijau di `main` sebelum deploy |
 
 **Accepted risks (Soft Launch NON-PAID):** storage disk-lokal (TD-30), job inline tanpa Redis (TD-31), web Sentry off (TD-32). Semua punya gate/penyelesaian sebelum Public Launch/berbayar.
 
