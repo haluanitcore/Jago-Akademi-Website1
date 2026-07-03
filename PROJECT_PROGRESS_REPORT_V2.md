@@ -1273,6 +1273,7 @@ Acuan tunggal proyek: **git commit date** (objektif). Untuk dokumen manusia, gun
 | TD-31 | **Job inline untuk Soft Launch; Redis sebelum Public Launch** | Volume awal rendah; kode queue sudah ada | Set `REDIS_URL` di host pra-Public-Launch |
 | TD-32 | **BL-17 Web Sentry ditunda ke Phase 5** | API Sentry cukup untuk visibilitas launch | — |
 | TD-33 | **Hardening pra-paid (WAJIB sebelum jual berbayar):** BL-34 signature DOKU constant-time + seed fail-closed (tanpa fallback password hardcode) | Keamanan pembayaran & kredensial | Review kode payment terpisah; TASK-030/seed |
+| TD-34 | **Build frontend WAJIB meng-install devDependencies** (Tailwind = devDep, dibutuhkan saat build, bukan runtime) + **guard build-time** yang menggagalkan build bila utility CSS hilang | Cegah ulang BL-35 (CSS produksi kosong karena `npm ci` di Alpine default `NODE_ENV=production` men-skip devDeps → `@tailwindcss/postcss` tak jalan) | `apps/web/Dockerfile`: `npm ci --include=dev` + grep `.flex{` pasca-build → exit 1 bila absen |
 
 **Accepted risks (Soft Launch NON-PAID):** storage disk-lokal (TD-30), job inline tanpa Redis (TD-31), web Sentry off (TD-32). Semua punya gate/penyelesaian sebelum Public Launch/berbayar.
 
