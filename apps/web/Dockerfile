@@ -10,9 +10,13 @@ COPY apps/web/package.json ./apps/web/
 COPY apps/api/package.json ./apps/api/
 COPY packages/ ./packages/
 
-# NODE_ENV=development ensures devDependencies (tailwindcss, etc.) are installed
-# node:22-alpine sets NODE_ENV=production by default which skips devDeps
-RUN NODE_ENV=development npm ci
+# node:22-alpine sets NODE_ENV=production by default, which makes `npm ci` omit
+# devDependencies. Tailwind (tailwindcss, @tailwindcss/postcss, @tailwindcss/
+# typography) lives in devDependencies and is required AT BUILD TIME — without it
+# @import "tailwindcss" is never processed and the site ships with zero utility
+# classes (the BL-35 production CSS outage). --include=dev forces devDeps in
+# regardless of NODE_ENV; the explicit env keeps intent obvious.
+RUN NODE_ENV=development npm ci --include=dev
 
 # ─── Build ────────────────────────────────────────────────────────────────────
 FROM base AS builder
@@ -36,6 +40,22 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # Run from root using npm workspace flag — npm sets correct PATH for workspace binaries
 RUN npm run build -w apps/web
+
+# Build-time guard (BL-35): the production CSS outage was silent — devDeps were
+# skipped, @tailwindcss/postcss never ran, and the build happily emitted CSS with
+# no utility classes (~18KB, no .flex/.grid/.mx-auto), collapsing every layout.
+# Fail the build LOUDLY if Tailwind utilities are absent so a broken bundle can
+# never reach production unnoticed again.
+RUN set -e; \
+    css_files=$(find apps/web/.next/static -name '*.css' 2>/dev/null); \
+    test -n "$css_files" || { echo 'FATAL(BL-35): build emitted no CSS at all'; exit 1; }; \
+    grep -qE '\.flex\{' $css_files || { \
+      echo 'FATAL(BL-35): Tailwind utilities missing from build output.'; \
+      echo '  Cause: @tailwindcss/postcss did not run — devDependencies not installed at build time.'; \
+      echo '  Fix:   ensure `npm ci --include=dev` (deps stage) installs tailwindcss + @tailwindcss/postcss.'; \
+      exit 1; \
+    }; \
+    echo 'OK(BL-35): Tailwind utilities present in build output.'
 
 # ─── Production image ─────────────────────────────────────────────────────────
 FROM base AS runner

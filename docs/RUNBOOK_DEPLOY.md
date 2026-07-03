@@ -112,6 +112,38 @@ curl -fsSI https://jagoakademi.com | head -5            # 200 + security headers
 ```
 SSL rating: https://www.ssllabs.com/ssltest/ → target A.
 
+## 5.1 🖐️ Hotfix rebuild — CSS/Tailwind kosong (BL-35)
+
+Gejala: situs tampil berantakan / tanpa styling. Akar penyebab: image web lama
+dibangun tanpa devDependencies (Tailwind), sehingga `@tailwindcss/postcss` tidak
+jalan dan CSS hasil build tidak punya utility class. Fix ada di `apps/web/Dockerfile`
+(`npm ci --include=dev` + guard build-time). **Rebuild image web dari nol** (bukan
+cache lama):
+
+```bash
+cd /opt/jago-akademi
+git pull                                                  # ambil Dockerfile terbaru (fix BL-35)
+docker compose -f docker-compose.prod.yml build --no-cache web
+# ↑ Guard build-time akan MENGGAGALKAN build bila utility Tailwind tetap hilang
+#   (cari baris "OK(BL-35): Tailwind utilities present" = sukses; "FATAL(BL-35)" = masih rusak).
+docker compose -f docker-compose.prod.yml up -d --wait web
+```
+
+### Verifikasi pasca-deploy (bukti sukses — host-independent, bisa dari mana saja)
+```bash
+# 1. Ambil URL file CSS yang di-link homepage
+CSS=$(curl -fsS https://jagoakademi.com | grep -oE '/_next/static/[^"]*\.css' | head -1)
+# 2. Header + ukuran: harus 200, text/css, dan JAUH lebih besar dari 18KB (build benar ≈ 100KB+)
+curl -sSI "https://jagoakademi.com${CSS}" | grep -iE 'HTTP|content-type|content-length'
+# 3. Utility HARUS ada sekarang (sebelumnya MISSING):
+curl -fsS "https://jagoakademi.com${CSS}" | grep -oE '\.flex\{|\.mx-auto|\.grid-cols-1' | sort -u
+# 4. Direktif Tailwind mentah TIDAK boleh muncul lagi (dulu bocor = plugin tak jalan):
+curl -fsS "https://jagoakademi.com${CSS}" | grep -c '@config\|@plugin'   # harus 0
+```
+Sukses = CSS 200 `text/css`, ukuran ~100KB+, `.flex{`/`.mx-auto`/`.grid-cols-1` muncul, `@config`/`@plugin` = 0, dan homepage tampil ber-styling di browser.
+
+> Catatan: rebuild ini juga akan menaikkan kode terbaru yang sudah di-merge (mis. EPIC 8 menghapus data fiktif). Situs live saat ini masih kode pra-EPIC-8.
+
 ## 6. 🖐️ GitHub — aktifkan CD
 
 Repo → Settings:
