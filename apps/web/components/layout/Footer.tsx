@@ -12,15 +12,11 @@ const footerLinks = {
   ],
   Program: [
     { label: "Trainer Program", href: "/trainer-program" },
-    { label: "Paket LMS", href: "/lms" },
+    { label: "Paket LMS", href: "/clients" },
     { label: "Kolaborasi", href: "/kolaborasi" },
-    { label: "Program Afiliasi", href: "/afiliasi" },
   ],
   Perusahaan: [
-    { label: "Tentang Kami", href: "/tentang-kami" },
-    { label: "Klien Kami", href: "/klien" },
-    { label: "Event Sebelumnya", href: "/event-sebelumnya" },
-    { label: "Hubungi Kami", href: "/hubungi-kami" },
+    { label: "Tentang Kami", href: "/about" },
     { label: "FAQ", href: "/faq" },
   ],
 };
