@@ -1,15 +1,23 @@
 import { HeroSection } from "@/components/home/HeroSection";
-import { ProductsSection } from "@/components/home/ProductsSection";
-import { TestimonialsSection } from "@/components/home/TestimonialsSection";
-import { CTASection } from "@/components/home/CTASection";
+import { CategoryGrid } from "@/components/home/CategoryGrid";
+import { PillarsSection } from "@/components/home/PillarsSection";
+import { ECourseSpotlight } from "@/components/home/ECourseSpotlight";
+import { EarlyAccessBand } from "@/components/home/EarlyAccessBand";
 
+/**
+ * Homepage (design refresh, Jul 2026) — varied editorial rhythm:
+ * asymmetric hero → unit grid (sunken) → 3 pillars → flagship split
+ * (sunken) → dark closing band. No fabricated data anywhere; social
+ * proof is intentionally OMITTED until real testimonials/partners exist.
+ */
 export default function HomePage() {
   return (
     <>
       <HeroSection />
-      <ProductsSection />
-      <TestimonialsSection />
-      <CTASection />
+      <CategoryGrid />
+      <PillarsSection />
+      <ECourseSpotlight />
+      <EarlyAccessBand />
     </>
   );
 }

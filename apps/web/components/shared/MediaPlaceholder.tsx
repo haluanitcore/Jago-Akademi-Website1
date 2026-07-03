@@ -47,7 +47,7 @@ export function MediaPlaceholder({ type, ratio, label, showRatio = true, classNa
         <svg
           aria-hidden="true"
           viewBox="0 0 24 24"
-          className="h-[22%] max-h-14 min-h-6 w-auto text-[var(--border-strong)]"
+          className="h-[22%] max-h-14 min-h-6 w-auto text-[var(--text-muted)] opacity-45"
           fill="none"
           stroke="currentColor"
           strokeWidth="1.4"
