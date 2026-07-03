@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getDashboard, type DashboardData } from "../../lib/api/enrollment";
+import { MediaPlaceholder } from "@/components/shared/MediaPlaceholder";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -105,7 +106,7 @@ export default function DashboardPage() {
                         className="w-full h-36 object-cover"
                       />
                     ) : (
-                      <div className="w-full h-36 bg-gradient-to-br from-[#0077A8] to-[#CC0052]" />
+                      <MediaPlaceholder type="foto" ratio="16:9" showRatio={false} className="!rounded-none !border-x-0 !border-t-0" />
                     )}
                     <div className="p-4 space-y-3">
                       <div>
