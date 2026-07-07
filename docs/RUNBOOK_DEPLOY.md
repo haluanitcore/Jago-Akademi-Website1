@@ -71,7 +71,10 @@ EMAIL_FROM_NAME=Jago Akademi
 MEILISEARCH_KEY=<random-32>
 # Observability (TASK-023)
 SENTRY_DSN=
+# Analytics (TASK-041) — build-time inlined into the web image; leave blank to disable.
+# After changing either, rebuild web: docker compose -f docker-compose.vps.yml build --no-cache web
 NEXT_PUBLIC_GA_ID=
+NEXT_PUBLIC_MIXPANEL_TOKEN=
 ```
 
 `chmod 600 .env`. Generator rahasia: `openssl rand -base64 48`.
@@ -151,7 +154,7 @@ Sukses = CSS 200 `text/css`, ukuran ~100KB+, `.flex{`/`.mx-auto`/`.grid-cols-1` 
 Repo → Settings:
 1. **Environments → New: `production`** → centang *Required reviewers* (Anda) → ini gate approval tiap deploy.
 2. **Secrets and variables → Actions → Secrets**: `DEPLOY_HOST` (IP), `DEPLOY_USER`, `DEPLOY_SSH_KEY` (private key), `DEPLOY_PATH` (`/opt/jago-akademi`).
-3. **Variables**: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GA_ID`.
+3. **Variables**: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_MIXPANEL_TOKEN`.
 
 ## 7. Deploy rutin (otomatis, human-approved)
 
