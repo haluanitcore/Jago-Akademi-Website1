@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Inter } from "next/font/google";
+import { Analytics } from "@/components/analytics/Analytics";
 import "./globals.css";
 
 const jakartaSans = Plus_Jakarta_Sans({
@@ -86,6 +87,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen antialiased">
+        <Analytics />
         {children}
       </body>
     </html>

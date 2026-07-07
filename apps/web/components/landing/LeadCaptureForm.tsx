@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { track, AnalyticsEvent } from "@/lib/analytics";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -47,6 +48,7 @@ export function LeadCaptureForm({ source, withCompany = false, submitLabel = "Ki
         setError(json.error?.message ?? "Gagal mengirim. Coba lagi.");
         return;
       }
+      track(AnalyticsEvent.LEAD_SUBMIT, { source });
       setDone(true);
     } catch {
       setError("Tidak dapat terhubung ke server. Coba lagi.");

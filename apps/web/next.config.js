@@ -46,10 +46,12 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              // Analytics (TASK-041): GA (googletagmanager) + Mixpanel (mxpnl) script origins.
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://cdn.mxpnl.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
+              // Analytics beacons: GA collect + Mixpanel API.
               "connect-src 'self' https:",
               "frame-ancestors 'none'",
               "base-uri 'self'",
