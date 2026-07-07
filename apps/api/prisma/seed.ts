@@ -222,7 +222,7 @@ async function main() {
       type: "online", status: "published",
       startDate: new Date(now.getTime() + 7 * 86400000),
       endDate: new Date(now.getTime() + 7 * 86400000 + 7200000),
-      location: "Zoom Webinar", isOnline: true, isPaid: false, price: 0,
+      location: "Zoom Webinar", price: 0,
       quota: 500, isFeatured: true,
     },
     {
@@ -231,7 +231,7 @@ async function main() {
       type: "offline", status: "published",
       startDate: new Date(now.getTime() + 14 * 86400000),
       endDate: new Date(now.getTime() + 14 * 86400000 + 28800000),
-      location: "Co-working Space Jakarta Selatan", isOnline: false, isPaid: true, price: 350000,
+      location: "Co-working Space Jakarta Selatan", price: 350000,
       quota: 30, isFeatured: false,
     },
     {
@@ -240,7 +240,7 @@ async function main() {
       type: "hybrid", status: "published",
       startDate: new Date(now.getTime() + 21 * 86400000),
       endDate: new Date(now.getTime() + 21 * 86400000 + 14400000),
-      location: "Jakarta Convention Center", isOnline: true, isPaid: true, price: 150000,
+      location: "Jakarta Convention Center", price: 150000,
       quota: 1000, isFeatured: true,
     },
     {
@@ -249,7 +249,7 @@ async function main() {
       type: "online", status: "draft",
       startDate: new Date(now.getTime() + 30 * 86400000),
       endDate: new Date(now.getTime() + 31 * 86400000),
-      location: "Live Streaming YouTube", isOnline: true, isPaid: true, price: 500000,
+      location: "Live Streaming YouTube", price: 500000,
       quota: 200, isFeatured: false,
     },
   ];
@@ -265,12 +265,12 @@ async function main() {
 
   // ─── E-Books ───────────────────────────────────────────────────────────────
   const ebooks = [
-    { slug: "panduan-digital-marketing-2024", title: "Panduan Digital Marketing 2024", category: "Marketing", isFree: true, price: 0, status: "published" },
-    { slug: "desain-logo-profesional", title: "Desain Logo Profesional dengan Canva", category: "Desain", isFree: true, price: 0, status: "published" },
-    { slug: "seo-guide-indonesia", title: "SEO Guide for Indonesian Business", category: "Marketing", isFree: false, price: 79000, status: "published" },
-    { slug: "financial-planning-freelancer", title: "Financial Planning untuk Freelancer", category: "Keuangan", isFree: false, price: 99000, status: "published" },
-    { slug: "react-best-practices", title: "React Best Practices 2024", category: "Teknologi", isFree: false, price: 129000, status: "published" },
-    { slug: "hr-playbook-startup", title: "HR Playbook untuk Startup Indonesia", category: "HR", isFree: true, price: 0, status: "published" },
+    { slug: "panduan-digital-marketing-2024", title: "Panduan Digital Marketing 2024", category: "Marketing", price: 0, status: "published" },
+    { slug: "desain-logo-profesional", title: "Desain Logo Profesional dengan Canva", category: "Desain", price: 0, status: "published" },
+    { slug: "seo-guide-indonesia", title: "SEO Guide for Indonesian Business", category: "Marketing", price: 79000, status: "published" },
+    { slug: "financial-planning-freelancer", title: "Financial Planning untuk Freelancer", category: "Keuangan", price: 99000, status: "published" },
+    { slug: "react-best-practices", title: "React Best Practices 2024", category: "Teknologi", price: 129000, status: "published" },
+    { slug: "hr-playbook-startup", title: "HR Playbook untuk Startup Indonesia", category: "HR", price: 0, status: "published" },
   ];
 
   for (const ebook of ebooks) {
