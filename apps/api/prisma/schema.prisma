@@ -9,34 +9,34 @@ generator client {
 }
 
 model User {
-  id                   String    @id @default(uuid())
-  email                String    @unique
-  passwordHash         String?
-  name                 String
-  avatarUrl            String?
-  isVerified           Boolean   @default(false)
-  isActive             Boolean   @default(true)
-  authProvider         String    @default("email")
-  lastLoginAt          DateTime?
+  id                  String    @id @default(uuid())
+  email               String    @unique
+  passwordHash        String?
+  name                String
+  avatarUrl           String?
+  isVerified          Boolean   @default(false)
+  isActive            Boolean   @default(true)
+  authProvider        String    @default("email")
+  lastLoginAt         DateTime?
   // PDP compliance
-  deletedAt            DateTime?
-  consentGivenAt       DateTime?
+  deletedAt           DateTime?
+  consentGivenAt      DateTime?
   // Email verification
-  emailVerifyToken     String?
-  emailVerifyExpiry    DateTime?
+  emailVerifyToken    String?
+  emailVerifyExpiry   DateTime?
   // Password reset
-  resetPasswordToken   String?
-  resetPasswordExpiry  DateTime?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  resetPasswordToken  String?
+  resetPasswordExpiry DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  profile         UserProfile?
-  roles           UserRole[]
-  refreshTokens   RefreshToken[]
-  courses         Course[]              @relation("TrainerCourses")
-  enrollments     CourseEnrollment[]
-  orders          Order[]
-  certificates    Certificate[]
+  profile            UserProfile?
+  roles              UserRole[]
+  refreshTokens      RefreshToken[]
+  courses            Course[]              @relation("TrainerCourses")
+  enrollments        CourseEnrollment[]
+  orders             Order[]
+  certificates       Certificate[]
   affiliate          Affiliate?
   referred           AffiliateCommission[] @relation("ReferredUserRelation")
   quizSubmissions    QuizSubmission[]
@@ -74,17 +74,17 @@ model RefreshToken {
 
 // Immutable audit trail — no updatedAt, no FK on actorId (preserved after user erasure)
 model AuditLog {
-  id          String   @id @default(uuid())
-  actorId     String?
-  actorEmail  String?
-  action      String
-  resource    String
-  resourceId  String?
-  oldValue    Json?
-  newValue    Json?
-  ip          String?
-  userAgent   String?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  actorId    String?
+  actorEmail String?
+  action     String
+  resource   String
+  resourceId String?
+  oldValue   Json?
+  newValue   Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
 
   @@index([actorId])
   @@index([resource, resourceId])
@@ -132,36 +132,36 @@ model CourseCategory {
 }
 
 model Course {
-  id            String          @id @default(uuid())
-  slug          String          @unique
+  id            String    @id @default(uuid())
+  slug          String    @unique
   title         String
-  description   String?         @db.Text
+  description   String?   @db.Text
   shortDesc     String?
-  price         Decimal         @default(0.00) @db.Decimal(12, 2)
-  salePrice     Decimal?        @db.Decimal(12, 2)
-  status        String          @default("draft")
+  price         Decimal   @default(0.00) @db.Decimal(12, 2)
+  salePrice     Decimal?  @db.Decimal(12, 2)
+  status        String    @default("draft")
   trainerId     String
   categoryId    String?
   level         String?
-  language      String          @default("id")
+  language      String    @default("id")
   thumbnailUrl  String?
   previewVideo  String?
-  totalDuration Int             @default(0)
-  totalLessons  Int             @default(0)
-  totalEnrolled Int             @default(0)
-  avgRating     Decimal         @default(0.00) @db.Decimal(3, 2)
-  totalReviews  Int             @default(0)
-  isFeatured    Boolean         @default(false)
+  totalDuration Int       @default(0)
+  totalLessons  Int       @default(0)
+  totalEnrolled Int       @default(0)
+  avgRating     Decimal   @default(0.00) @db.Decimal(3, 2)
+  totalReviews  Int       @default(0)
+  isFeatured    Boolean   @default(false)
   metaTitle     String?
-  metaDesc      String?         @db.Text
+  metaDesc      String?   @db.Text
   publishedAt   DateTime?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  category    CourseCategory?    @relation(fields: [categoryId], references: [id])
-  trainer     User               @relation("TrainerCourses", fields: [trainerId], references: [id])
-  sections    CourseSection[]
-  enrollments CourseEnrollment[]
+  category     CourseCategory?    @relation(fields: [categoryId], references: [id])
+  trainer      User               @relation("TrainerCourses", fields: [trainerId], references: [id])
+  sections     CourseSection[]
+  enrollments  CourseEnrollment[]
   certificates Certificate[]
 
   @@map("courses")
@@ -191,7 +191,7 @@ model CourseLesson {
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
 
-  section  CourseSection            @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  section  CourseSection          @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   progress CourseLessonProgress[]
   quiz     Quiz?
 
@@ -199,10 +199,10 @@ model CourseLesson {
 }
 
 model Quiz {
-  id        String         @id @default(uuid())
-  lessonId  String         @unique
-  passMark  Int            @default(70)
-  createdAt DateTime       @default(now())
+  id        String   @id @default(uuid())
+  lessonId  String   @unique
+  passMark  Int      @default(70)
+  createdAt DateTime @default(now())
 
   lesson    CourseLesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   questions QuizQuestion[]
@@ -211,12 +211,12 @@ model Quiz {
 }
 
 model QuizQuestion {
-  id        String   @id @default(uuid())
+  id        String @id @default(uuid())
   quizId    String
-  question  String   @db.Text
+  question  String @db.Text
   options   Json
   answer    Int
-  sortOrder Int      @default(0)
+  sortOrder Int    @default(0)
 
   quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
 
@@ -240,15 +240,15 @@ model QuizSubmission {
 }
 
 model CourseEnrollment {
-  id           String                 @id @default(uuid())
-  courseId     String
-  userId       String
-  orderId      String?
-  progressPct  Decimal                @default(0.00) @db.Decimal(5, 2)
-  isCompleted  Boolean                @default(false)
-  completedAt  DateTime?
-  enrolledAt   DateTime               @default(now())
-  progress     CourseLessonProgress[]
+  id          String                 @id @default(uuid())
+  courseId    String
+  userId      String
+  orderId     String?
+  progressPct Decimal                @default(0.00) @db.Decimal(5, 2)
+  isCompleted Boolean                @default(false)
+  completedAt DateTime?
+  enrolledAt  DateTime               @default(now())
+  progress    CourseLessonProgress[]
 
   course Course @relation(fields: [courseId], references: [id])
   user   User   @relation(fields: [userId], references: [id])
@@ -275,23 +275,23 @@ model CourseLessonProgress {
 }
 
 model Order {
-  id             String      @id @default(uuid())
+  id             String    @id @default(uuid())
   userId         String
-  totalAmount    Decimal     @db.Decimal(12, 2)
-  discountAmount Decimal     @default(0.00) @db.Decimal(12, 2)
-  finalAmount    Decimal     @db.Decimal(12, 2)
-  status         String      @default("pending")
+  totalAmount    Decimal   @db.Decimal(12, 2)
+  discountAmount Decimal   @default(0.00) @db.Decimal(12, 2)
+  finalAmount    Decimal   @db.Decimal(12, 2)
+  status         String    @default("pending")
   paymentMethod  String?
   couponId       String?
   referralCode   String?
   paidAt         DateTime?
   expiredAt      DateTime?
-  notes          String?     @db.Text
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  notes          String?   @db.Text
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  user         User                 @relation(fields: [userId], references: [id])
-  coupon       Coupon?              @relation(fields: [couponId], references: [id])
+  user         User                  @relation(fields: [userId], references: [id])
+  coupon       Coupon?               @relation(fields: [couponId], references: [id])
   items        OrderItem[]
   transactions PaymentTransaction[]
   commissions  AffiliateCommission[]
@@ -356,19 +356,19 @@ model Certificate {
 }
 
 model Coupon {
-  id           String    @id @default(uuid())
-  code         String    @unique
-  type         String    // "percentage" | "fixed"
-  value        Decimal   @db.Decimal(12, 2)
-  maxDiscount  Decimal?  @db.Decimal(12, 2)
-  minPurchase  Decimal   @default(0) @db.Decimal(12, 2)
-  usageLimit   Int?
-  usageCount   Int       @default(0)
-  startDate    DateTime?
-  endDate      DateTime?
-  isActive     Boolean   @default(true)
-  description  String?
-  createdAt    DateTime  @default(now())
+  id          String    @id @default(uuid())
+  code        String    @unique
+  type        String // "percentage" | "fixed"
+  value       Decimal   @db.Decimal(12, 2)
+  maxDiscount Decimal?  @db.Decimal(12, 2)
+  minPurchase Decimal   @default(0) @db.Decimal(12, 2)
+  usageLimit  Int?
+  usageCount  Int       @default(0)
+  startDate   DateTime?
+  endDate     DateTime?
+  isActive    Boolean   @default(true)
+  description String?
+  createdAt   DateTime  @default(now())
 
   orders Order[]
 
@@ -557,9 +557,9 @@ model LmsEnrollment {
   enrolledAt  DateTime  @default(now())
   completedAt DateTime?
 
-  tenant      LmsTenant        @relation(fields: [tenantId], references: [id])
-  course      LmsCourse        @relation(fields: [courseId], references: [id])
-  user        User             @relation(fields: [userId], references: [id])
+  tenant      LmsTenant       @relation(fields: [tenantId], references: [id])
+  course      LmsCourse       @relation(fields: [courseId], references: [id])
+  user        User            @relation(fields: [userId], references: [id])
   progress    LmsProgress[]
   certificate LmsCertificate?
 
@@ -701,9 +701,9 @@ model TrainerPayout {
 model Review {
   id        String   @id @default(uuid())
   userId    String
-  itemType  String   // course | event | ebook
+  itemType  String // course | event | ebook
   itemId    String
-  rating    Int      // 1–5
+  rating    Int // 1–5
   content   String?  @db.Text
   status    String   @default("published") // published | hidden
   createdAt DateTime @default(now())
@@ -759,7 +759,7 @@ model AffiliateWithdrawal {
 model Subscription {
   id        String   @id @default(uuid())
   userId    String   @unique
-  planType  String   // monthly | annual
+  planType  String // monthly | annual
   status    String   @default("active") // active | cancelled | expired
   startedAt DateTime @default(now())
   expiresAt DateTime
@@ -768,4 +768,24 @@ model Subscription {
   user User @relation(fields: [userId], references: [id])
 
   @@map("subscriptions")
+}
+
+// ─── Phase 5: Lead capture (TASK-040) ─────────────────────────────────────────
+
+model Lead {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String?
+  company   String?
+  message   String?  @db.Text
+  // Which landing/funnel produced the lead — affiliate | lms | trainer | free-class | other
+  source    String   @default("other")
+  status    String   @default("new") // new | contacted | qualified | converted | archived
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([source, status])
+  @@index([email])
+  @@map("leads")
 }

@@ -1,13 +1,26 @@
 /** @type {import('next').NextConfig} */
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const nextConfig = {
   // Self-contained server build for the Docker runner image (TASK-020).
   // apps/web/Dockerfile copies .next/standalone — without this the image build fails.
   output: "standalone",
 
+  // Turbopack needs the monorepo root in workspaces (Next.js 16+).
+  turbopack: {
+    root: resolve(__dirname, "../.."),
+  },
+
   async redirects() {
     return [
       { source: "/kursus", destination: "/e-course", permanent: true },
       { source: "/kursus/:path*", destination: "/e-course/:path*", permanent: true },
+      // /lms index → the B2B LMS landing (/clients). The /lms/* namespace is the
+      // multi-tenant LMS app, so only the exact /lms path redirects.
+      { source: "/lms", destination: "/clients", permanent: false },
     ];
   },
 
