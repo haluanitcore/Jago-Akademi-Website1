@@ -789,3 +789,25 @@ model Lead {
   @@index([email])
   @@map("leads")
 }
+
+// ─── Phase 5: Testimonial engine (TASK-095) ───────────────────────────────────
+
+model Testimonial {
+  id        String   @id @default(uuid())
+  name      String
+  role      String
+  company   String?
+  quote     String   @db.Text
+  rating    Int? // 1..5, optional
+  photoUrl  String?
+  // Moderation lifecycle — only `approved` are shown publicly.
+  status    String   @default("pending") // pending | approved | rejected
+  // Optional link to the submitting user (consent/audit).
+  userId    String?
+  featured  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, featured])
+  @@map("testimonials")
+}

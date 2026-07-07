@@ -2,6 +2,7 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
 import { PillarsSection } from "@/components/home/PillarsSection";
 import { ECourseSpotlight } from "@/components/home/ECourseSpotlight";
+import { TestimonialsSection } from "@/components/home/TestimonialsSection";
 import { EarlyAccessBand } from "@/components/home/EarlyAccessBand";
 
 /**
@@ -17,6 +18,7 @@ export default function HomePage() {
       <CategoryGrid />
       <PillarsSection />
       <ECourseSpotlight />
+      <TestimonialsSection />
       <EarlyAccessBand />
     </>
   );
