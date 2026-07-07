@@ -1,0 +1,11 @@
+# Jago Akademi — automated Postgres backup (TASK-021).
+# Install on host:  sudo cp deploy/jago-backup.cron /etc/cron.d/jago-backup
+# Requires: docker compose stack up; (optional) rclone remote "r2" for offsite.
+#
+# Set R2_REMOTE to enable offsite copy to Cloudflare R2, e.g. r2:jago-backups
+# Daily at 02:15 server time. Logs to /var/log/jago-backup.log.
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+15 2 * * * root COMPOSE_DIR=/var/www/jago-akademi R2_REMOTE= /var/www/jago-akademi/scripts/backup.sh >> /var/log/jago-backup.log 2>&1

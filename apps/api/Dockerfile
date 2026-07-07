@@ -9,7 +9,11 @@ COPY package.json package-lock.json* ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/ ./packages/
 
-RUN npm ci --workspace=apps/api
+# node:22-alpine defaults NODE_ENV=production → npm ci omits devDependencies.
+# The API needs prisma CLI (migrate/generate) and tsx (seed) at build AND for
+# one-off `docker compose run` ops on the host, so force devDeps in
+# (same class of fix as BL-35 for the web image).
+RUN npm ci --include=dev
 
 # ─── Build ────────────────────────────────────────────────────────────────────
 FROM base AS builder
