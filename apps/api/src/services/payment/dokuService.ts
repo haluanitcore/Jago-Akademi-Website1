@@ -1,5 +1,18 @@
-import { createHmac, createHash } from "node:crypto";
+import { createHmac, createHash, timingSafeEqual } from "node:crypto";
 import { env } from "../../config/env.js";
+
+/**
+ * Constant-time string comparison (BL-34). Prevents a timing side-channel on
+ * webhook signature verification. Compares the raw UTF-8 bytes; unequal lengths
+ * short-circuit to false (DOKU signatures are fixed-length base64 HMAC-SHA256,
+ * so length is not secret).
+ */
+function safeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, "utf8");
+  const bufB = Buffer.from(b, "utf8");
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
 
 const SANDBOX_URL = "https://api-sandbox.doku.com";
 const PRODUCTION_URL = "https://api.doku.com";
@@ -99,6 +112,7 @@ export function verifyDokuWebhook(
   receivedSignature: string
 ): boolean {
   if (!env.DOKU_SECRET_KEY) return true; // dev mode: trust all
+  if (!receivedSignature) return false;
   const expected = sign(clientId, requestId, timestamp, rawBody, env.DOKU_SECRET_KEY);
-  return expected === receivedSignature;
+  return safeEqual(expected, receivedSignature);
 }
