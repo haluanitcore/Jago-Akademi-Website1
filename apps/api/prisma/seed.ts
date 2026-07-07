@@ -12,10 +12,60 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { Meilisearch } from "meilisearch";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
 
 const prisma = new PrismaClient();
+
+/**
+ * Best-effort Meilisearch sync (TASK-021). The seed writes courses straight to
+ * Postgres via upsert, bypassing the publish flow that normally fires the
+ * search-index job — so without this the catalog exists in the DB but returns
+ * nothing from /api/search. Reads MEILISEARCH_* from process.env directly (no
+ * env.ts coupling) and never throws: Meilisearch is optional.
+ */
+async function syncSearchIndex() {
+  const host = process.env.MEILISEARCH_URL;
+  if (!host) {
+    console.log("↷ MEILISEARCH_URL unset — skipping search index sync");
+    return;
+  }
+  try {
+    const client = new Meilisearch({ host, apiKey: process.env.MEILISEARCH_KEY });
+    const index = client.index("courses");
+    await index.updateSearchableAttributes(["title", "shortDesc", "description", "categoryName"]);
+    await index.updateFilterableAttributes(["status", "categoryName", "level", "isFeatured"]);
+    await index.updateSortableAttributes(["price", "avgRating", "totalEnrolled"]);
+
+    const courses = await prisma.course.findMany({
+      where: { status: "published" },
+      include: { category: { select: { name: true } } },
+    });
+    if (courses.length > 0) {
+      await index.addDocuments(
+        courses.map((c) => ({
+          id: c.id,
+          slug: c.slug,
+          title: c.title,
+          shortDesc: c.shortDesc ?? "",
+          description: c.description ?? "",
+          status: c.status,
+          categoryName: c.category?.name ?? "",
+          level: c.level ?? "",
+          price: Number(c.price),
+          thumbnailUrl: c.thumbnailUrl ?? "",
+          avgRating: Number(c.avgRating),
+          totalEnrolled: c.totalEnrolled,
+          isFeatured: c.isFeatured,
+        })),
+      );
+    }
+    console.log(`✓ search index synced (${courses.length} courses)`);
+  } catch (err) {
+    console.warn(`↷ search index sync skipped: ${String(err)}`);
+  }
+}
 
 async function main() {
   console.log("🌱 Seeding Jago Akademi production data...");
@@ -272,6 +322,8 @@ async function main() {
     });
   }
   console.log(`✓ ${blogPosts.length} blog posts seeded`);
+
+  await syncSearchIndex();
 
   console.log("\n✅ Seeding complete!");
   console.log(`   Admin email: ${adminEmail} (password = your SEED_ADMIN_PASSWORD)`);
