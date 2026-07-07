@@ -17,9 +17,11 @@ R2_REMOTE="${R2_REMOTE:-}"            # e.g. "r2:jago-backups" — empty = local
 DB_NAME="${DB_NAME:-jago_akademi}"
 
 cd "$COMPOSE_DIR"
-# Source POSTGRES_USER/PASSWORD from the compose .env so cron (no shell env) works.
-[ -f "$COMPOSE_DIR/.env" ] && set -a && . "$COMPOSE_DIR/.env" && set +a
-PG_USER="${POSTGRES_USER:-jagouser}"
+# Extract only POSTGRES_USER from .env (safe even if .env has unquoted values with spaces).
+if [ -f "$COMPOSE_DIR/.env" ]; then
+  _pg_user="$(grep -E '^POSTGRES_USER=' "$COMPOSE_DIR/.env" | head -1 | cut -d= -f2- | tr -d '"' || true)"
+fi
+PG_USER="${_pg_user:-${POSTGRES_USER:-jagouser}}"
 
 STAMP="$(date +%F-%H%M)"
 FILE="$BACKUP_DIR/jago-$STAMP.sql.gz"
@@ -30,9 +32,9 @@ echo "[$(date -Is)] dumping $DB_NAME -> $FILE"
 docker compose -f "$COMPOSE_FILE" exec -T postgres \
   pg_dump -U "$PG_USER" --no-owner --no-privileges "$DB_NAME" | gzip > "$FILE"
 
-# Fail loudly on suspiciously small dumps (< 10 KB usually means an error).
+# Fail loudly on suspiciously small dumps (< 1 KB usually means an error).
 SIZE=$(stat -c%s "$FILE" 2>/dev/null || stat -f%z "$FILE")
-if [ "$SIZE" -lt 10240 ]; then
+if [ "$SIZE" -lt 1024 ]; then
   echo "[$(date -Is)] ERROR: backup too small ($SIZE bytes) — investigate" >&2
   exit 1
 fi

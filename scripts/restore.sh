@@ -14,8 +14,11 @@ SCRATCH="${SCRATCH_DB:-jago_restore_test}"
 MIN_TABLES="${MIN_TABLES:-40}"
 
 cd "$COMPOSE_DIR"
-[ -f "$COMPOSE_DIR/.env" ] && set -a && . "$COMPOSE_DIR/.env" && set +a
-PG_USER="${POSTGRES_USER:-jagouser}"
+# Extract only POSTGRES_USER from .env (safe even if .env has unquoted values with spaces).
+if [ -f "$COMPOSE_DIR/.env" ]; then
+  _pg_user="$(grep -E '^POSTGRES_USER=' "$COMPOSE_DIR/.env" | head -1 | cut -d= -f2- | tr -d '"' || true)"
+fi
+PG_USER="${_pg_user:-${POSTGRES_USER:-jagouser}}"
 
 LATEST="${1:-$(ls -t "$BACKUP_DIR"/jago-*.sql.gz 2>/dev/null | head -1 || true)}"
 [ -n "$LATEST" ] || { echo "No backup found in $BACKUP_DIR" >&2; exit 1; }
