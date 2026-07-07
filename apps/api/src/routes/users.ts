@@ -115,4 +115,69 @@ router.delete(
   },
 );
 
+// GET /api/users/me/export — PDP right to data access/portability (BL-18).
+// Returns a downloadable JSON bundle of everything we hold about the caller.
+router.get(
+  "/me/export",
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id, email } = req.user!;
+
+      const [user, orders, courseEnrollments, lmsEnrollments, activityLog] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id },
+          include: { profile: true, roles: { select: { role: true } } },
+        }),
+        prisma.order.findMany({ where: { userId: id }, include: { items: true } }),
+        prisma.courseEnrollment.findMany({ where: { userId: id } }),
+        prisma.lmsEnrollment.findMany({ where: { userId: id } }),
+        prisma.auditLog.findMany({
+          where: { actorId: id },
+          orderBy: { createdAt: "desc" },
+          take: 500,
+        }),
+      ]);
+
+      // Strip internal secrets/tokens — a data export must never leak them.
+      const safeUser: Record<string, unknown> = { ...(user ?? {}) };
+      for (const secret of [
+        "passwordHash",
+        "emailVerifyToken",
+        "emailVerifyExpiry",
+        "resetPasswordToken",
+        "resetPasswordExpiry",
+      ]) {
+        delete safeUser[secret];
+      }
+
+      const bundle = {
+        exportedAt: new Date().toISOString(),
+        subject: { id, email },
+        account: safeUser,
+        orders,
+        courseEnrollments,
+        lmsEnrollments,
+        activityLog,
+      };
+
+      await writeAudit({
+        actorId: id,
+        actorEmail: email,
+        action: "USER_DATA_EXPORT",
+        resource: "User",
+        resourceId: id,
+        ip: (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ?? req.ip ?? "",
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.setHeader("Content-Disposition", `attachment; filename="jago-data-${id}.json"`);
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.status(200).send(JSON.stringify(successResponse(bundle), null, 2));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 export default router;
