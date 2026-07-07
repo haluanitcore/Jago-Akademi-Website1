@@ -7,18 +7,21 @@
 #   (defaults to the newest backup in $BACKUP_DIR)
 set -euo pipefail
 
-COMPOSE_DIR="${COMPOSE_DIR:-/opt/jago-akademi}"
-BACKUP_DIR="${BACKUP_DIR:-/opt/jago-akademi/backups}"
-PG_USER="${POSTGRES_USER:-jagouser}"
+COMPOSE_DIR="${COMPOSE_DIR:-/var/www/jago-akademi}"
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.vps.yml}"
+BACKUP_DIR="${BACKUP_DIR:-$COMPOSE_DIR/backups}"
 SCRATCH="${SCRATCH_DB:-jago_restore_test}"
 MIN_TABLES="${MIN_TABLES:-40}"
 
 cd "$COMPOSE_DIR"
+[ -f "$COMPOSE_DIR/.env" ] && set -a && . "$COMPOSE_DIR/.env" && set +a
+PG_USER="${POSTGRES_USER:-jagouser}"
+
 LATEST="${1:-$(ls -t "$BACKUP_DIR"/jago-*.sql.gz 2>/dev/null | head -1 || true)}"
 [ -n "$LATEST" ] || { echo "No backup found in $BACKUP_DIR" >&2; exit 1; }
 echo "[$(date -Is)] restore drill from: $LATEST"
 
-DC=(docker compose -f docker-compose.prod.yml exec -T postgres)
+DC=(docker compose -f "$COMPOSE_FILE" exec -T postgres)
 
 cleanup() { "${DC[@]}" psql -U "$PG_USER" -d postgres -c "DROP DATABASE IF EXISTS $SCRATCH;" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
