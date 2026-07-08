@@ -4,6 +4,13 @@
 >
 > **⚠️ Sumber image yang benar (TD-35):** Build/deploy HARUS dari **`main` terkonsolidasi** (superset linear hasil ff dari integration branch `chore/deploy-hardening`). **JANGAN** deploy dari `task/*` atau `main` kuno — hanya `main` terkonsolidasi yang memuat fix BL-35 (CSS). Deploy dari branch lain = UI berantakan (regresi BL-35).
 
+> **✅ Kondisi live aktual (terverifikasi 8 Jul 2026)** — realita di host berbeda dari desain awal di bawah:
+> - **Path:** `/var/www/jago-akademi` (bukan direktori lain).
+> - **Compose file live:** `docker-compose.vps.yml` (**bukan** `docker-compose.prod.yml`). Section §5.1 sudah memakai file ini; section lain yang masih menulis `docker-compose.prod.yml` merujuk desain awal (nginx-in-Docker + GHCR/CD) yang belum dipakai.
+> - **Reverse proxy:** **nginx level-host** (systemd, di luar Docker) meng-handle TLS + proxy ke container. **Tidak ada Cloudflare / CDN** di depan domain → tidak ada cache CDN yang perlu di-purge; recreate container = langsung live.
+> - **Stack berjalan:** `web` (`:3010→3000`), `api` (`:4010→4000`), `postgres`, `meilisearch`. (redis/BullMQ & CD GitHub Actions belum di-deploy; repo belum punya secret CD.)
+> - **Deploy rutin manual (proven):** `cd /var/www/jago-akademi && git pull --ff-only origin main && docker compose -f docker-compose.vps.yml build --no-cache web && docker compose -f docker-compose.vps.yml up -d --force-recreate web`.
+
 ## Arsitektur runtime
 
 ```
@@ -36,14 +43,14 @@ Verifikasi: `dig +short jagoakademi.com api.jagoakademi.com`
 ## 2. 🖐️ Bootstrap direktori & kode
 
 ```bash
-sudo mkdir -p /opt/jago-akademi /var/www/certbot && sudo chown -R $USER /opt/jago-akademi
-cd /opt/jago-akademi
+sudo mkdir -p /var/www/jago-akademi /var/www/certbot && sudo chown -R $USER /var/www/jago-akademi
+cd /var/www/jago-akademi
 git clone <REPO_URL> . && git checkout <release-tag-atau-branch>
 ```
 
 ## 3. 🖐️ Environment produksi
 
-Buat `/opt/jago-akademi/.env` (dibaca docker compose; **jangan** commit):
+Buat `/var/www/jago-akademi/.env` (dibaca docker compose; **jangan** commit):
 
 ```bash
 # Database
@@ -96,14 +103,14 @@ Sertifikat → `/etc/letsencrypt/live/jagoakademi.com/` (path yang dipakai `ngin
 
 ```bash
 sudo tee /etc/cron.d/certbot-renew <<'EOF'
-0 3 * * * root certbot renew --webroot -w /var/www/certbot --deploy-hook "docker compose -f /opt/jago-akademi/docker-compose.prod.yml exec nginx nginx -s reload" >> /var/log/certbot-renew.log 2>&1
+0 3 * * * root certbot renew --webroot -w /var/www/certbot --deploy-hook "docker compose -f /var/www/jago-akademi/docker-compose.prod.yml exec nginx nginx -s reload" >> /var/log/certbot-renew.log 2>&1
 EOF
 ```
 
 ## 5. 🖐️ First deploy (build di host)
 
 ```bash
-cd /opt/jago-akademi
+cd /var/www/jago-akademi
 docker compose -f docker-compose.prod.yml build        # ± beberapa menit
 docker compose -f docker-compose.prod.yml run --rm api npx prisma migrate deploy   # migrations ter-commit (TASK-021); DB lama hasil `db push` → baseline dulu, lihat RUNBOOK_DB.md §1
 docker compose -f docker-compose.prod.yml up -d --wait
@@ -126,12 +133,12 @@ jalan dan CSS hasil build tidak punya utility class. Fix ada di `apps/web/Docker
 cache lama):
 
 ```bash
-cd /opt/jago-akademi
-git pull                                                  # ambil Dockerfile terbaru (fix BL-35)
-docker compose -f docker-compose.prod.yml build --no-cache web
+cd /var/www/jago-akademi
+git pull --ff-only origin main                            # ambil kode terbaru dari main
+docker compose -f docker-compose.vps.yml build --no-cache web
 # ↑ Guard build-time akan MENGGAGALKAN build bila utility Tailwind tetap hilang
 #   (cari baris "OK(BL-35): Tailwind utilities present" = sukses; "FATAL(BL-35)" = masih rusak).
-docker compose -f docker-compose.prod.yml up -d --wait web
+docker compose -f docker-compose.vps.yml up -d --force-recreate web
 ```
 
 ### Verifikasi pasca-deploy (bukti sukses — host-independent, bisa dari mana saja)
@@ -147,13 +154,13 @@ curl -fsS "https://jagoakademi.com${CSS}" | grep -c '@config\|@plugin'   # harus
 ```
 Sukses = CSS 200 `text/css`, ukuran ~100KB+, `.flex{`/`.mx-auto`/`.grid-cols-1` muncul, `@config`/`@plugin` = 0, dan homepage tampil ber-styling di browser.
 
-> Catatan: rebuild ini juga akan menaikkan kode terbaru yang sudah di-merge (mis. EPIC 8 menghapus data fiktif). Situs live saat ini masih kode pra-EPIC-8.
+> Catatan: rebuild ini adalah jalur deploy rutin manual yang dipakai saat ini (terverifikasi 8 Jul 2026, deploy fix QA C-1/H-1/M-1 dari `main @ 581fb5f`).
 
 ## 6. 🖐️ GitHub — aktifkan CD
 
 Repo → Settings:
 1. **Environments → New: `production`** → centang *Required reviewers* (Anda) → ini gate approval tiap deploy.
-2. **Secrets and variables → Actions → Secrets**: `DEPLOY_HOST` (IP), `DEPLOY_USER`, `DEPLOY_SSH_KEY` (private key), `DEPLOY_PATH` (`/opt/jago-akademi`).
+2. **Secrets and variables → Actions → Secrets**: `DEPLOY_HOST` (IP), `DEPLOY_USER`, `DEPLOY_SSH_KEY` (private key), `DEPLOY_PATH` (`/var/www/jago-akademi`).
 3. **Variables**: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_MIXPANEL_TOKEN`.
 
 ## 7. Deploy rutin (otomatis, human-approved)
@@ -168,7 +175,7 @@ Pipeline: build+push GHCR → **tunggu approval** environment `production` → S
 Versi sebelumnya tercatat di `.last-deploy-api|web`:
 
 ```bash
-cd /opt/jago-akademi
+cd /var/www/jago-akademi
 export API_IMAGE=ghcr.io/<org>/<repo>/api:<versi-sebelumnya>
 export WEB_IMAGE=ghcr.io/<org>/<repo>/web:<versi-sebelumnya>
 docker compose -f docker-compose.prod.yml -f docker-compose.registry.yml up -d --wait
