@@ -20,12 +20,17 @@ async function fetchDynamicPages(): Promise<MetadataRoute.Sitemap> {
   const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
   const pages: MetadataRoute.Sitemap = [];
 
+  // Hard timeout so `next build` never stalls generating the sitemap when the API
+  // is slow or unreachable — each fetch rejects fast and Promise.allSettled lets
+  // us fall back to the static-only sitemap (QA/CD build hang).
+  const opts = { next: { revalidate: 3600 }, signal: AbortSignal.timeout(8000) };
+
   try {
     const [coursesRes, eventsRes, ebooksRes, blogRes] = await Promise.allSettled([
-      fetch(`${API}/api/courses?limit=200&status=published`, { next: { revalidate: 3600 } }),
-      fetch(`${API}/api/events?limit=100`, { next: { revalidate: 3600 } }),
-      fetch(`${API}/api/ebooks?limit=200`, { next: { revalidate: 3600 } }),
-      fetch(`${API}/api/blog?limit=200`, { next: { revalidate: 3600 } }),
+      fetch(`${API}/api/courses?limit=200&status=published`, opts),
+      fetch(`${API}/api/events?limit=100`, opts),
+      fetch(`${API}/api/ebooks?limit=200`, opts),
+      fetch(`${API}/api/blog?limit=200`, opts),
     ]);
 
     if (coursesRes.status === "fulfilled" && coursesRes.value.ok) {

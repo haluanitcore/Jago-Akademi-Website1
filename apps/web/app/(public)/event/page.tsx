@@ -27,7 +27,10 @@ type Event = {
 
 async function getEvents(): Promise<{ data: Event[]; meta: { total: number } }> {
   try {
-    const res = await fetch(`${API}/api/events?limit=24`, { next: { revalidate: 300 } });
+    const res = await fetch(`${API}/api/events?limit=24`, {
+      next: { revalidate: 300 },
+      signal: AbortSignal.timeout(8000), // fail fast so build never hangs on a slow/unreachable API
+    });
     const body = await res.json();
     return body.success ? body : { data: [], meta: { total: 0 } };
   } catch {
