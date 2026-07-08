@@ -19,7 +19,11 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_BASE: ghcr.io/${{ github.repository }}
+  # GHCR / Docker require the image repository name to be all-lowercase. The
+  # GitHub repo slug (haluanitcore/Jago-Akademi-Website1) has uppercase letters
+  # and a workflow-level `env:` cannot run a lowercasing expression, so pin the
+  # lowercased path here. Keep in sync if the repo is ever renamed.
+  IMAGE_BASE: ghcr.io/haluanitcore/jago-akademi-website1
 
 jobs:
   build-push:
