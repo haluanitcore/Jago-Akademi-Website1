@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
-import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata: Metadata = {
-  title: { default: "Jago Akademi", template: "%s | Jago Akademi" },
-};
+// No `title` metadata here on purpose: each auth page sets its own title and the
+// root layout's `%s | Jago Akademi` template wraps it exactly once. Declaring a
+// bare `title.default: "Jago Akademi"` here caused the root template to double it
+// into "Jago Akademi | Jago Akademi" (QA M-1).
 
 /**
  * Auth shell (design refresh, Jul 2026) — centered editorial card on the

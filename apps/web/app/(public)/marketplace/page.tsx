@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ComingSoon } from "@/components/shared/ComingSoon";
 
 export const metadata: Metadata = {
-  title: "Marketplace Materi | Jago Akademi",
+  title: "Marketplace Materi",
   description: "Marketplace rekaman & modul pasca-event Jago Akademi — segera hadir.",
 };
 

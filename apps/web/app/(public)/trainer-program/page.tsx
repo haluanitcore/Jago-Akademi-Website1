@@ -3,7 +3,7 @@ import { GraduationCap, BadgeCheck, Presentation, Wallet, Users, Rocket } from "
 import { LandingTemplate } from "@/components/landing/LandingTemplate";
 
 export const metadata: Metadata = {
-  title: "Trainer Program — Jadi Trainer Bersertifikat | Jago Akademi",
+  title: "Trainer Program — Jadi Trainer Bersertifikat",
   description:
     "Jadilah trainer profesional bersertifikat bersama Jago Akademi: kembangkan personal brand, ajar audiens luas, dan hasilkan pendapatan. Daftar minat sekarang.",
   alternates: { canonical: "/trainer-program" },

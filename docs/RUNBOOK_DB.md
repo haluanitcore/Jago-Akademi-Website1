@@ -77,11 +77,13 @@ ssh -N -L 5433:localhost:5432 user@VPS &   # tunnel
 cd apps/api
 DATABASE_URL="postgresql://jagouser:<pw>@localhost:5433/jago_akademi" \
 SEED_ADMIN_EMAIL="admin@jagoakademi.com" \
-SEED_ADMIN_PASSWORD="<STRONG — WAJIB set, jangan pakai default!>" \
+SEED_ADMIN_PASSWORD="<STRONG — min 12 char, WAJIB set>" \
 npx tsx prisma/seed.ts
 ```
 
-⚠️ `seed.ts` punya default password lemah (`Admin@2024!`) — **selalu** set `SEED_ADMIN_PASSWORD` di produksi.
+✅ **Fail-closed (TD-33 / QA H-2):** `seed.ts` **tidak** punya default password. Jika `SEED_ADMIN_PASSWORD` kosong atau < 12 karakter, seed **berhenti** (`process.exit(1)`) tanpa membuat admin — jadi mustahil men-deploy admin ber-password lemah/hardcode. Akun trainer demo memakai password acak (`randomBytes(24)`) yang tak bisa di-login sampai admin me-reset. Set `SEED_ADMIN_PASSWORD` yang kuat sebelum menjalankan.
+
+> Verifikasi cepat fail-closed sebelum jalan: menjalankan seed **tanpa** `SEED_ADMIN_PASSWORD` harus keluar dengan pesan `FATAL: SEED_ADMIN_PASSWORD env var is required`. Baru kemudian ulangi dengan password kuat.
 
 ## Validation Checklist (TASK-021)
 

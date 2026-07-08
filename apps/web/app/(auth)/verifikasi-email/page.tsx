@@ -1,5 +1,8 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import VerifyEmailPanel from "./VerifyEmailPanel";
+
+export const metadata: Metadata = { title: "Verifikasi Email" };
 
 export default function VerifikasiEmailPage() {
   return (

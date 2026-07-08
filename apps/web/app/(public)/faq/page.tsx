@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import FaqAccordion from "./FaqAccordion";
 
 export const metadata: Metadata = {
-  title: "FAQ — Pertanyaan Umum | Jago Akademi",
+  title: "FAQ — Pertanyaan Umum",
   description:
     "Temukan jawaban atas pertanyaan umum seputar Jago Akademi — cara beli kursus, sertifikat, pembayaran, refund, dan lainnya.",
 };

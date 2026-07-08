@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Syarat & Ketentuan | Jago Akademi",
+  title: "Syarat & Ketentuan",
   description: "Syarat dan ketentuan penggunaan layanan Jago Akademi.",
 };
 
