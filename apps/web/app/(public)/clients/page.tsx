@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Paket LMS untuk Perusahaan | Jago Akademi",
+  title: "Paket LMS untuk Perusahaan",
   description:
     "Digitalkan program pelatihan dan pengembangan SDM perusahaan Anda dengan LMS B2B Jago Akademi — kelola batch, tugaskan kursus, dan pantau progres karyawan.",
 };

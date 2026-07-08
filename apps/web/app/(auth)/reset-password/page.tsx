@@ -1,5 +1,8 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import ResetPasswordForm from "./ResetPasswordForm";
+
+export const metadata: Metadata = { title: "Reset Kata Sandi" };
 
 export default function ResetPasswordPage() {
   return (

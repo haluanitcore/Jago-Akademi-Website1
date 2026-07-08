@@ -32,9 +32,9 @@ export async function generateMetadata({
   params: { certId: string };
 }): Promise<Metadata> {
   const cert = await getCertificate(params.certId);
-  if (!cert) return { title: "Sertifikat Tidak Ditemukan | Jago Akademi" };
+  if (!cert) return { title: "Sertifikat Tidak Ditemukan" };
   return {
-    title: `Sertifikat ${cert.holderName} | Jago Akademi`,
+    title: `Sertifikat ${cert.holderName}`,
     description: `Verifikasi keaslian sertifikat ${cert.type} atas nama ${cert.holderName}`,
   };
 }

@@ -3,7 +3,7 @@ import { Gift, PlayCircle, FileText, BadgeCheck, Clock, Sparkles } from "lucide-
 import { LandingTemplate } from "@/components/landing/LandingTemplate";
 
 export const metadata: Metadata = {
-  title: "Kelas Gratis — Mulai Belajar Tanpa Biaya | Jago Akademi",
+  title: "Kelas Gratis — Mulai Belajar Tanpa Biaya",
   description:
     "Akses kelas gratis Jago Akademi sebagai langkah pertama upgrade skill-mu. Daftar sekarang, dapatkan akses materi pengantar, dan lanjutkan ke jenjang berikutnya.",
   alternates: { canonical: "/kelas-gratis" },

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ContactForm from "./ContactForm";
 
 export const metadata: Metadata = {
-  title: "Hubungi Kami | Jago Akademi",
+  title: "Hubungi Kami",
   description:
     "Ada pertanyaan atau ingin berkolaborasi? Hubungi tim Jago Akademi melalui form, email, atau WhatsApp.",
 };

@@ -39,21 +39,21 @@ export function LandingTemplate({
       <section className="border-b border-[var(--border-subtle)] bg-white">
         <div className="container-pad grid grid-cols-1 items-start gap-12 py-16 md:py-20 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-7">
-            <Reveal>
+            <Reveal immediate>
               <p className="eyebrow mb-5">{eyebrow}</p>
             </Reveal>
-            <Reveal delay={0.06}>
+            <Reveal immediate delay={0.06}>
               <h1 className="font-display text-4xl font-extrabold leading-[1.1] tracking-tight text-[var(--text-primary)] text-balance md:text-5xl">
                 {title}
               </h1>
             </Reveal>
-            <Reveal delay={0.12}>
+            <Reveal immediate delay={0.12}>
               <p className="mt-5 max-w-lg text-base leading-relaxed text-[var(--text-secondary)] md:text-lg">{lede}</p>
             </Reveal>
           </div>
 
           <div className="lg:col-span-5">
-            <Reveal delay={0.15}>
+            <Reveal immediate delay={0.15}>
               <p className="mb-1 font-display text-lg font-bold text-[var(--text-primary)]">{formTitle}</p>
               <p className="mb-4 text-sm text-[var(--text-secondary)]">{formLede}</p>
               <LeadCaptureForm source={formSource} withCompany={withCompany} submitLabel={submitLabel} />

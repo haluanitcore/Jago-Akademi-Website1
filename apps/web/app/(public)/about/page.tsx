@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Tentang Kami | Jago Akademi",
+  title: "Tentang Kami",
   description:
     "Jago Akademi adalah platform edukasi digital yang mengintegrasikan e-course, event, e-book, dan program trainer dalam satu ekosistem belajar.",
 };

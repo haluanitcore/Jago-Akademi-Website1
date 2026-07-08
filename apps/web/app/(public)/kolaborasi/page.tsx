@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ComingSoon } from "@/components/shared/ComingSoon";
 
 export const metadata: Metadata = {
-  title: "Kolaborasi | Jago Akademi",
+  title: "Kolaborasi",
   description: "Peluang kolaborasi kreator, komunitas, dan mitra dengan Jago Akademi — segera hadir.",
 };
 

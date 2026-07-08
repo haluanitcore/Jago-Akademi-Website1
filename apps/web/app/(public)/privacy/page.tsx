@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Kebijakan Privasi | Jago Akademi",
+  title: "Kebijakan Privasi",
   description: "Kebijakan privasi Jago Akademi — bagaimana kami mengumpulkan, menggunakan, dan melindungi data pribadi Anda sesuai UU PDP.",
 };
 

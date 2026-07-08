@@ -19,21 +19,21 @@ export function ECourseHero() {
       <div className="container-pad grid grid-cols-1 items-center gap-12 py-16 md:py-20 lg:grid-cols-12 lg:gap-8">
         {/* Copy */}
         <div className="lg:col-span-6">
-          <Reveal>
+          <Reveal immediate>
             <p className="eyebrow mb-5">E-Learning</p>
           </Reveal>
-          <Reveal delay={0.06}>
+          <Reveal immediate delay={0.06}>
             <h1 className="font-display text-4xl font-extrabold leading-[1.1] tracking-tight text-[var(--text-primary)] text-balance md:text-5xl">
               Kuasai skill baru, <span className="text-accent">bawa buktinya</span>
             </h1>
           </Reveal>
-          <Reveal delay={0.12}>
+          <Reveal immediate delay={0.12}>
             <p className="mt-5 max-w-md text-base leading-relaxed text-[var(--text-secondary)] md:text-lg">
               Akses materi sekali bayar. Selesaikan dengan praktik, dan bawa
               sertifikat resmi ber-QR ke dunia kerja.
             </p>
           </Reveal>
-          <Reveal delay={0.18}>
+          <Reveal immediate delay={0.18}>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link href="/daftar" className="btn btn-primary btn-lg">
                 Mulai Belajar
@@ -44,7 +44,7 @@ export function ECourseHero() {
               </Link>
             </div>
           </Reveal>
-          <Reveal delay={0.24}>
+          <Reveal immediate delay={0.24}>
             <div className="mt-8 flex flex-wrap gap-2">
               {categories.map((cat) => (
                 <span
@@ -59,7 +59,7 @@ export function ECourseHero() {
         </div>
 
         {/* Visual */}
-        <Reveal delay={0.15} className="lg:col-span-6">
+        <Reveal immediate delay={0.15} className="lg:col-span-6">
           <div className="relative mx-auto max-w-xl lg:ml-auto">
             <MediaPlaceholder
               type="video"

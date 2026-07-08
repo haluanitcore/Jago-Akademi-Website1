@@ -15,11 +15,11 @@ export function HeroSection() {
       <div className="container-pad relative grid grid-cols-1 items-center gap-12 py-16 md:py-24 lg:grid-cols-12 lg:gap-8">
         {/* Left — copy */}
         <div className="lg:col-span-6 xl:col-span-6">
-          <Reveal>
+          <Reveal immediate>
             <p className="eyebrow mb-5">Platform edukasi digital</p>
           </Reveal>
 
-          <Reveal delay={0.06}>
+          <Reveal immediate delay={0.06}>
             <h1 className="font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-[var(--text-primary)] text-balance md:text-5xl xl:text-6xl">
               Belajar. Berlatih.
               <br />
@@ -27,14 +27,14 @@ export function HeroSection() {
             </h1>
           </Reveal>
 
-          <Reveal delay={0.12}>
+          <Reveal immediate delay={0.12}>
             <p className="mt-6 max-w-md text-base leading-relaxed text-[var(--text-secondary)] md:text-lg">
               Kursus online, event, dan LMS perusahaan dalam satu platform —
               dengan sertifikat resmi yang bisa diverifikasi publik.
             </p>
           </Reveal>
 
-          <Reveal delay={0.18}>
+          <Reveal immediate delay={0.18}>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link href="/daftar" className="btn btn-primary btn-lg">
                 Mulai Belajar
@@ -48,7 +48,7 @@ export function HeroSection() {
         </div>
 
         {/* Right — layered honest visual */}
-        <Reveal delay={0.15} className="lg:col-span-6 xl:col-span-6">
+        <Reveal immediate delay={0.15} className="lg:col-span-6 xl:col-span-6">
           <div className="relative mx-auto max-w-xl lg:ml-auto">
             <MediaPlaceholder
               type="video"

@@ -5,7 +5,7 @@ import { ECourseFeatures } from "@/components/e-course/ECourseFeatures";
 import { ECourseCatalog } from "@/components/e-course/ECourseCatalog";
 
 export const metadata: Metadata = {
-  title: "E-Course — Skill Profesional & Bersertifikat | Jago Akademi",
+  title: "E-Course — Skill Profesional & Bersertifikat",
   description:
     "Kuasai skill profesional dengan akses materi sekali bayar. Belajar fleksibel, dapatkan sertifikat resmi, dan buka peluang karier bersama Jago Akademi.",
   openGraph: {
