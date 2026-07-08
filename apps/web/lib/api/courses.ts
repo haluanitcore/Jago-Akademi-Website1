@@ -70,7 +70,13 @@ export type CategoryItem = {
 
 async function apiFetch<T>(path: string): Promise<{ success: true; data: T } | { success: false; error: string }> {
   try {
-    const res = await fetch(`${API}${path}`, { next: { revalidate: 60 } });
+    // Hard timeout so build-time prerendering never hangs when the API is slow
+    // or unreachable — the fetch rejects fast and we fall through to the graceful
+    // empty result below instead of stalling `next build` for 60s (QA/CD build hang).
+    const res = await fetch(`${API}${path}`, {
+      next: { revalidate: 60 },
+      signal: AbortSignal.timeout(8000),
+    });
     return res.json();
   } catch {
     return { success: false, error: "Tidak dapat terhubung ke server." };

@@ -22,7 +22,10 @@ async function getEBooks(): Promise<EBook[]> {
   try {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/api/ebooks?limit=24`,
-      { next: { revalidate: 300 } }
+      {
+        next: { revalidate: 300 },
+        signal: AbortSignal.timeout(8000), // fail fast so build never hangs on a slow/unreachable API
+      }
     );
     const data = await res.json();
     return data.success ? data.data : [];
