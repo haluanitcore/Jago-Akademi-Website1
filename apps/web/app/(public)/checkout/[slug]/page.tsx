@@ -1,14 +1,20 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 
-type CourseInfo = {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type ItemInfo = {
   id: string;
   title: string;
   price: number;
-  coverUrl?: string;
+  coverUrl?: string | null;
+  /** "course" | "event" */
+  itemType: "course" | "event";
+  /** Extra label shown below title */
+  subtitle?: string;
 };
 
 type CouponResult = {
@@ -16,6 +22,8 @@ type CouponResult = {
   discountAmount: number;
   finalAmount: number;
 };
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getApiBase() {
   return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -26,12 +34,28 @@ function getToken() {
   return sessionStorage.getItem("jg_token");
 }
 
-export default function CheckoutPage() {
+function formatRp(amount: number) {
+  return `Rp ${amount.toLocaleString("id-ID")}`;
+}
+
+// ─── Inner component (needs useSearchParams) ──────────────────────────────────
+
+function CheckoutContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const slug = params.slug as string;
 
-  const [course, setCourse] = useState<CourseInfo | null>(null);
+  /**
+   * type=event  → checkout mode event (itemId must be provided via query)
+   * type=course (or absent) → checkout mode course (slug is the course slug)
+   */
+  const itemType = (searchParams.get("type") ?? "course") as "course" | "event";
+  // For event checkout the UUID is passed explicitly; for course we resolve it via the API
+  const queryItemId = searchParams.get("itemId");
+
+  const [item, setItem] = useState<ItemInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [couponCode, setCouponCode] = useState("");
   const [coupon, setCoupon] = useState<CouponResult | null>(null);
@@ -40,30 +64,70 @@ export default function CheckoutPage() {
   const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState("");
 
+  // ── Fetch item data ──────────────────────────────────────────────────────────
   useEffect(() => {
     const token = getToken();
     if (!token) {
-      router.push(`/login?redirect=/checkout/${slug}`);
+      const returnPath = `/checkout/${slug}${window.location.search}`;
+      router.push(`/masuk?redirect=${encodeURIComponent(returnPath)}`);
       return;
     }
 
-    fetch(`${getApiBase()}/api/courses/${slug}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success) setCourse(data.data);
-        else setError("Kursus tidak ditemukan.");
+    async function fetchItem() {
+      try {
+        if (itemType === "event") {
+          // Fetch event by slug — we use slug in URL for readability; UUID comes via queryItemId
+          const res = await fetch(`${getApiBase()}/api/events/${slug}`, {
+            headers: { Authorization: `Bearer ${getToken()}` },
+          });
+          const data = await res.json();
+          if (data.success && data.data) {
+            const ev = data.data;
+            const price = ev.salePrice ? Number(ev.salePrice) : Number(ev.price);
+            setItem({
+              id: ev.id,
+              title: ev.title,
+              price,
+              coverUrl: ev.coverUrl,
+              itemType: "event",
+              subtitle: "Tiket event — akses sesuai tanggal pelaksanaan",
+            });
+          } else {
+            setError("Event tidak ditemukan.");
+          }
+        } else {
+          // Default: course
+          const res = await fetch(`${getApiBase()}/api/courses/${slug}`, {
+            headers: { Authorization: `Bearer ${getToken()}` },
+          });
+          const data = await res.json();
+          if (data.success && data.data) {
+            const course = data.data;
+            setItem({
+              id: course.id,
+              title: course.title,
+              price: Number(course.price),
+              coverUrl: course.coverUrl,
+              itemType: "course",
+              subtitle: "Akses seumur hidup",
+            });
+          } else {
+            setError("Kursus tidak ditemukan.");
+          }
+        }
+      } catch {
+        setError("Gagal memuat data. Coba lagi.");
+      } finally {
         setLoading(false);
-      })
-      .catch(() => {
-        setError("Gagal memuat data kursus.");
-        setLoading(false);
-      });
-  }, [slug, router]);
+      }
+    }
 
+    fetchItem();
+  }, [slug, itemType, queryItemId, router]);
+
+  // ── Coupon ───────────────────────────────────────────────────────────────────
   async function applyCoupon() {
-    if (!couponCode.trim() || !course) return;
+    if (!couponCode.trim() || !item) return;
     setValidatingCoupon(true);
     setCouponError("");
     try {
@@ -73,7 +137,7 @@ export default function CheckoutPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${getToken()}`,
         },
-        body: JSON.stringify({ code: couponCode, subtotal: course.price }),
+        body: JSON.stringify({ code: couponCode, subtotal: item.price }),
       });
       const data = await res.json();
       if (data.success) {
@@ -89,8 +153,9 @@ export default function CheckoutPage() {
     }
   }
 
+  // ── Checkout ─────────────────────────────────────────────────────────────────
   async function handleCheckout() {
-    if (!course) return;
+    if (!item) return;
     setCheckingOut(true);
     setError("");
     try {
@@ -101,13 +166,14 @@ export default function CheckoutPage() {
           Authorization: `Bearer ${getToken()}`,
         },
         body: JSON.stringify({
-          itemType: "course",
-          itemId: course.id,
+          itemType: item.itemType,
+          itemId: item.id,
           couponCode: coupon?.code,
         }),
       });
       const data = await res.json();
       if (data.success) {
+        // paymentUrl is the DOKU hosted payment page
         window.location.href = data.data.paymentUrl;
       } else {
         setError(data.error?.message ?? "Gagal memproses checkout.");
@@ -119,119 +185,254 @@ export default function CheckoutPage() {
     }
   }
 
+  // ── Design tokens per item type ───────────────────────────────────────────────
+  const accentColor  = itemType === "event" ? "#7C3AED" : "var(--brand-cyan-strong)";
+  const accentBg     = itemType === "event" ? "rgba(124,58,237,0.08)" : "var(--surface-accent-soft)";
+  const accentBorder = itemType === "event" ? "rgba(124,58,237,0.2)" : "rgba(0,119,168,0.15)";
+  const coverEmoji   = itemType === "event" ? "🎤" : "📚";
+
+  // ── Loading state ─────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <div
+        className="flex min-h-screen items-center justify-center"
+        style={{ background: "var(--surface-page)" }}
+      >
+        <div
+          className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
+          style={{ borderColor: "var(--brand-cyan-strong)", borderTopColor: "transparent" }}
+        />
       </div>
     );
   }
 
-  if (error && !course) {
+  // ── Error state (item not found) ──────────────────────────────────────────────
+  if (error && !item) {
+    const backHref = itemType === "event" ? "/event" : "/e-course";
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
-        <p className="text-red-600">{error}</p>
-        <Link href="/e-course" className="text-blue-600 underline">Kembali ke E-Course</Link>
+      <div
+        className="flex min-h-screen flex-col items-center justify-center gap-4 px-4"
+        style={{ background: "var(--surface-page)" }}
+      >
+        <div
+          className="rounded-2xl p-5 text-center"
+          style={{
+            background: "rgba(239,68,68,0.05)",
+            border: "1px solid rgba(239,68,68,0.2)",
+          }}
+        >
+          <p className="mb-3 font-semibold" style={{ color: "#B91C1C" }}>⚠️ {error}</p>
+          <Link href={backHref} className="btn btn-outline btn-sm">
+            {itemType === "event" ? "← Kembali ke Event" : "← Kembali ke E-Course"}
+          </Link>
+        </div>
       </div>
     );
   }
 
-  const finalAmount = coupon ? coupon.finalAmount : (course?.price ?? 0);
+  const finalAmount = coupon ? coupon.finalAmount : (item?.price ?? 0);
+  const priceLabel  = itemType === "event" ? "Harga tiket" : "Harga kursus";
 
+  // ── Main render ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        <h1 className="text-2xl font-bold text-gray-900 mb-8">Checkout</h1>
+    <div style={{ background: "var(--surface-page)", minHeight: "100vh" }}>
+      <div className="mx-auto max-w-4xl px-4 py-12">
 
-        <div className="grid md:grid-cols-5 gap-8">
-          {/* Order Summary */}
-          <div className="md:col-span-3 space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h2 className="font-semibold text-gray-900 mb-4">Ringkasan Pesanan</h2>
+        {/* Breadcrumb */}
+        <nav className="mb-6 flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
+          <Link
+            href={itemType === "event" ? "/event" : "/e-course"}
+            className="transition-colors hover:underline"
+            style={{ color: "var(--text-muted)" }}
+          >
+            {itemType === "event" ? "Event" : "E-Course"}
+          </Link>
+          <span aria-hidden="true" style={{ color: "var(--border-strong)" }}>/</span>
+          <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>Checkout</span>
+        </nav>
+
+        <h1
+          className="mb-8 text-2xl font-extrabold tracking-tight"
+          style={{ color: "var(--text-primary)", fontFamily: "var(--font-display)" }}
+        >
+          {itemType === "event" ? "Pembelian Tiket" : "Checkout"}
+        </h1>
+
+        <div className="grid gap-8 md:grid-cols-5">
+
+          {/* ── Left column: summary + coupon ─────────────────────────────────── */}
+          <div className="space-y-5 md:col-span-3">
+
+            {/* Item summary card */}
+            <div
+              className="rounded-2xl p-6"
+              style={{
+                background: "var(--surface-card)",
+                border: "1px solid var(--border-subtle)",
+                boxShadow: "var(--shadow-e1)",
+              }}
+            >
+              <h2 className="mb-5 font-semibold" style={{ color: "var(--text-primary)" }}>
+                Ringkasan Pesanan
+              </h2>
+
               <div className="flex gap-4">
-                <div className="w-20 h-14 bg-blue-50 rounded-lg flex-shrink-0 overflow-hidden">
-                  {course?.coverUrl ? (
-                    <img src={course.coverUrl} alt={course?.title} className="w-full h-full object-cover" />
+                {/* Thumbnail */}
+                <div
+                  className="flex h-14 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl text-2xl"
+                  style={{ background: accentBg, border: `1px solid ${accentBorder}` }}
+                >
+                  {item?.coverUrl ? (
+                    <img src={item.coverUrl} alt={item.title} className="h-full w-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-blue-300 text-2xl">📚</div>
+                    coverEmoji
                   )}
                 </div>
-                <div>
-                  <p className="font-medium text-gray-900">{course?.title}</p>
-                  <p className="text-sm text-gray-500 mt-1">Akses seumur hidup</p>
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold" style={{ color: "var(--text-primary)" }}>
+                    {item?.title}
+                  </p>
+                  <p className="mt-0.5 text-sm" style={{ color: "var(--text-muted)" }}>
+                    {item?.subtitle}
+                  </p>
+                  {/* Type badge */}
+                  <span
+                    className="badge mt-2"
+                    style={{ background: accentBg, color: accentColor, border: `1px solid ${accentBorder}` }}
+                  >
+                    {itemType === "event" ? "Event" : "E-Course"}
+                  </span>
                 </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-gray-100 space-y-2">
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>Harga kursus</span>
-                  <span>Rp {course?.price.toLocaleString("id-ID")}</span>
+              {/* Price breakdown */}
+              <div
+                className="mt-5 space-y-2.5 border-t pt-5"
+                style={{ borderColor: "var(--border-subtle)" }}
+              >
+                <div className="flex justify-between text-sm" style={{ color: "var(--text-secondary)" }}>
+                  <span>{priceLabel}</span>
+                  <span>{item ? formatRp(item.price) : "—"}</span>
                 </div>
                 {coupon && (
-                  <div className="flex justify-between text-sm text-green-600">
+                  <div className="flex justify-between text-sm" style={{ color: "#16A34A" }}>
                     <span>Diskon ({coupon.code})</span>
-                    <span>-Rp {coupon.discountAmount.toLocaleString("id-ID")}</span>
+                    <span>-{formatRp(coupon.discountAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between font-semibold text-gray-900 pt-2 border-t border-gray-100">
+                <div
+                  className="flex justify-between border-t pt-3 font-semibold"
+                  style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
+                >
                   <span>Total Pembayaran</span>
-                  <span className="text-blue-600">Rp {finalAmount.toLocaleString("id-ID")}</span>
+                  <span style={{ color: accentColor }}>{formatRp(finalAmount)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Coupon */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h2 className="font-semibold text-gray-900 mb-4">Kode Kupon</h2>
+            {/* Coupon card */}
+            <div
+              className="rounded-2xl p-6"
+              style={{
+                background: "var(--surface-card)",
+                border: "1px solid var(--border-subtle)",
+                boxShadow: "var(--shadow-e1)",
+              }}
+            >
+              <h2 className="mb-4 font-semibold" style={{ color: "var(--text-primary)" }}>
+                Kode Kupon
+              </h2>
               <div className="flex gap-2">
                 <input
+                  id="coupon-input"
                   type="text"
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                   placeholder="Masukkan kode kupon"
-                  className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input-dark flex-1"
                 />
                 <button
+                  id="coupon-apply-btn"
                   onClick={applyCoupon}
                   disabled={validatingCoupon || !couponCode.trim()}
-                  className="px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-xl disabled:opacity-50 hover:bg-gray-800 transition-colors"
+                  className="btn btn-ghost btn-sm"
+                  style={{ flexShrink: 0 }}
                 >
-                  {validatingCoupon ? "..." : "Terapkan"}
+                  {validatingCoupon ? (
+                    <span
+                      className="h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
+                      style={{ borderColor: "var(--text-muted)", borderTopColor: "transparent" }}
+                    />
+                  ) : (
+                    "Terapkan"
+                  )}
                 </button>
               </div>
-              {couponError && <p className="text-red-500 text-sm mt-2">{couponError}</p>}
+              {couponError && (
+                <p className="mt-2 text-sm" style={{ color: "#DC2626" }}>
+                  {couponError}
+                </p>
+              )}
               {coupon && (
-                <p className="text-green-600 text-sm mt-2">
-                  ✓ Kupon berhasil diterapkan! Hemat Rp {coupon.discountAmount.toLocaleString("id-ID")}
+                <p className="mt-2 text-sm font-medium" style={{ color: "#16A34A" }}>
+                  ✓ Kupon berhasil! Hemat {formatRp(coupon.discountAmount)}
                 </p>
               )}
             </div>
           </div>
 
-          {/* Payment Action */}
+          {/* ── Right column: pay action ───────────────────────────────────────── */}
           <div className="md:col-span-2">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-6">
+            <div
+              className="sticky top-6 rounded-2xl p-6"
+              style={{
+                background: "var(--surface-card)",
+                border: "1px solid var(--border-default)",
+                boxShadow: "var(--shadow-e2)",
+              }}
+            >
+              {/* Total display */}
               <div className="mb-6">
-                <p className="text-sm text-gray-500">Total yang harus dibayar</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">
-                  Rp {finalAmount.toLocaleString("id-ID")}
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  Total yang harus dibayar
+                </p>
+                <p
+                  className="mt-1 text-3xl font-extrabold tabular-nums tracking-tight"
+                  style={{ color: "var(--text-primary)", fontFamily: "var(--font-display)" }}
+                >
+                  {formatRp(finalAmount)}
                 </p>
               </div>
 
+              {/* Error */}
               {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+                <div
+                  className="mb-4 rounded-xl p-3 text-sm"
+                  style={{
+                    background: "rgba(239,68,68,0.05)",
+                    border: "1px solid rgba(239,68,68,0.2)",
+                    color: "#B91C1C",
+                  }}
+                >
                   {error}
                 </div>
               )}
 
+              {/* Pay button */}
               <button
+                id="checkout-pay-btn"
                 onClick={handleCheckout}
                 disabled={checkingOut}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                className="btn btn-primary btn-lg w-full justify-center"
+                style={{ opacity: checkingOut ? 0.7 : 1 }}
               >
                 {checkingOut ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span
+                      className="h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
+                      style={{ borderColor: "var(--text-on-accent)", borderTopColor: "transparent" }}
+                    />
                     Memproses...
                   </>
                 ) : (
@@ -239,15 +440,27 @@ export default function CheckoutPage() {
                 )}
               </button>
 
-              <p className="text-xs text-gray-400 text-center mt-4">
-                Pembayaran diproses dengan aman melalui DOKU
+              {/* Security badge */}
+              <p
+                className="mt-4 text-center text-xs"
+                style={{ color: "var(--text-muted)" }}
+              >
+                🔒 Pembayaran aman melalui DOKU
               </p>
 
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-500 text-center">
+              {/* Terms */}
+              <div
+                className="mt-4 border-t pt-4"
+                style={{ borderColor: "var(--border-subtle)" }}
+              >
+                <p className="text-center text-xs" style={{ color: "var(--text-muted)" }}>
                   Dengan melanjutkan, Anda menyetujui{" "}
-                  <Link href="/syarat" className="text-blue-600 hover:underline">
-                    Syarat & Ketentuan
+                  <Link
+                    href="/terms"
+                    className="font-semibold hover:underline"
+                    style={{ color: "var(--brand-cyan-strong)" }}
+                  >
+                    Syarat &amp; Ketentuan
                   </Link>
                 </p>
               </div>
@@ -256,5 +469,27 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Page wrapper (Suspense required for useSearchParams) ─────────────────────
+
+export default function CheckoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="flex min-h-screen items-center justify-center"
+          style={{ background: "var(--surface-page)" }}
+        >
+          <div
+            className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
+            style={{ borderColor: "var(--brand-cyan-strong)", borderTopColor: "transparent" }}
+          />
+        </div>
+      }
+    >
+      <CheckoutContent />
+    </Suspense>
   );
 }

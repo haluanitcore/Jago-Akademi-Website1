@@ -2,67 +2,242 @@
 
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 
+// ─── Animated check-mark SVG (CSS stroke-dasharray trick) ─────────────────────
+function AnimatedCheckmark() {
+  return (
+    <div className="relative flex items-center justify-center" aria-hidden="true">
+      {/* Outer glow ring */}
+      <span
+        className="absolute inset-0 rounded-full animate-ping"
+        style={{
+          background: "rgba(0, 212, 255, 0.15)",
+          animationDuration: "1.6s",
+          animationIterationCount: 1,
+        }}
+      />
+      {/* Icon container */}
+      <div
+        className="relative flex h-20 w-20 items-center justify-center rounded-full"
+        style={{ background: "rgba(0, 212, 255, 0.12)", border: "2px solid rgba(0,212,255,0.35)" }}
+      >
+        <svg
+          viewBox="0 0 52 52"
+          className="h-10 w-10"
+          fill="none"
+          stroke="var(--brand-cyan-strong)"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ strokeDasharray: 60, strokeDashoffset: 60, animation: "draw-check 0.5s 0.3s ease forwards" }}
+        >
+          <path d="M14 27 l9 9 l16 -18" />
+        </svg>
+      </div>
+
+      <style>{`
+        @keyframes draw-check {
+          to { stroke-dashoffset: 0; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ─── Floating confetti particle ───────────────────────────────────────────────
+function ConfettiDots() {
+  const dots = [
+    { color: "var(--brand-cyan)", x: "-60px", y: "-45px", size: 8, delay: "0.2s" },
+    { color: "var(--brand-pink)", x: "60px",  y: "-55px", size: 6, delay: "0.35s" },
+    { color: "var(--brand-cyan-strong)", x: "-75px", y: "10px", size: 5, delay: "0.1s" },
+    { color: "var(--brand-pink-strong)", x: "80px",  y: "5px",  size: 7, delay: "0.4s" },
+    { color: "var(--brand-cyan)", x: "20px",  y: "-70px", size: 5, delay: "0.25s" },
+    { color: "var(--brand-pink)", x: "-25px", y: "-68px", size: 4, delay: "0.45s" },
+  ];
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      {dots.map((d, i) => (
+        <span
+          key={i}
+          className="absolute left-1/2 top-1/2 rounded-full opacity-0"
+          style={{
+            width: d.size,
+            height: d.size,
+            background: d.color,
+            transform: `translate(-50%, -50%)`,
+            animation: `burst-dot 0.6s ${d.delay} cubic-bezier(0.16,1,0.3,1) forwards`,
+            "--tx": d.x,
+            "--ty": d.y,
+          } as React.CSSProperties}
+        />
+      ))}
+      <style>{`
+        @keyframes burst-dot {
+          0%   { opacity: 0; transform: translate(-50%, -50%) translate(0, 0) scale(0); }
+          60%  { opacity: 1; }
+          100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) scale(1); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ─── Step item in "next steps" card ──────────────────────────────────────────
+function NextStep({ icon, text, delay }: { icon: string; text: string; delay: string }) {
+  return (
+    <li
+      className="flex items-center gap-3 opacity-0"
+      style={{ animation: `fade-in-up 0.4s ${delay} ease forwards` }}
+    >
+      <span
+        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-sm"
+        style={{ background: "var(--surface-accent-soft)", border: "1px solid rgba(0,119,168,0.15)" }}
+      >
+        {icon}
+      </span>
+      <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{text}</span>
+    </li>
+  );
+}
+
+// ─── Main content ─────────────────────────────────────────────────────────────
 function SuccessContent() {
   const params = useSearchParams();
   const orderId = params.get("orderId");
   const isMock = params.get("mock") === "1";
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // Small delay so CSS animations trigger after mount
+    const t = setTimeout(() => setMounted(true), 50);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4">
-      <div className="max-w-md w-full text-center">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg className="w-10 h-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
+    <div
+      className="flex min-h-screen flex-col items-center justify-center px-4 py-16"
+      style={{ background: "var(--surface-page)" }}
+    >
+      {/* Card */}
+      <div
+        className="w-full max-w-md"
+        style={{
+          opacity: mounted ? 1 : 0,
+          transform: mounted ? "translateY(0)" : "translateY(24px)",
+          transition: "opacity 0.5s ease, transform 0.5s ease",
+        }}
+      >
+        {/* Icon + confetti area */}
+        <div className="relative mb-8 flex justify-center">
+          <AnimatedCheckmark />
+          <ConfettiDots />
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Pembayaran Berhasil!</h1>
-        <p className="text-gray-500 mb-2">
-          {isMock
-            ? "Mode dev: pembayaran dikonfirmasi secara otomatis."
-            : "Terima kasih! Pembayaran Anda telah berhasil dikonfirmasi."}
-        </p>
-        {orderId && (
-          <p className="text-sm text-gray-400 mb-8">
-            Order ID: <span className="font-mono font-medium text-gray-600">{orderId.slice(0, 8).toUpperCase()}</span>
+        {/* Heading */}
+        <div className="mb-6 text-center">
+          <h1
+            className="mb-2 text-3xl font-extrabold tracking-tight"
+            style={{ color: "var(--text-primary)", fontFamily: "var(--font-display)" }}
+          >
+            Pembayaran Berhasil!
+          </h1>
+          <p style={{ color: "var(--text-secondary)" }}>
+            {isMock
+              ? "Mode dev: pembayaran dikonfirmasi secara otomatis."
+              : "Terima kasih! Akses pembelian kamu sudah aktif."}
           </p>
-        )}
+          {orderId && (
+            <p
+              className="mt-2 text-xs"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Ref:{" "}
+              <span
+                className="font-mono font-semibold"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                {orderId.slice(0, 8).toUpperCase()}
+              </span>
+            </p>
+          )}
+        </div>
 
-        <div className="bg-blue-50 rounded-2xl p-4 mb-8 text-left">
-          <p className="text-sm text-blue-800 font-medium mb-2">Apa selanjutnya?</p>
-          <ul className="text-sm text-blue-700 space-y-1">
-            <li>✓ Akses kursus sudah aktif</li>
-            <li>✓ Invoice dikirim ke email Anda</li>
-            <li>✓ Mulai belajar kapan saja</li>
+        {/* Next steps card */}
+        <div
+          className="mb-6 rounded-2xl p-5"
+          style={{
+            background: "var(--surface-card)",
+            border: "1px solid var(--border-subtle)",
+            boxShadow: "var(--shadow-e1)",
+          }}
+        >
+          <p
+            className="mb-4 text-xs font-semibold uppercase tracking-widest"
+            style={{ color: "var(--brand-cyan-strong)" }}
+          >
+            Apa selanjutnya?
+          </p>
+          <ul className="space-y-3">
+            <NextStep icon="✅" text="Akses pembelian kamu sudah aktif" delay="0.6s" />
+            <NextStep icon="📧" text="Invoice dikirim ke email kamu" delay="0.75s" />
+            <NextStep icon="🚀" text="Mulai belajar kapan saja, di mana saja" delay="0.9s" />
           </ul>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        {/* CTA buttons */}
+        <div
+          className="flex flex-col gap-3 sm:flex-row opacity-0"
+          style={{ animation: "fade-in-up 0.4s 1s ease forwards" }}
+        >
           <Link
+            id="success-start-learning-btn"
             href="/belajar"
-            className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+            className="btn btn-primary btn-lg flex-1 justify-center"
           >
             Mulai Belajar
           </Link>
           {orderId && (
             <Link
+              id="success-view-order-btn"
               href={`/pesanan/${orderId}`}
-              className="px-6 py-3 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+              className="btn btn-outline btn-lg flex-1 justify-center"
             >
               Lihat Pesanan
             </Link>
           )}
         </div>
+
+        {/* Back link */}
+        <p
+          className="mt-6 text-center text-sm opacity-0"
+          style={{ animation: "fade-in-up 0.4s 1.1s ease forwards", color: "var(--text-muted)" }}
+        >
+          <Link href="/" className="hover:underline" style={{ color: "var(--text-muted)" }}>
+            Kembali ke Beranda
+          </Link>
+        </p>
       </div>
     </div>
   );
 }
 
+// ─── Page (Suspense boundary required for useSearchParams) ───────────────────
 export default function PaymentSuccessPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}>
+    <Suspense
+      fallback={
+        <div
+          className="flex min-h-screen items-center justify-center"
+          style={{ background: "var(--surface-page)" }}
+        >
+          <div
+            className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
+            style={{ borderColor: "var(--brand-cyan-strong)", borderTopColor: "transparent" }}
+          />
+        </div>
+      }
+    >
       <SuccessContent />
     </Suspense>
   );

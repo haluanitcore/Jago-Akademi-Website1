@@ -1,4 +1,7 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+// On browser use relative path (goes through Next.js proxy); on server use absolute URL
+const BASE = typeof window === "undefined"
+  ? (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000")
+  : "";
 
 export type Enrollment = {
   id: string;

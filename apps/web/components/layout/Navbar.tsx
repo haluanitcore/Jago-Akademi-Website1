@@ -14,21 +14,33 @@ const navLinks = [
     label: "Produk",
     href: "#",
     children: [
-      { label: "E-Book", href: "/ebook", desc: "Buku digital berkualitas" },
-      { label: "Trainer Program", href: "/trainer-program", desc: "Jadilah trainer profesional" },
-      { label: "Paket LMS", href: "/clients", desc: "LMS untuk institusi & perusahaan" },
-      { label: "Marketplace Materi", href: "/marketplace", desc: "Rekaman & modul event" },
+      { label: "E-Book",             href: "/ebook",           desc: "Buku digital berkualitas" },
+      { label: "Kelas Gratis",       href: "/kelas-gratis",    desc: "Mulai belajar tanpa biaya" },
+      { label: "Trainer Program",    href: "/trainer-program", desc: "Jadilah trainer profesional" },
+      { label: "Paket LMS",          href: "/clients",         desc: "LMS untuk institusi & perusahaan" },
+      { label: "Marketplace Materi", href: "/marketplace",     desc: "Rekaman & modul event" },
     ],
   },
   { label: "Blog", href: "/blog" },
   { label: "Tentang", href: "/about" },
 ];
 
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return (
+    sessionStorage.getItem("access_token") ||
+    sessionStorage.getItem("jg_token") ||
+    localStorage.getItem("jg_access_token")
+  );
+}
+
 export function Navbar() {
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userInitials, setUserInitials] = useState("");
   const mobileMenuId = "mobile-nav-menu";
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -47,6 +59,24 @@ export function Navbar() {
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Check login state from token
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((body) => {
+        if (body.success) {
+          setIsLoggedIn(true);
+          const name: string = body.data?.name ?? "";
+          setUserInitials(
+            name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2) || "U"
+          );
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const openDropdown = useCallback((label: string) => {
@@ -72,7 +102,7 @@ export function Navbar() {
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <div className="relative w-32 h-9">
             <Image
-              src="/logo.svg"
+              src="/logo.png"
               alt="Jago Akademi"
               fill
               sizes="128px"
@@ -170,12 +200,29 @@ export function Navbar() {
             <Sparkles size={14} aria-hidden="true" />
             Kolaborasi
           </Link>
-          <Link href="/masuk" className="btn btn-ghost btn-sm">
-            Masuk
-          </Link>
-          <Link href="/daftar" className="btn btn-primary btn-sm">
-            Mulai Gratis
-          </Link>
+          {isLoggedIn ? (
+            <>
+              <Link href="/dashboard" className="btn btn-ghost btn-sm">
+                Dashboard
+              </Link>
+              <Link
+                href="/dashboard"
+                aria-label="Profil saya"
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-[#0077A8] text-white text-xs font-bold hover:opacity-90 transition-opacity"
+              >
+                {userInitials}
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href="/masuk" className="btn btn-ghost btn-sm">
+                Masuk
+              </Link>
+              <Link href="/daftar" className="btn btn-primary btn-sm">
+                Mulai Gratis
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile hamburger */}
@@ -235,12 +282,20 @@ export function Navbar() {
               )
             )}
             <div className="pt-4 border-t border-[#E5E5E5] flex flex-col gap-2">
-              <Link href="/masuk" className="btn btn-ghost w-full justify-center">
-                Masuk
-              </Link>
-              <Link href="/daftar" className="btn btn-primary w-full justify-center">
-                Mulai Gratis
-              </Link>
+              {isLoggedIn ? (
+                <Link href="/dashboard" className="btn btn-primary w-full justify-center" onClick={() => setIsMobileOpen(false)}>
+                  Dashboard Saya
+                </Link>
+              ) : (
+                <>
+                  <Link href="/masuk" className="btn btn-ghost w-full justify-center" onClick={() => setIsMobileOpen(false)}>
+                    Masuk
+                  </Link>
+                  <Link href="/daftar" className="btn btn-primary w-full justify-center" onClick={() => setIsMobileOpen(false)}>
+                    Mulai Gratis
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

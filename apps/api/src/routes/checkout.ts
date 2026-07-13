@@ -29,6 +29,8 @@ router.post("/", authenticate, async (req, res, next) => {
     // Get item details
     let itemTitle = "";
     let price = 0;
+    /** Slug of the purchased item — used to build the failure redirect URL */
+    let itemSlug = "";
 
     if (itemType === "course") {
       const course = await prisma.course.findUnique({ where: { id: itemId } });
@@ -42,11 +44,13 @@ router.post("/", authenticate, async (req, res, next) => {
 
       itemTitle = course.title;
       price = Number(course.price);
+      itemSlug = course.slug;
     } else if (itemType === "ebook") {
       const ebook = await prisma.eBook.findUnique({ where: { id: itemId } });
       if (!ebook || ebook.status !== "published") throw new AppError(404, "E-Book tidak ditemukan.");
       itemTitle = ebook.title;
       price = ebook.salePrice ? Number(ebook.salePrice) : Number(ebook.price);
+      itemSlug = ebook.slug;
     } else {
       const event = await prisma.event.findUnique({ where: { id: itemId } });
       if (!event || event.status !== "published") throw new AppError(404, "Event tidak ditemukan.");
@@ -62,6 +66,7 @@ router.post("/", authenticate, async (req, res, next) => {
 
       itemTitle = event.title;
       price = event.salePrice ? Number(event.salePrice) : Number(event.price);
+      itemSlug = event.slug;
 
       if (price === 0) {
         // Free event — register immediately, skip payment
@@ -131,13 +136,25 @@ router.post("/", authenticate, async (req, res, next) => {
     const invoiceNumber = `JA-${order.id.slice(0, 8).toUpperCase()}`;
     const callbackUrl = `${env.WEB_URL}/payment/success?orderId=${order.id}`;
 
+    // Build a failure URL so DOKU can redirect the user back to the checkout
+    // page (with context) when payment is cancelled or fails.
+    let failureUrl: string | undefined;
+    if (itemSlug) {
+      const returnPath =
+        itemType === "event"
+          ? `/checkout/${itemSlug}?type=event&itemId=${itemId}`
+          : `/checkout/${itemSlug}`;
+      failureUrl = `${env.WEB_URL}/payment/failed?orderId=${order.id}&returnUrl=${encodeURIComponent(returnPath)}`;
+    }
+
     const { paymentUrl } = await createDokuOrder(
       invoiceNumber,
       [{ name: itemTitle, price: Math.round(finalAmount), quantity: 1 }],
       Math.round(finalAmount),
       callbackUrl,
       order.user.name,
-      order.user.email
+      order.user.email,
+      failureUrl
     );
 
     // Store transaction record

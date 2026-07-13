@@ -24,9 +24,29 @@ export function MasukForm() {
       return;
     }
 
-    // Store access token then navigate to dashboard
+    // Store access token in both storages: sessionStorage for current tab, localStorage for cross-tab
     if (typeof window !== "undefined") {
       sessionStorage.setItem("access_token", result.data.accessToken);
+      localStorage.setItem("jg_access_token", result.data.accessToken);
+    }
+
+    // Fetch role to determine redirect target
+    try {
+      const meRes = await fetch("/api/auth/me", {
+        headers: { Authorization: `Bearer ${result.data.accessToken}` },
+      }).then((r) => r.json());
+
+      if (meRes.success) {
+        const roleNames: string[] = (meRes.data.roles ?? []).map(
+          (r: { role: string } | string) => (typeof r === "string" ? r : r.role)
+        );
+        if (roleNames.some((r) => ["admin", "super_admin"].includes(r))) {
+          window.location.href = "/admin/dashboard";
+          return;
+        }
+      }
+    } catch {
+      // fallback to dashboard
     }
     window.location.href = "/dashboard";
   }

@@ -61,7 +61,7 @@ const organizationJsonLd = {
   "@type": "EducationalOrganization",
   name: "Jago Akademi",
   url: "https://jagoakademi.com",
-  logo: "https://jagoakademi.com/logo.svg",
+  logo: "https://jagoakademi.com/logo.png",
   description: "Platform edukasi digital terlengkap Indonesia — E-Course, Event, LMS B2B, E-Book, dan Trainer Program.",
   sameAs: [
     "https://instagram.com/jagoakademi",

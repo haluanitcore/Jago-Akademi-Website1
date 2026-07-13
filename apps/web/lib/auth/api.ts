@@ -1,17 +1,19 @@
 import type { LoginPayload, RegisterPayload, AuthResponse, AuthUser, ApiResult } from "./types";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+// All API calls go through Next.js /api/* proxy rewrite → backend:4000
+// Use relative paths to avoid CORS preflight issues with credentials.
+const API_PATH = "";  // Empty = relative, Next.js proxy handles routing to backend
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
   try {
-    const res = await fetch(`${API}${path}`, {
+    const res = await fetch(`${API_PATH}${path}`, {
       ...init,
-      credentials: "include",
       headers: { "Content-Type": "application/json", ...init?.headers },
     });
     const json = (await res.json()) as ApiResult<T>;
     return json;
-  } catch {
+  } catch (err) {
+    console.error("[apiFetch] Network error:", err);
     return { success: false, error: { code: "NETWORK_ERROR", message: "Tidak dapat terhubung ke server." } };
   }
 }
@@ -69,5 +71,6 @@ export async function verifyEmail(token: string): Promise<ApiResult<{ message: s
 }
 
 export function buildGoogleLoginUrl(): string {
-  return `${API}/api/auth/google`;
+  // Use relative path to go through Next.js proxy — avoids SSR hydration mismatch
+  return `/api/auth/google`;
 }

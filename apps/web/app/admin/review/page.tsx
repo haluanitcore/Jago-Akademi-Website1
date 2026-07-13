@@ -1,142 +1,166 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 
 type Review = {
   id: string;
-  itemType: string;
-  itemId: string;
   rating: number;
-  content: string | null;
-  status: string;
+  comment: string | null;
+  isApproved: boolean;
   createdAt: string;
-  user: { id: string; name: string; email: string };
+  user: { name: string; email: string };
+  course: { title: string } | null;
 };
+
+function getToken() {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem("access_token") || sessionStorage.getItem("jg_token");
+}
 
 export default function AdminReviewPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("");
-  const [itemTypeFilter, setItemTypeFilter] = useState("");
-  const [moderating, setModerating] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | "pending" | "approved">("all");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 15;
 
-  const fetchReviews = useCallback(async () => {
+  function loadReviews() {
+    const token = getToken();
+    if (!token) return;
+    const params = new URLSearchParams({ page: String(page), limit: String(limit), ...(filter !== "all" ? { approved: String(filter === "approved") } : {}) });
     setLoading(true);
-    const params = new URLSearchParams({ page: "1", limit: "30" });
-    if (statusFilter) params.set("status", statusFilter);
-    if (itemTypeFilter) params.set("itemType", itemTypeFilter);
-    const res = await fetch(`/api/reviews/admin?${params}`);
-    const data = await res.json();
-    if (data.success) { setReviews(data.data); setTotal(data.meta?.total ?? 0); }
-    setLoading(false);
-  }, [statusFilter, itemTypeFilter]);
-
-  useEffect(() => { fetchReviews(); }, [fetchReviews]);
-
-  async function moderate(reviewId: string, newStatus: string) {
-    setModerating(reviewId);
-    const res = await fetch(`/api/reviews/${reviewId}/moderate`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      setReviews((prev) => prev.map((r) => r.id === reviewId ? { ...r, status: newStatus } : r));
-    }
-    setModerating(null);
+    fetch(`/api/admin/reviews?${params}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((body) => {
+        if (body.success) { setReviews(body.data?.reviews ?? body.data ?? []); setTotal(body.data?.total ?? 0); }
+      })
+      .finally(() => setLoading(false));
   }
 
-  const ITEM_TYPE_LABEL: Record<string, string> = {
-    course: "Kursus", event: "Event", ebook: "E-Book", blog_post: "Blog",
-  };
+  useEffect(() => { loadReviews(); }, [page, filter]); // eslint-disable-line
+
+  async function toggleApprove(id: string, current: boolean) {
+    const token = getToken();
+    if (!token) return;
+    await fetch(`/api/admin/reviews/${id}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ isApproved: !current }),
+    });
+    loadReviews();
+  }
+
+  async function deleteReview(id: string) {
+    if (!confirm("Hapus review ini?")) return;
+    const token = getToken();
+    if (!token) return;
+    await fetch(`/api/admin/reviews/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    loadReviews();
+  }
+
+  const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-center gap-2 text-sm text-[#6E6E73] mb-4">
-        <Link href="/admin" className="hover:text-[#0077A8]">Admin</Link>
-        <span>/</span>
-        <span className="text-[#1D1D1F]">Moderasi Ulasan</span>
-      </div>
-      <h1 className="text-xl font-bold text-[#1D1D1F] mb-6">Moderasi Ulasan</h1>
-
-      <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-[#E5E5EA]">
-          <p className="text-sm text-[#6E6E73] flex-1">{total} ulasan</p>
-          <select value={itemTypeFilter} onChange={(e) => setItemTypeFilter(e.target.value)} className="text-sm border border-[#E5E5EA] rounded-lg px-2 py-1.5">
-            <option value="">Semua Tipe</option>
-            <option value="course">Kursus</option>
-            <option value="event">Event</option>
-            <option value="ebook">E-Book</option>
-          </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="text-sm border border-[#E5E5EA] rounded-lg px-2 py-1.5">
-            <option value="">Semua Status</option>
-            <option value="published">Published</option>
-            <option value="hidden">Hidden</option>
-          </select>
+    <div className="rv-page">
+      <div className="rv-header">
+        <div>
+          <h1 className="rv-title">Moderasi Review</h1>
+          <p className="rv-sub">{total.toLocaleString("id-ID")} review total</p>
         </div>
-
-        {loading ? (
-          <div className="text-center py-8 text-[#6E6E73]">Memuat...</div>
-        ) : reviews.length === 0 ? (
-          <div className="text-center py-10 text-[#6E6E73]">Belum ada ulasan.</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-[#F5F5F7] text-[#6E6E73]">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium">Pengguna</th>
-                <th className="px-4 py-3 text-left font-medium">Tipe</th>
-                <th className="px-4 py-3 text-center font-medium">Rating</th>
-                <th className="px-4 py-3 text-left font-medium">Ulasan</th>
-                <th className="px-4 py-3 text-center font-medium">Status</th>
-                <th className="px-4 py-3 text-left font-medium">Tanggal</th>
-                <th className="px-4 py-3 text-center font-medium">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#F5F5F7]">
-              {reviews.map((r) => (
-                <tr key={r.id} className={`hover:bg-[#F5F5F7] ${r.status === "hidden" ? "opacity-60" : ""}`}>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-[#1D1D1F]">{r.user.name}</p>
-                    <p className="text-xs text-[#6E6E73]">{r.user.email}</p>
-                  </td>
-                  <td className="px-4 py-3 text-[#6E6E73]">{ITEM_TYPE_LABEL[r.itemType] ?? r.itemType}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="text-amber-400">{"⭐".repeat(r.rating)}</span>
-                    <span className="text-[#6E6E73] text-xs ml-1">({r.rating}/5)</span>
-                  </td>
-                  <td className="px-4 py-3 text-[#6E6E73] max-w-xs">
-                    <p className="line-clamp-2">{r.content ?? <em>Tidak ada teks</em>}</p>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${r.status === "published" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
-                      {r.status === "published" ? "Aktif" : "Disembunyikan"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-[#6E6E73]">
-                    {new Date(r.createdAt).toLocaleDateString("id-ID")}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => moderate(r.id, r.status === "published" ? "hidden" : "published")}
-                      disabled={moderating === r.id}
-                      className={`text-xs px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 ${
-                        r.status === "published"
-                          ? "border-red-200 text-red-500 hover:bg-red-50"
-                          : "border-green-200 text-green-600 hover:bg-green-50"
-                      }`}
-                    >
-                      {moderating === r.id ? "..." : r.status === "published" ? "Sembunyikan" : "Tampilkan"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <div className="rv-tabs">
+          {(["all", "pending", "approved"] as const).map((f) => (
+            <button key={f} onClick={() => { setFilter(f); setPage(1); }} className={`rv-tab ${filter === f ? "rv-tab-active" : ""}`}>
+              {f === "all" ? "Semua" : f === "pending" ? "⏳ Menunggu" : "✅ Disetujui"}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {loading ? (
+        <div className="rv-loading"><span className="rv-spinner" /></div>
+      ) : reviews.length === 0 ? (
+        <div className="rv-empty"><p>⭐</p><p>Tidak ada review ditemukan</p></div>
+      ) : (
+        <div className="rv-list">
+          {reviews.map((r) => (
+            <div key={r.id} className={`rv-card ${!r.isApproved ? "rv-card-pending" : ""}`}>
+              <div className="rv-card-top">
+                <div className="rv-user">
+                  <div className="rv-avatar">{r.user.name.slice(0, 2).toUpperCase()}</div>
+                  <div>
+                    <p className="rv-user-name">{r.user.name}</p>
+                    <p className="rv-course">{r.course?.title ?? "—"}</p>
+                  </div>
+                </div>
+                <div className="rv-meta">
+                  <div className="rv-stars">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</div>
+                  <p className="rv-date">{new Date(r.createdAt).toLocaleDateString("id-ID")}</p>
+                </div>
+              </div>
+              {r.comment && <p className="rv-comment">{r.comment}</p>}
+              <div className="rv-actions">
+                <span className={`rv-badge ${r.isApproved ? "rv-badge-ok" : "rv-badge-pending"}`}>
+                  {r.isApproved ? "✓ Disetujui" : "⏳ Menunggu"}
+                </span>
+                <button className={`rv-btn ${r.isApproved ? "rv-btn-warn" : "rv-btn-ok"}`} onClick={() => toggleApprove(r.id, r.isApproved)}>
+                  {r.isApproved ? "Cabut" : "Setujui"}
+                </button>
+                <button className="rv-btn rv-btn-del" onClick={() => deleteReview(r.id)}>🗑 Hapus</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="rv-pagination">
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rv-page-btn">← Prev</button>
+          <span>{page} / {totalPages}</span>
+          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="rv-page-btn">Next →</button>
+        </div>
+      )}
+
+      <style jsx>{`
+        .rv-page { display:flex; flex-direction:column; gap:20px; max-width:900px; }
+        .rv-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+        .rv-title { font-size:20px; font-weight:800; color:#1D1D1F; }
+        .rv-sub { font-size:13px; color:#6E6E73; margin-top:3px; }
+        .rv-tabs { display:flex; gap:6px; }
+        .rv-tab { padding:7px 14px; border-radius:999px; font-size:12px; font-weight:600; border:1.5px solid #E5E5EA; background:white; cursor:pointer; color:#6E6E73; transition:all 0.18s; }
+        .rv-tab-active { background:#0077A8; color:white; border-color:#0077A8; }
+        .rv-list { display:flex; flex-direction:column; gap:12px; }
+        .rv-card { background:white; border-radius:16px; padding:18px; border:1px solid rgba(0,0,0,0.06); box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+        .rv-card-pending { border-left:3px solid #F59E0B; }
+        .rv-card-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px; }
+        .rv-user { display:flex; align-items:center; gap:10px; }
+        .rv-avatar { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#0077A8,#CC0052); color:white; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .rv-user-name { font-size:13px; font-weight:700; }
+        .rv-course { font-size:11px; color:#6E6E73; }
+        .rv-meta { text-align:right; }
+        .rv-stars { font-size:14px; color:#FBBF24; }
+        .rv-date { font-size:11px; color:#9CA3AF; margin-top:3px; }
+        .rv-comment { font-size:13px; color:#374151; line-height:1.5; margin-bottom:12px; padding:10px 12px; background:#F9FAFB; border-radius:8px; }
+        .rv-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .rv-badge { font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; margin-right:auto; }
+        .rv-badge-ok { background:#DCFCE7; color:#16A34A; }
+        .rv-badge-pending { background:#FEF3C7; color:#D97706; }
+        .rv-btn { padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; border:none; cursor:pointer; transition:all 0.18s; }
+        .rv-btn-ok { background:#DCFCE7; color:#16A34A; }
+        .rv-btn-ok:hover { background:#16A34A; color:white; }
+        .rv-btn-warn { background:#FEF3C7; color:#D97706; }
+        .rv-btn-warn:hover { background:#D97706; color:white; }
+        .rv-btn-del { background:#FEE2E2; color:#DC2626; }
+        .rv-btn-del:hover { background:#DC2626; color:white; }
+        .rv-loading { display:flex; justify-content:center; padding:48px; }
+        .rv-spinner { width:32px; height:32px; border-radius:50%; border:3px solid #0077A8; border-top-color:transparent; animation:spin 0.8s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .rv-empty { display:flex; flex-direction:column; align-items:center; gap:8px; padding:48px; color:#9CA3AF; font-size:14px; }
+        .rv-empty p:first-child { font-size:32px; }
+        .rv-pagination { display:flex; align-items:center; justify-content:center; gap:16px; font-size:13px; color:#6E6E73; }
+        .rv-page-btn { padding:8px 16px; border-radius:10px; border:1.5px solid #E5E5EA; background:white; font-size:13px; font-weight:600; cursor:pointer; }
+        .rv-page-btn:disabled { opacity:0.4; cursor:not-allowed; }
+      `}</style>
     </div>
   );
 }

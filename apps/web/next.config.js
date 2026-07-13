@@ -24,6 +24,15 @@ const nextConfig = {
     ];
   },
 
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "http://localhost:4000/api/:path*",
+      },
+    ];
+  },
+
   async headers() {
     return [
       {
@@ -52,7 +61,8 @@ const nextConfig = {
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
               // Analytics beacons: GA collect + Mixpanel API.
-              "connect-src 'self' https:",
+              // Also allow localhost:4000 for development (backend API direct fetch).
+              `connect-src 'self' https: ${process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : ''}`.trim(),
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

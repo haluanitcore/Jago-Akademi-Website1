@@ -4,20 +4,23 @@ import { ArrowUpRight } from "lucide-react";
 
 const footerLinks = {
   Belajar: [
-    { label: "Katalog Kursus", href: "/kursus" },
-    { label: "Event & Workshop", href: "/event" },
-    { label: "E-Book", href: "/ebook" },
+    { label: "Katalog Kursus",    href: "/e-course" },
+    { label: "Event & Workshop",  href: "/event" },
+    { label: "E-Book",            href: "/ebook" },
+    { label: "Kelas Gratis",      href: "/kelas-gratis" },
     { label: "Marketplace Materi", href: "/marketplace" },
-    { label: "Blog", href: "/blog" },
+    { label: "Blog",              href: "/blog" },
   ],
   Program: [
-    { label: "Trainer Program", href: "/trainer-program" },
-    { label: "Paket LMS", href: "/clients" },
-    { label: "Kolaborasi", href: "/kolaborasi" },
+    { label: "Trainer Program",  href: "/trainer-program" },
+    { label: "Program Afiliasi", href: "/afiliasi" },
+    { label: "Paket LMS",        href: "/clients" },
+    { label: "Kolaborasi",       href: "/kolaborasi" },
   ],
   Perusahaan: [
-    { label: "Tentang Kami", href: "/about" },
-    { label: "FAQ", href: "/faq" },
+    { label: "Tentang Kami",  href: "/about" },
+    { label: "Hubungi Kami",  href: "/contact" },
+    { label: "FAQ",           href: "/faq" },
   ],
 };
 
@@ -39,7 +42,7 @@ export function Footer() {
             <Link href="/">
               <div className="relative w-36 h-10">
                 <Image
-                  src="/logo.svg"
+                  src="/logo.png"
                   alt="Jago Akademi"
                   fill
                   sizes="144px"

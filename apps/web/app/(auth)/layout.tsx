@@ -20,7 +20,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             href="/"
             className="inline-flex min-h-10 items-center gap-2 text-[var(--text-primary)] transition-colors hover:text-[var(--brand-cyan-strong)]"
           >
-            <img src="/logo.svg" alt="Jago Akademi" className="h-8 w-auto" />
+            <img src="/logo.png" alt="Jago Akademi" className="h-8 w-auto" />
           </Link>
         </div>
 

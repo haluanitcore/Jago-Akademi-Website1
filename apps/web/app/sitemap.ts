@@ -3,17 +3,22 @@ import { type MetadataRoute } from "next";
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://jagoakademi.com";
 
 const STATIC_PAGES: MetadataRoute.Sitemap = [
-  { url: `${BASE_URL}/`, lastModified: new Date(), changeFrequency: "weekly", priority: 1.0 },
-  { url: `${BASE_URL}/e-course`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
-  { url: `${BASE_URL}/event`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
-  { url: `${BASE_URL}/e-book`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
-  { url: `${BASE_URL}/blog`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
-  { url: `${BASE_URL}/berlangganan`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
-  { url: `${BASE_URL}/tentang`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
-  { url: `${BASE_URL}/kontak`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
-  { url: `${BASE_URL}/faq`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
-  { url: `${BASE_URL}/masuk`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.4 },
-  { url: `${BASE_URL}/daftar`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.4 },
+  { url: `${BASE_URL}/`,                 lastModified: new Date(), changeFrequency: "weekly",  priority: 1.0 },
+  { url: `${BASE_URL}/e-course`,         lastModified: new Date(), changeFrequency: "daily",   priority: 0.9 },
+  { url: `${BASE_URL}/event`,            lastModified: new Date(), changeFrequency: "daily",   priority: 0.9 },
+  { url: `${BASE_URL}/ebook`,            lastModified: new Date(), changeFrequency: "weekly",  priority: 0.8 },
+  { url: `${BASE_URL}/kelas-gratis`,     lastModified: new Date(), changeFrequency: "weekly",  priority: 0.8 },
+  { url: `${BASE_URL}/blog`,             lastModified: new Date(), changeFrequency: "daily",   priority: 0.8 },
+  { url: `${BASE_URL}/marketplace`,      lastModified: new Date(), changeFrequency: "weekly",  priority: 0.7 },
+  { url: `${BASE_URL}/trainer-program`,  lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+  { url: `${BASE_URL}/clients`,          lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+  { url: `${BASE_URL}/afiliasi`,         lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+  { url: `${BASE_URL}/kolaborasi`,       lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
+  { url: `${BASE_URL}/about`,            lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
+  { url: `${BASE_URL}/contact`,          lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+  { url: `${BASE_URL}/faq`,              lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+  { url: `${BASE_URL}/masuk`,            lastModified: new Date(), changeFrequency: "yearly",  priority: 0.4 },
+  { url: `${BASE_URL}/daftar`,           lastModified: new Date(), changeFrequency: "yearly",  priority: 0.4 },
 ];
 
 async function fetchDynamicPages(): Promise<MetadataRoute.Sitemap> {
@@ -64,7 +69,7 @@ async function fetchDynamicPages(): Promise<MetadataRoute.Sitemap> {
       const ebooks = (data.data ?? []) as Array<{ slug: string; updatedAt?: string }>;
       ebooks.forEach((e) =>
         pages.push({
-          url: `${BASE_URL}/e-book/${e.slug}`,
+          url: `${BASE_URL}/ebook/${e.slug}`,
           lastModified: e.updatedAt ? new Date(e.updatedAt) : new Date(),
           changeFrequency: "weekly",
           priority: 0.6,

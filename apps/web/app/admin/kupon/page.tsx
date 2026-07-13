@@ -7,35 +7,20 @@ type Coupon = {
   code: string;
   type: string;
   value: number;
-  maxDiscount: number | null;
   minPurchase: number;
-  usageCount: number;
-  usageLimit: number | null;
-  endDate: string | null;
+  maxUses: number | null;
+  usedCount: number;
   isActive: boolean;
-  description: string | null;
+  expiresAt: string | null;
+  createdAt: string;
 };
-
-function getApiBase() {
-  return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-}
 
 function getToken() {
   if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("jg_token");
+  return sessionStorage.getItem("access_token") || sessionStorage.getItem("jg_token");
 }
 
-const EMPTY_FORM = {
-  code: "",
-  type: "percentage" as "percentage" | "fixed",
-  value: "",
-  maxDiscount: "",
-  minPurchase: "0",
-  usageLimit: "",
-  endDate: "",
-  description: "",
-  isActive: true,
-};
+const EMPTY_FORM = { code: "", type: "percentage", value: 0, minPurchase: 0, maxUses: "", expiresAt: "" };
 
 export default function AdminKuponPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -43,265 +28,210 @@ export default function AdminKuponPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
-  function fetchCoupons() {
+  function loadCoupons() {
     const token = getToken();
     if (!token) return;
-    fetch(`${getApiBase()}/api/coupons?limit=50`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    setLoading(true);
+    fetch("/api/admin/coupons?limit=50", { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
-      .then((data) => {
-        if (data.success) setCoupons(data.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      .then((body) => { if (body.success) setCoupons(body.data?.coupons ?? body.data ?? []); })
+      .finally(() => setLoading(false));
   }
 
-  useEffect(() => { fetchCoupons(); }, []);
+  useEffect(() => { loadCoupons(); }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
+    const token = getToken();
+    if (!token) return;
     setSaving(true);
-    setError("");
-    try {
-      const token = getToken();
-      const payload: Record<string, unknown> = {
-        code: form.code,
-        type: form.type,
-        value: Number(form.value),
-        minPurchase: Number(form.minPurchase),
-        isActive: form.isActive,
-      };
-      if (form.maxDiscount) payload.maxDiscount = Number(form.maxDiscount);
-      if (form.usageLimit) payload.usageLimit = Number(form.usageLimit);
-      if (form.endDate) payload.endDate = new Date(form.endDate).toISOString();
-      if (form.description) payload.description = form.description;
-
-      const res = await fetch(`${getApiBase()}/api/coupons`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setShowForm(false);
-        setForm(EMPTY_FORM);
-        fetchCoupons();
-      } else {
-        setError(data.error?.message ?? "Gagal menyimpan kupon.");
-      }
-    } catch {
-      setError("Terjadi kesalahan.");
-    } finally {
-      setSaving(false);
-    }
+    setError(null);
+    const body = {
+      code: form.code.toUpperCase(),
+      type: form.type,
+      value: Number(form.value),
+      minPurchase: Number(form.minPurchase),
+      maxUses: form.maxUses ? Number(form.maxUses) : null,
+      expiresAt: form.expiresAt || null,
+    };
+    const res = await fetch("/api/admin/coupons", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then((r) => r.json());
+    setSaving(false);
+    if (res.success) { setShowForm(false); setForm(EMPTY_FORM); loadCoupons(); }
+    else setError(res.error?.message ?? "Gagal membuat kupon.");
   }
 
-  async function toggleActive(id: string, isActive: boolean) {
+  async function toggleActive(id: string, current: boolean) {
     const token = getToken();
-    await fetch(`${getApiBase()}/api/coupons/${id}`, {
+    if (!token) return;
+    await fetch(`/api/admin/coupons/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ isActive: !isActive }),
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: !current }),
     });
-    fetchCoupons();
+    loadCoupons();
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Kupon</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors"
-        >
-          + Buat Kupon
+    <div className="kp-page">
+      <div className="kp-header">
+        <div>
+          <h1 className="kp-title">Manajemen Kupon</h1>
+          <p className="kp-sub">{coupons.length} kupon terdaftar</p>
+        </div>
+        <button onClick={() => setShowForm(!showForm)} className="kp-create-btn">
+          {showForm ? "✕ Batal" : "+ Buat Kupon"}
         </button>
       </div>
 
-      {/* Create form */}
+      {/* Create Form */}
       {showForm && (
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Kupon Baru</h2>
-          <form onSubmit={handleCreate} className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Kode Kupon *</label>
-              <input
-                type="text"
-                required
-                value={form.code}
-                onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
-                placeholder="DISKON10"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Tipe *</label>
-              <select
-                value={form.type}
-                onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as "percentage" | "fixed" }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none"
-              >
-                <option value="percentage">Persentase (%)</option>
-                <option value="fixed">Nominal Tetap (Rp)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">
-                Nilai * {form.type === "percentage" ? "(%)" : "(Rp)"}
-              </label>
-              <input
-                type="number"
-                required
-                min={0}
-                max={form.type === "percentage" ? 100 : undefined}
-                value={form.value}
-                onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {form.type === "percentage" && (
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Maks Diskon (Rp)</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={form.maxDiscount}
-                  onChange={(e) => setForm((f) => ({ ...f, maxDiscount: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+        <div className="kp-form-card">
+          <h2 className="kp-form-title">Buat Kupon Baru</h2>
+          {error && <div className="kp-error">{error}</div>}
+          <form onSubmit={handleCreate} className="kp-form">
+            <div className="kp-form-row">
+              <div className="kp-field">
+                <label>Kode Kupon *</label>
+                <input required className="kp-input" placeholder="PROMO50" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} />
               </div>
-            )}
-
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Min. Pembelian (Rp)</label>
-              <input
-                type="number"
-                min={0}
-                value={form.minPurchase}
-                onChange={(e) => setForm((f) => ({ ...f, minPurchase: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Maks Penggunaan</label>
-              <input
-                type="number"
-                min={1}
-                value={form.usageLimit}
-                onChange={(e) => setForm((f) => ({ ...f, usageLimit: e.target.value }))}
-                placeholder="Kosongkan = tidak terbatas"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Berlaku Hingga</label>
-              <input
-                type="datetime-local"
-                value={form.endDate}
-                onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Deskripsi</label>
-              <input
-                type="text"
-                value={form.description}
-                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Deskripsi kupon (opsional)"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {error && (
-              <div className="col-span-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                {error}
+              <div className="kp-field">
+                <label>Tipe *</label>
+                <select className="kp-input" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+                  <option value="percentage">Persen (%)</option>
+                  <option value="fixed">Nominal (Rp)</option>
+                </select>
               </div>
-            )}
-
-            <div className="col-span-2 flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={() => { setShowForm(false); setForm(EMPTY_FORM); }}
-                className="px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl disabled:opacity-50 hover:bg-blue-700"
-              >
-                {saving ? "Menyimpan..." : "Simpan Kupon"}
-              </button>
+              <div className="kp-field">
+                <label>Nilai *</label>
+                <input required type="number" min={0} className="kp-input" placeholder={form.type === "percentage" ? "50" : "50000"} value={form.value} onChange={(e) => setForm({ ...form, value: Number(e.target.value) })} />
+              </div>
             </div>
+            <div className="kp-form-row">
+              <div className="kp-field">
+                <label>Minimal Pembelian (Rp)</label>
+                <input type="number" min={0} className="kp-input" placeholder="0" value={form.minPurchase} onChange={(e) => setForm({ ...form, minPurchase: Number(e.target.value) })} />
+              </div>
+              <div className="kp-field">
+                <label>Maks. Penggunaan</label>
+                <input type="number" min={1} className="kp-input" placeholder="Tanpa batas" value={form.maxUses} onChange={(e) => setForm({ ...form, maxUses: e.target.value })} />
+              </div>
+              <div className="kp-field">
+                <label>Kadaluarsa</label>
+                <input type="datetime-local" className="kp-input" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} />
+              </div>
+            </div>
+            <button type="submit" disabled={saving} className="kp-submit-btn">
+              {saving ? "Menyimpan…" : "✓ Buat Kupon"}
+            </button>
           </form>
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : coupons.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">Belum ada kupon. Buat kupon pertama Anda.</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs text-gray-400 uppercase tracking-wide">
-              <tr>
-                <th className="text-left px-4 py-3">Kode</th>
-                <th className="text-left px-4 py-3">Tipe</th>
-                <th className="text-left px-4 py-3">Nilai</th>
-                <th className="text-left px-4 py-3">Penggunaan</th>
-                <th className="text-left px-4 py-3">Berlaku Hingga</th>
-                <th className="text-center px-4 py-3">Aktif</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {coupons.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <span className="font-mono font-semibold text-gray-900">{c.code}</span>
-                    {c.description && <p className="text-xs text-gray-400 mt-0.5">{c.description}</p>}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 capitalize">{c.type === "percentage" ? "Persentase" : "Nominal"}</td>
-                  <td className="px-4 py-3 text-gray-900">
-                    {c.type === "percentage" ? `${Number(c.value)}%` : `Rp ${Number(c.value).toLocaleString("id-ID")}`}
-                    {c.maxDiscount && <span className="text-xs text-gray-400 ml-1">(maks Rp {Number(c.maxDiscount).toLocaleString("id-ID")})</span>}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {c.usageCount}{c.usageLimit ? ` / ${c.usageLimit}` : ""}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">
-                    {c.endDate
-                      ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(new Date(c.endDate))
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => toggleActive(c.id, c.isActive)}
-                      className={`w-10 h-5 rounded-full transition-colors ${c.isActive ? "bg-green-500" : "bg-gray-300"} relative`}
-                    >
-                      <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${c.isActive ? "right-0.5" : "left-0.5"}`} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {/* Coupon Cards */}
+      {loading ? (
+        <div className="kp-loading"><span className="kp-spinner" /></div>
+      ) : coupons.length === 0 ? (
+        <div className="kp-empty"><p>🏷️</p><p>Belum ada kupon. Buat yang pertama!</p></div>
+      ) : (
+        <div className="kp-grid">
+          {coupons.map((c) => {
+            const expired = c.expiresAt && new Date(c.expiresAt) < new Date();
+            const usageRate = c.maxUses ? Math.round((c.usedCount / c.maxUses) * 100) : null;
+            return (
+              <div key={c.id} className={`kp-card ${!c.isActive || expired ? "kp-card-inactive" : ""}`}>
+                <div className="kp-card-top">
+                  <div>
+                    <p className="kp-code">{c.code}</p>
+                    <p className="kp-type">
+                      {c.type === "percentage" ? `${c.value}% off` : `Rp ${Number(c.value).toLocaleString("id-ID")} off`}
+                      {c.minPurchase > 0 && ` · min. Rp ${Number(c.minPurchase).toLocaleString("id-ID")}`}
+                    </p>
+                  </div>
+                  <div className="kp-card-badges">
+                    <span className={`kp-badge ${c.isActive && !expired ? "kp-badge-active" : "kp-badge-off"}`}>
+                      {expired ? "Kadaluarsa" : c.isActive ? "Aktif" : "Non-aktif"}
+                    </span>
+                  </div>
+                </div>
+                <div className="kp-card-stats">
+                  <span>📊 {c.usedCount}{c.maxUses ? `/${c.maxUses}` : ""} digunakan</span>
+                  {c.expiresAt && (
+                    <span>⏰ {new Date(c.expiresAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
+                  )}
+                </div>
+                {usageRate !== null && (
+                  <div className="kp-progress-bar">
+                    <div className="kp-progress-fill" style={{ width: `${Math.min(100, usageRate)}%` }} />
+                  </div>
+                )}
+                <button
+                  className={`kp-toggle-btn ${c.isActive ? "kp-toggle-off" : "kp-toggle-on"}`}
+                  onClick={() => toggleActive(c.id, c.isActive)}
+                >
+                  {c.isActive ? "Non-aktifkan" : "Aktifkan"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <style jsx>{`
+        .kp-page { display:flex; flex-direction:column; gap:20px; max-width:1100px; }
+        .kp-header { display:flex; align-items:center; justify-content:space-between; }
+        .kp-title { font-size:20px; font-weight:800; color:#1D1D1F; }
+        .kp-sub { font-size:13px; color:#6E6E73; margin-top:3px; }
+        .kp-create-btn { padding:9px 18px; border-radius:10px; background:#0077A8; color:white; border:none; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; }
+        .kp-create-btn:hover { background:#005f87; }
+
+        .kp-form-card { background:white; border-radius:18px; padding:24px; border:1px solid rgba(0,0,0,0.06); box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+        .kp-form-title { font-size:15px; font-weight:700; color:#1D1D1F; margin-bottom:16px; }
+        .kp-error { background:#FEE2E2; color:#DC2626; padding:10px 14px; border-radius:10px; font-size:13px; margin-bottom:12px; }
+        .kp-form { display:flex; flex-direction:column; gap:14px; }
+        .kp-form-row { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+        .kp-field { display:flex; flex-direction:column; gap:5px; }
+        .kp-field label { font-size:12px; font-weight:600; color:#374151; }
+        .kp-input { padding:9px 12px; border-radius:10px; border:1.5px solid #E5E5EA; font-size:13px; outline:none; }
+        .kp-input:focus { border-color:#0077A8; box-shadow:0 0 0 3px rgba(0,119,168,0.1); }
+        .kp-submit-btn { align-self:flex-start; padding:10px 24px; border-radius:10px; background:#0077A8; color:white; border:none; font-size:13px; font-weight:700; cursor:pointer; }
+        .kp-submit-btn:disabled { opacity:0.6; cursor:not-allowed; }
+
+        .kp-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+        .kp-card { background:white; border-radius:16px; padding:18px; border:1px solid rgba(0,0,0,0.06); box-shadow:0 1px 4px rgba(0,0,0,0.06); transition:all 0.2s; }
+        .kp-card:hover { box-shadow:0 6px 20px rgba(0,0,0,0.1); transform:translateY(-2px); }
+        .kp-card-inactive { opacity:0.65; }
+        .kp-card-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+        .kp-code { font-size:16px; font-weight:900; font-family:monospace; color:#1D1D1F; letter-spacing:0.08em; }
+        .kp-type { font-size:12px; color:#6E6E73; margin-top:3px; }
+        .kp-card-badges { display:flex; gap:4px; }
+        .kp-badge { font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; }
+        .kp-badge-active { background:#DCFCE7; color:#16A34A; }
+        .kp-badge-off { background:#F3F4F6; color:#6B7280; }
+        .kp-card-stats { display:flex; flex-wrap:wrap; gap:10px; font-size:12px; color:#6E6E73; margin-bottom:10px; }
+        .kp-progress-bar { height:4px; background:#F3F4F6; border-radius:999px; overflow:hidden; margin-bottom:12px; }
+        .kp-progress-fill { height:100%; background:linear-gradient(90deg,#0077A8,#CC0052); border-radius:999px; transition:width 0.5s; }
+        .kp-toggle-btn { width:100%; padding:8px; border-radius:10px; font-size:12px; font-weight:700; border:none; cursor:pointer; transition:all 0.18s; }
+        .kp-toggle-on { background:#DCFCE7; color:#16A34A; }
+        .kp-toggle-on:hover { background:#16A34A; color:white; }
+        .kp-toggle-off { background:#FEE2E2; color:#DC2626; }
+        .kp-toggle-off:hover { background:#DC2626; color:white; }
+        .kp-loading { display:flex; justify-content:center; padding:48px; }
+        .kp-spinner { width:32px; height:32px; border-radius:50%; border:3px solid #0077A8; border-top-color:transparent; animation:spin 0.8s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .kp-empty { display:flex; flex-direction:column; align-items:center; gap:8px; padding:48px; color:#9CA3AF; font-size:14px; }
+        .kp-empty p:first-child { font-size:32px; }
+
+        @media (max-width:768px) {
+          .kp-form-row { grid-template-columns:1fr; }
+          .kp-grid { grid-template-columns:1fr; }
+        }
+      `}</style>
     </div>
   );
 }

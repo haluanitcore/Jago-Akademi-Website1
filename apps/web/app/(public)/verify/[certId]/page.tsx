@@ -98,7 +98,7 @@ export default async function VerifyCertPage({
 
         {/* Logo */}
         <div className="text-center">
-          <img src="/logo.svg" alt="Jago Akademi" className="h-8 w-auto mx-auto" />
+          <img src="/logo.png" alt="Jago Akademi" className="h-8 w-auto mx-auto" />
         </div>
 
         {/* Detail */}

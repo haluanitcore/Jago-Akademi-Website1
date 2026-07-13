@@ -49,10 +49,12 @@ export async function createDokuOrder(
   totalAmount: number,
   callbackUrl: string,
   customerName: string,
-  customerEmail: string
+  customerEmail: string,
+  /** Optional URL to redirect the user to if payment fails on DOKU's hosted page */
+  failureUrl?: string
 ): Promise<DokuCreateOrderResult> {
   if (!env.DOKU_CLIENT_ID || !env.DOKU_SECRET_KEY) {
-    // Dev fallback: return a mock payment URL
+    // Dev fallback: return a mock payment URL (always succeeds in dev)
     return {
       invoiceNumber,
       paymentUrl: `${env.WEB_URL}/payment/success?order=${invoiceNumber}&mock=1`,
@@ -73,6 +75,8 @@ export async function createDokuOrder(
       currency: "IDR",
       callback_url: callbackUrl,
       auto_redirect: true,
+      // Redirect user to failed page if payment is cancelled/failed on DOKU's page
+      ...(failureUrl && { failure_return_url: failureUrl }),
     },
     payment: { payment_due_date: 60 },
     customer: {

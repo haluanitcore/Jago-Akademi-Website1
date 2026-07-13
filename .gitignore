@@ -16,6 +16,18 @@ node_modules
 # Stray local artifacts
 Claude Dekstop/
 
+# Large binary files — do NOT commit to GitHub
+postgresql-installer.exe
+redis-bin/
+verify_student.sql
+implementation_plan2.md
+# Root-level images (not web assets)
+/*.png
+/*.jpg
+/*.jpeg
+"Jago Akademi.png"
+
+
 # Testing
 coverage
 test-results/

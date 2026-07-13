@@ -1,269 +1,197 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 
 type BlogPost = {
   id: string;
-  slug: string;
   title: string;
+  slug: string;
+  excerpt: string | null;
   status: string;
-  category: string | null;
   publishedAt: string | null;
   createdAt: string;
-  author: { name: string };
+  author: { name: string } | null;
+  category: { name: string } | null;
+  _count?: { comments: number };
 };
+
+const STATUS_MAP: Record<string, { label: string; cls: string }> = {
+  draft:     { label: "Draft",   cls: "bg-gray-100 text-gray-600" },
+  published: { label: "Aktif",   cls: "bg-green-100 text-green-700" },
+  archived:  { label: "Arsip",   cls: "bg-gray-100 text-gray-500" },
+};
+
+function getToken() {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem("access_token") || sessionStorage.getItem("jg_token");
+}
 
 export default function AdminBlogPage() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("");
-  const [showForm, setShowForm] = useState(false);
-  const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [form, setForm] = useState({ title: "", slug: "", excerpt: "", content: "", coverUrl: "", category: "", tags: "", status: "draft" });
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
 
-  const fetchPosts = useCallback(async () => {
+  function loadPosts() {
+    const token = getToken();
+    if (!token) return;
+    const params = new URLSearchParams({
+      page: String(page), limit: String(limit),
+      ...(search ? { search } : {}),
+      ...(statusFilter !== "all" ? { status: statusFilter } : {}),
+    });
     setLoading(true);
-    const params = new URLSearchParams({ page: "1", limit: "20" });
-    if (statusFilter) params.set("status", statusFilter);
-    const res = await fetch(`/api/blog/admin/posts?${params}`);
-    const data = await res.json();
-    if (data.success) { setPosts(data.data); setTotal(data.meta?.total ?? 0); }
-    setLoading(false);
-  }, [statusFilter]);
-
-  useEffect(() => { fetchPosts(); }, [fetchPosts]);
-
-  function openEditForm(post: BlogPost) {
-    setEditingPost(post);
-    setShowForm(true);
-    setForm({
-      title: post.title,
-      slug: post.slug,
-      excerpt: "",
-      content: "",
-      coverUrl: "",
-      category: post.category ?? "",
-      tags: "",
-      status: post.status,
-    });
-    setMsg("");
+    fetch(`/api/admin/blog?${params}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((body) => {
+        if (body.success) { setPosts(body.data?.posts ?? body.data ?? []); setTotal(body.data?.total ?? 0); }
+      })
+      .finally(() => setLoading(false));
   }
 
-  function openNewForm() {
-    setEditingPost(null);
-    setShowForm(true);
-    setForm({ title: "", slug: "", excerpt: "", content: "", coverUrl: "", category: "", tags: "", status: "draft" });
-    setMsg("");
-  }
+  useEffect(() => { loadPosts(); }, [page, statusFilter]); // eslint-disable-line
 
-  async function createPost(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    setMsg("");
-    const body = {
-      ...form,
-      tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
-      coverUrl: form.coverUrl || undefined,
-      excerpt: form.excerpt || undefined,
-      category: form.category || undefined,
-    };
+  function handleSearch(e: React.FormEvent) { e.preventDefault(); setPage(1); loadPosts(); }
 
-    if (editingPost) {
-      const res = await fetch(`/api/blog/admin/posts/${editingPost.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setMsg("Artikel berhasil diperbarui.");
-        setShowForm(false);
-        setEditingPost(null);
-        fetchPosts();
-      } else {
-        setMsg(data.error?.message ?? "Gagal memperbarui artikel.");
-      }
-    } else {
-      const res = await fetch("/api/blog/admin/posts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setMsg("Artikel berhasil dibuat.");
-        setShowForm(false);
-        setForm({ title: "", slug: "", excerpt: "", content: "", coverUrl: "", category: "", tags: "", status: "draft" });
-        fetchPosts();
-      } else {
-        setMsg(data.error?.message ?? "Gagal membuat artikel.");
-      }
-    }
-    setSubmitting(false);
-  }
-
-  async function toggleStatus(post: BlogPost) {
-    const newStatus = post.status === "published" ? "draft" : "published";
-    const res = await fetch(`/api/blog/admin/posts/${post.id}`, {
+  async function updateStatus(id: string, status: string) {
+    const token = getToken();
+    if (!token) return;
+    await fetch(`/api/admin/blog/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
     });
-    const data = await res.json();
-    if (data.success) fetchPosts();
+    loadPosts();
   }
 
-  async function deletePost(post: BlogPost) {
-    if (!confirm(`Hapus artikel "${post.title}"?`)) return;
-    const res = await fetch(`/api/blog/admin/posts/${post.id}`, { method: "DELETE" });
-    const data = await res.json();
-    if (data.success) fetchPosts();
-  }
+  const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bl-page">
+      <div className="bl-header">
         <div>
-          <div className="flex items-center gap-2 text-sm text-[#6E6E73] mb-1">
-            <Link href="/admin" className="hover:text-[#0077A8]">Admin</Link>
-            <span>/</span>
-            <span className="text-[#1D1D1F]">Blog CMS</span>
-          </div>
-          <h1 className="text-xl font-bold text-[#1D1D1F]">Blog CMS</h1>
-        </div>
-        <div className="flex gap-2">
-          {showForm && (
-            <button onClick={() => { setShowForm(false); setEditingPost(null); }} className="px-4 py-2 border border-[#E5E5EA] text-[#6E6E73] text-sm rounded-xl hover:bg-[#F5F5F7]">
-              Batal
-            </button>
-          )}
-          {!showForm && (
-            <button onClick={openNewForm} className="px-4 py-2 bg-[#0077A8] text-white text-sm rounded-xl hover:bg-[#005f87]">
-              + Artikel Baru
-            </button>
-          )}
+          <h1 className="bl-title">Manajemen Blog</h1>
+          <p className="bl-sub">{total.toLocaleString("id-ID")} artikel</p>
         </div>
       </div>
 
-      {showForm && (
-        <div className="bg-white rounded-2xl border border-[#E5E5EA] p-6 mb-6">
-          <h2 className="font-semibold text-[#1D1D1F] mb-4">{editingPost ? `Edit: ${editingPost.title}` : "Buat Artikel Baru"}</h2>
-          <form onSubmit={createPost} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { key: "title", label: "Judul", placeholder: "Judul artikel" },
-                { key: "slug", label: "Slug", placeholder: "judul-artikel-saya" },
-                { key: "category", label: "Kategori", placeholder: "Bisnis, Marketing..." },
-                { key: "coverUrl", label: "URL Cover", placeholder: "https://..." },
-              ].map(({ key, label, placeholder }) => (
-                <div key={key}>
-                  <label className="block text-xs font-medium text-[#6E6E73] mb-1.5">{label}</label>
-                  <input
-                    value={form[key as keyof typeof form]}
-                    onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                    placeholder={placeholder}
-                    className="w-full border border-[#E5E5EA] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0077A8]"
-                    required={key === "title" || key === "slug"}
-                  />
-                </div>
-              ))}
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[#6E6E73] mb-1.5">Ringkasan</label>
-              <input value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} placeholder="Ringkasan singkat artikel..." className="w-full border border-[#E5E5EA] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0077A8]" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[#6E6E73] mb-1.5">Konten</label>
-              <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={8} required placeholder="Isi artikel..." className="w-full border border-[#E5E5EA] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0077A8]" />
-            </div>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-[#6E6E73] mb-1.5">Tags (pisah dengan koma)</label>
-                <input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="digital, marketing, tips" className="w-full border border-[#E5E5EA] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0077A8]" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-[#6E6E73] mb-1.5">Status</label>
-                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="border border-[#E5E5EA] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0077A8]">
-                  <option value="draft">Draft</option>
-                  <option value="published">Publikasikan</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <button type="submit" disabled={submitting} className="px-5 py-2.5 bg-[#0077A8] text-white text-sm font-medium rounded-xl hover:bg-[#005f87] disabled:opacity-50">
-                {submitting ? "Menyimpan..." : editingPost ? "Perbarui Artikel" : "Simpan Artikel"}
-              </button>
-              {msg && <p className="text-sm text-[#0077A8]">{msg}</p>}
-            </div>
-          </form>
+      <div className="bl-filters">
+        <form onSubmit={handleSearch} className="bl-search-form">
+          <input className="bl-input" placeholder="Cari artikel..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <button type="submit" className="bl-search-btn">🔍 Cari</button>
+        </form>
+        <div className="bl-tabs">
+          {["all", "published", "draft", "archived"].map((s) => (
+            <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }} className={`bl-tab ${statusFilter === s ? "bl-tab-active" : ""}`}>
+              {s === "all" ? "Semua" : STATUS_MAP[s]?.label ?? s}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
-      <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E5EA]">
-          <p className="text-sm text-[#6E6E73]">{total} artikel</p>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="text-sm border border-[#E5E5EA] rounded-lg px-2 py-1.5">
-            <option value="">Semua Status</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
-          </select>
-        </div>
+      <div className="bl-table-wrap">
         {loading ? (
-          <div className="text-center py-8 text-[#6E6E73]">Memuat...</div>
+          <div className="bl-loading"><span className="bl-spinner" /></div>
         ) : posts.length === 0 ? (
-          <div className="text-center py-10 text-[#6E6E73]">Belum ada artikel.</div>
+          <div className="bl-empty"><p>✍️</p><p>Tidak ada artikel ditemukan</p></div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-[#F5F5F7] text-[#6E6E73]">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium">Judul</th>
-                <th className="px-4 py-3 text-left font-medium">Kategori</th>
-                <th className="px-4 py-3 text-left font-medium">Penulis</th>
-                <th className="px-4 py-3 text-center font-medium">Status</th>
-                <th className="px-4 py-3 text-left font-medium">Tanggal</th>
-                <th className="px-4 py-3 text-center font-medium">Aksi</th>
-              </tr>
+          <table className="bl-table">
+            <thead>
+              <tr><th>Judul</th><th>Penulis</th><th>Kategori</th><th>Status</th><th>Dipublikasi</th><th>Aksi</th></tr>
             </thead>
-            <tbody className="divide-y divide-[#F5F5F7]">
-              {posts.map((p) => (
-                <tr key={p.id} className="hover:bg-[#F5F5F7]">
-                  <td className="px-4 py-3">
-                    <Link href={`/blog/${p.slug}`} target="_blank" className="font-medium text-[#1D1D1F] hover:text-[#0077A8] line-clamp-1">{p.title}</Link>
-                    <p className="text-xs text-[#6E6E73]">{p.slug}</p>
-                  </td>
-                  <td className="px-4 py-3 text-[#6E6E73]">{p.category ?? "—"}</td>
-                  <td className="px-4 py-3 text-[#6E6E73]">{p.author.name}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${p.status === "published" ? "bg-green-100 text-green-700" : "bg-[#F5F5F7] text-[#6E6E73]"}`}>
-                      {p.status === "published" ? "Published" : "Draft"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-[#6E6E73]">
-                    {p.publishedAt ? new Date(p.publishedAt).toLocaleDateString("id-ID") : new Date(p.createdAt).toLocaleDateString("id-ID")}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex gap-2 justify-center">
-                      <button onClick={() => openEditForm(p)} className="text-xs px-2.5 py-1 rounded-lg border border-[#0077A8] text-[#0077A8] hover:bg-[#E8F4F9]">
-                        Edit
-                      </button>
-                      <button onClick={() => toggleStatus(p)} className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${p.status === "published" ? "border-amber-300 text-amber-600 hover:bg-amber-50" : "border-green-300 text-green-600 hover:bg-green-50"}`}>
-                        {p.status === "published" ? "Draft" : "Publish"}
-                      </button>
-                      <button onClick={() => deletePost(p)} className="text-xs px-2.5 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50">
-                        Hapus
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+            <tbody>
+              {posts.map((p) => {
+                const s = STATUS_MAP[p.status] ?? STATUS_MAP["draft"]!;
+                return (
+                  <tr key={p.id}>
+                    <td>
+                      <p className="bl-post-title">{p.title}</p>
+                      {p.excerpt && <p className="bl-excerpt">{p.excerpt.slice(0, 80)}…</p>}
+                    </td>
+                    <td><span className="bl-author">{p.author?.name ?? "—"}</span></td>
+                    <td><span className="bl-cat">{p.category?.name ?? "Umum"}</span></td>
+                    <td><span className={`bl-badge ${s.cls}`}>{s.label}</span></td>
+                    <td>
+                      <span className="bl-date">
+                        {p.publishedAt ? new Date(p.publishedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="bl-actions">
+                        {p.status !== "published" && (
+                          <button className="bl-btn bl-btn-publish" onClick={() => updateStatus(p.id, "published")}>Publikasi</button>
+                        )}
+                        {p.status === "published" && (
+                          <button className="bl-btn bl-btn-draft" onClick={() => updateStatus(p.id, "draft")}>Jadikan Draft</button>
+                        )}
+                        {p.status !== "archived" && (
+                          <button className="bl-btn bl-btn-archive" onClick={() => updateStatus(p.id, "archived")}>Arsip</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="bl-pagination">
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="bl-page-btn">← Prev</button>
+          <span className="bl-page-info">{page} / {totalPages}</span>
+          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="bl-page-btn">Next →</button>
+        </div>
+      )}
+
+      <style jsx>{`
+        .bl-page { display:flex; flex-direction:column; gap:20px; max-width:1100px; }
+        .bl-header { display:flex; align-items:center; justify-content:space-between; }
+        .bl-title { font-size:20px; font-weight:800; color:#1D1D1F; }
+        .bl-sub { font-size:13px; color:#6E6E73; margin-top:3px; }
+        .bl-filters { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+        .bl-search-form { display:flex; gap:8px; flex:1; min-width:240px; }
+        .bl-input { flex:1; padding:9px 14px; border-radius:10px; border:1.5px solid #E5E5EA; font-size:13px; outline:none; }
+        .bl-input:focus { border-color:#0077A8; box-shadow:0 0 0 3px rgba(0,119,168,0.1); }
+        .bl-search-btn { padding:9px 16px; border-radius:10px; background:#0077A8; color:white; border:none; font-size:13px; font-weight:600; cursor:pointer; }
+        .bl-tabs { display:flex; gap:6px; }
+        .bl-tab { padding:7px 14px; border-radius:999px; font-size:12px; font-weight:600; border:1.5px solid #E5E5EA; background:white; cursor:pointer; color:#6E6E73; transition:all 0.18s; }
+        .bl-tab-active { background:#0077A8; color:white; border-color:#0077A8; }
+        .bl-table-wrap { background:white; border-radius:18px; overflow:hidden; border:1px solid rgba(0,0,0,0.06); box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+        .bl-table { width:100%; border-collapse:collapse; }
+        .bl-table thead tr { background:#F9FAFB; border-bottom:1px solid #F0F0F5; }
+        .bl-table th { padding:12px 14px; font-size:11px; font-weight:700; color:#6E6E73; text-transform:uppercase; letter-spacing:0.05em; text-align:left; white-space:nowrap; }
+        .bl-table td { padding:11px 14px; font-size:13px; border-bottom:1px solid #F5F5F7; vertical-align:middle; }
+        .bl-table tr:last-child td { border-bottom:none; }
+        .bl-table tr:hover td { background:#FAFAFA; }
+        .bl-post-title { font-size:13px; font-weight:600; color:#1D1D1F; max-width:220px; }
+        .bl-excerpt { font-size:11px; color:#9CA3AF; margin-top:2px; }
+        .bl-author { font-size:13px; }
+        .bl-cat { font-size:11px; background:#F5F5F7; padding:3px 8px; border-radius:6px; color:#6E6E73; }
+        .bl-badge { font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; display:inline-block; }
+        .bl-date { font-size:12px; color:#6E6E73; }
+        .bl-actions { display:flex; gap:4px; flex-wrap:wrap; }
+        .bl-btn { padding:5px 10px; border-radius:8px; font-size:11px; font-weight:700; border:none; cursor:pointer; transition:all 0.18s; white-space:nowrap; }
+        .bl-btn-publish { background:#DCFCE7; color:#16A34A; }
+        .bl-btn-publish:hover { background:#16A34A; color:white; }
+        .bl-btn-draft { background:#FEF3C7; color:#D97706; }
+        .bl-btn-draft:hover { background:#D97706; color:white; }
+        .bl-btn-archive { background:#F3F4F6; color:#6B7280; }
+        .bl-btn-archive:hover { background:#6B7280; color:white; }
+        .bl-loading { display:flex; justify-content:center; padding:48px; }
+        .bl-spinner { width:32px; height:32px; border-radius:50%; border:3px solid #0077A8; border-top-color:transparent; animation:spin 0.8s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .bl-empty { display:flex; flex-direction:column; align-items:center; gap:8px; padding:48px; color:#9CA3AF; font-size:14px; }
+        .bl-empty p:first-child { font-size:32px; }
+        .bl-pagination { display:flex; align-items:center; justify-content:center; gap:16px; }
+        .bl-page-btn { padding:8px 16px; border-radius:10px; border:1.5px solid #E5E5EA; background:white; font-size:13px; font-weight:600; cursor:pointer; }
+        .bl-page-btn:disabled { opacity:0.4; cursor:not-allowed; }
+        .bl-page-info { font-size:13px; color:#6E6E73; }
+      `}</style>
     </div>
   );
 }

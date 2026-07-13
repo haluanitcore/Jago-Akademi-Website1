@@ -25,8 +25,28 @@ export default function ContactForm() {
     setError(null);
     setLoading(true);
 
-    // In production: POST to /api/contact or email service
-    await new Promise((r) => setTimeout(r, 800));
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          source: "contact",
+          notes: `[Topik: ${topic}] ${message}`.trim(),
+        }),
+      });
+      const body = await res.json();
+      if (!body.success) {
+        setError(body.error?.message ?? "Gagal mengirim pesan. Silakan coba lagi.");
+        setLoading(false);
+        return;
+      }
+    } catch {
+      setError("Tidak dapat terhubung ke server. Periksa koneksi Anda.");
+      setLoading(false);
+      return;
+    }
 
     setLoading(false);
     setSent(true);

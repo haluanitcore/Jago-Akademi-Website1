@@ -36,6 +36,12 @@ export function EarlyAccessBand() {
             >
               Gabung Early Access
             </Link>
+            <Link
+              href="/kelas-gratis"
+              className="text-sm text-white/50 hover:text-white/80 transition-colors text-center"
+            >
+              Atau mulai dari kelas gratis →
+            </Link>
           </div>
         </Reveal>
       </div>

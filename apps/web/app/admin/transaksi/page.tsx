@@ -1,35 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 
-type Transaction = {
+type Order = {
   id: string;
-  status: string;
   finalAmount: number;
-  createdAt: string;
-  paidAt: string | null;
-  user: { name: string; email: string };
-  items: { itemTitle: string | null; itemType: string }[];
-};
-
-type Revenue = {
-  totalRevenue: number;
-  totalOrders: number;
-  paidOrders: number;
-  conversionRate: number;
-};
-
-type Refund = {
-  id: string;
-  orderId: string;
-  reason: string;
+  originalAmount: number;
   status: string;
-  amount: string;
-  adminNote: string | null;
-  requestedAt: string;
-  processedAt: string | null;
+  paymentMethod: string | null;
+  createdAt: string;
   user: { name: string; email: string };
+  items: { itemTitle: string | null; itemType: string; amount: number }[];
 };
 
 const STATUS_BADGE: Record<string, string> = {
@@ -37,337 +18,213 @@ const STATUS_BADGE: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-700",
   failed: "bg-red-100 text-red-700",
   expired: "bg-gray-100 text-gray-500",
+  refunded: "bg-purple-100 text-purple-700",
 };
 
-function getApiBase() {
-  return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-}
+const STATUS_LABEL: Record<string, string> = {
+  paid: "Lunas", pending: "Menunggu", failed: "Gagal", expired: "Kadaluarsa", refunded: "Refund",
+};
 
 function getToken() {
   if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("jg_token");
+  return sessionStorage.getItem("access_token") || sessionStorage.getItem("jg_token");
 }
 
-const REFUND_STATUS_BADGE: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-700",
-  approved: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-600",
-};
-
 export default function AdminTransaksiPage() {
-  const [activeTab, setActiveTab] = useState<"transaksi" | "refund">("transaksi");
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [revenue, setRevenue] = useState<Revenue | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [statusFilter, setStatusFilter] = useState("");
-  const [search, setSearch] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const limit = 20;
+  const [summary, setSummary] = useState({ totalRevenue: 0, paidCount: 0, pendingCount: 0 });
+  const limit = 15;
 
-  // Refund state
-  const [refunds, setRefunds] = useState<Refund[]>([]);
-  const [refundLoading, setRefundLoading] = useState(false);
-  const [refundTotal, setRefundTotal] = useState(0);
-  const [processingId, setProcessingId] = useState<string | null>(null);
-
-  useEffect(() => {
+  function loadOrders() {
     const token = getToken();
     if (!token) return;
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    if (statusFilter) params.set("status", statusFilter);
-    if (search) params.set("search", search);
-
-    Promise.all([
-      fetch(`${getApiBase()}/api/admin/transactions?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then((r) => r.json()),
-      fetch(`${getApiBase()}/api/admin/revenue`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then((r) => r.json()),
-    ])
-      .then(([txData, revData]) => {
-        if (txData.success) {
-          setTransactions(txData.data);
-          setTotal(txData.meta?.total ?? 0);
-        }
-        if (revData.success) setRevenue(revData.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [page, statusFilter, search]);
-
-  useEffect(() => {
-    if (activeTab !== "refund") return;
-    const token = getToken();
-    if (!token) return;
-    setRefundLoading(true);
-    fetch(`${getApiBase()}/api/orders/admin/refunds?limit=50`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const params = new URLSearchParams({
+      page: String(page), limit: String(limit),
+      ...(search ? { search } : {}),
+      ...(statusFilter !== "all" ? { status: statusFilter } : {}),
+    });
+    setLoading(true);
+    fetch(`/api/admin/orders?${params}`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
-      .then((data) => {
-        if (data.success) { setRefunds(data.data); setRefundTotal(data.meta?.total ?? 0); }
-        setRefundLoading(false);
+      .then((body) => {
+        if (body.success) {
+          const list: Order[] = body.data?.orders ?? body.data ?? [];
+          setOrders(list);
+          setTotal(body.data?.total ?? list.length);
+          // compute summary from current page (approximate)
+          const paid = list.filter((o) => o.status === "paid");
+          setSummary({
+            totalRevenue: paid.reduce((s, o) => s + Number(o.finalAmount), 0),
+            paidCount: paid.length,
+            pendingCount: list.filter((o) => o.status === "pending").length,
+          });
+        }
       })
-      .catch(() => setRefundLoading(false));
-  }, [activeTab]);
-
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    setSearch(searchInput);
-    setPage(1);
+      .finally(() => setLoading(false));
   }
 
-  async function processRefund(refundId: string, status: "approved" | "rejected", adminNote?: string) {
-    const token = getToken();
-    if (!token) return;
-    setProcessingId(refundId);
-    try {
-      const res = await fetch(`${getApiBase()}/api/orders/admin/refunds/${refundId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status, adminNote }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setRefunds((prev) => prev.map((r) => (r.id === refundId ? { ...r, status: data.data.status, processedAt: data.data.processedAt } : r)));
-      }
-    } finally {
-      setProcessingId(null);
-    }
-  }
+  useEffect(() => { loadOrders(); }, [page, statusFilter]); // eslint-disable-line
+
+  function handleSearch(e: React.FormEvent) { e.preventDefault(); setPage(1); loadOrders(); }
+
+  const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Transaksi & Refund</h1>
-        <div className="flex border border-gray-200 rounded-xl overflow-hidden">
-          <button
-            onClick={() => setActiveTab("transaksi")}
-            className={`px-5 py-2 text-sm font-medium transition-colors ${activeTab === "transaksi" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-50"}`}
-          >
-            Transaksi
-          </button>
-          <button
-            onClick={() => setActiveTab("refund")}
-            className={`px-5 py-2 text-sm font-medium transition-colors ${activeTab === "refund" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-50"}`}
-          >
-            Refund {refundTotal > 0 && <span className="ml-1 bg-red-100 text-red-600 text-xs px-1.5 py-0.5 rounded-full">{refundTotal}</span>}
-          </button>
+    <div className="tr-page">
+      <div className="tr-header">
+        <div>
+          <h1 className="tr-title">Laporan Transaksi</h1>
+          <p className="tr-sub">{total.toLocaleString("id-ID")} transaksi total</p>
         </div>
       </div>
 
-      {/* Revenue summary (transaksi only) */}
-      {activeTab === "transaksi" && revenue && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: "Total Pendapatan", value: `Rp ${revenue.totalRevenue.toLocaleString("id-ID")}`, color: "text-blue-600" },
-            { label: "Total Order", value: revenue.totalOrders.toLocaleString(), color: "text-gray-900" },
-            { label: "Order Lunas", value: revenue.paidOrders.toLocaleString(), color: "text-green-600" },
-            { label: "Conversion Rate", value: `${revenue.conversionRate}%`, color: "text-purple-600" },
-          ].map((stat) => (
-            <div key={stat.label} className="bg-white rounded-xl border border-gray-100 p-4">
-              <p className="text-xs text-gray-400 mb-1">{stat.label}</p>
-              <p className={`text-xl font-bold ${stat.color}`}>{stat.value}</p>
+      {/* Summary cards */}
+      <div className="tr-summary-grid">
+        {[
+          { label: "Pendapatan (halaman ini)", value: `Rp ${summary.totalRevenue.toLocaleString("id-ID")}`, icon: "💰", cls: "text-green-600" },
+          { label: "Transaksi Lunas", value: summary.paidCount, icon: "✅", cls: "text-blue-600" },
+          { label: "Menunggu Pembayaran", value: summary.pendingCount, icon: "⏳", cls: "text-yellow-600" },
+        ].map(({ label, value, icon, cls }) => (
+          <div key={label} className="tr-summary-card">
+            <span className="tr-summary-icon">{icon}</span>
+            <div>
+              <p className={`tr-summary-value ${cls}`}>{value}</p>
+              <p className="tr-summary-label">{label}</p>
             </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="tr-filters">
+        <form onSubmit={handleSearch} className="tr-search-form">
+          <input className="tr-input" placeholder="Cari nama pelanggan atau email..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <button type="submit" className="tr-search-btn">🔍 Cari</button>
+        </form>
+        <div className="tr-status-tabs">
+          {["all", "paid", "pending", "failed", "expired", "refunded"].map((s) => (
+            <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }} className={`tr-tab ${statusFilter === s ? "tr-tab-active" : ""}`}>
+              {s === "all" ? "Semua" : STATUS_LABEL[s] ?? s}
+            </button>
           ))}
         </div>
-      )}
+      </div>
 
-      {/* Filters (transaksi only) */}
-      {activeTab === "transaksi" && (
-        <div className="bg-white rounded-xl border border-gray-100 p-4 flex flex-wrap gap-3 items-center">
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Cari nama / email / ID..."
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
-            />
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
-              Cari
-            </button>
-          </form>
-
-          <select
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none"
-          >
-            <option value="">Semua Status</option>
-            <option value="paid">Lunas</option>
-            <option value="pending">Menunggu</option>
-            <option value="failed">Gagal</option>
-            <option value="expired">Kedaluwarsa</option>
-          </select>
-        </div>
-      )}
-
-      {/* Table (transaksi only) */}
-      {activeTab === "transaksi" && <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      {/* Table */}
+      <div className="tr-table-wrap">
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : transactions.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">Tidak ada transaksi.</div>
+          <div className="tr-loading"><span className="tr-spinner" /></div>
+        ) : orders.length === 0 ? (
+          <div className="tr-empty"><p>💳</p><p>Tidak ada transaksi ditemukan</p></div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs text-gray-400 uppercase tracking-wide">
+          <table className="tr-table">
+            <thead>
               <tr>
-                <th className="text-left px-4 py-3">ID</th>
-                <th className="text-left px-4 py-3">Pengguna</th>
-                <th className="text-left px-4 py-3">Item</th>
-                <th className="text-left px-4 py-3">Tanggal</th>
-                <th className="text-right px-4 py-3">Total</th>
-                <th className="text-center px-4 py-3">Status</th>
-                <th className="text-center px-4 py-3">Aksi</th>
+                <th>ID</th><th>Pelanggan</th><th>Produk</th><th>Metode</th>
+                <th>Status</th><th>Jumlah</th><th>Tanggal</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {transactions.map((tx) => (
-                <tr key={tx.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-xs text-gray-400">#{tx.id.slice(0, 8).toUpperCase()}</td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900">{tx.user.name}</p>
-                    <p className="text-xs text-gray-400">{tx.user.email}</p>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate">
-                    {tx.items[0]?.itemTitle ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">
-                    {new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(new Date(tx.createdAt))}
-                  </td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                    Rp {Number(tx.finalAmount).toLocaleString("id-ID")}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[tx.status] ?? "bg-gray-100 text-gray-500"}`}>
-                      {tx.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <Link
-                      href={`/admin/transaksi/${tx.id}`}
-                      className="text-xs text-blue-600 hover:underline"
-                    >
-                      Detail
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+            <tbody>
+              {orders.map((order) => {
+                const badge = STATUS_BADGE[order.status] ?? "bg-gray-100 text-gray-500";
+                const title = order.items[0]?.itemTitle ?? "—";
+                return (
+                  <tr key={order.id}>
+                    <td><code className="tr-id">{order.id.slice(0, 8)}…</code></td>
+                    <td>
+                      <p className="tr-user-name">{order.user.name}</p>
+                      <p className="tr-user-email">{order.user.email}</p>
+                    </td>
+                    <td>
+                      <p className="tr-product">{title}</p>
+                      {order.items.length > 1 && <p className="tr-more">+{order.items.length - 1} item</p>}
+                    </td>
+                    <td><span className="tr-method">{order.paymentMethod ?? "—"}</span></td>
+                    <td><span className={`tr-badge ${badge}`}>{STATUS_LABEL[order.status] ?? order.status}</span></td>
+                    <td>
+                      <p className="tr-amount">Rp {Number(order.finalAmount).toLocaleString("id-ID")}</p>
+                      {Number(order.originalAmount) !== Number(order.finalAmount) && (
+                        <p className="tr-orig">Rp {Number(order.originalAmount).toLocaleString("id-ID")}</p>
+                      )}
+                    </td>
+                    <td>
+                      <span className="tr-date">
+                        {new Date(order.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
-      </div>}
+      </div>
 
-      {/* Pagination */}
-      {activeTab === "transaksi" && total > limit && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-400">
-            Menampilkan {(page - 1) * limit + 1}–{Math.min(page * limit, total)} dari {total}
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50"
-            >
-              ←
-            </button>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={page >= Math.ceil(total / limit)}
-              className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50"
-            >
-              →
-            </button>
-          </div>
+      {totalPages > 1 && (
+        <div className="tr-pagination">
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="tr-page-btn">← Prev</button>
+          <span className="tr-page-info">Halaman {page} dari {totalPages}</span>
+          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="tr-page-btn">Next →</button>
         </div>
       )}
 
-      {/* Refund tab */}
-      {activeTab === "refund" && (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          {refundLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : refunds.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">Tidak ada permintaan refund.</div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-xs text-gray-400 uppercase tracking-wide">
-                <tr>
-                  <th className="text-left px-4 py-3">Pengguna</th>
-                  <th className="text-left px-4 py-3">Order ID</th>
-                  <th className="text-left px-4 py-3">Alasan</th>
-                  <th className="text-right px-4 py-3">Jumlah</th>
-                  <th className="text-left px-4 py-3">Tanggal</th>
-                  <th className="text-center px-4 py-3">Status</th>
-                  <th className="text-center px-4 py-3">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {refunds.map((rf) => (
-                  <tr key={rf.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900">{rf.user.name}</p>
-                      <p className="text-xs text-gray-400">{rf.user.email}</p>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-400">
-                      #{rf.orderId.slice(0, 8).toUpperCase()}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 max-w-[200px]">
-                      <p className="line-clamp-2 text-xs">{rf.reason}</p>
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                      Rp {Number(rf.amount).toLocaleString("id-ID")}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">
-                      {new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(new Date(rf.requestedAt))}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${REFUND_STATUS_BADGE[rf.status] ?? "bg-gray-100 text-gray-500"}`}>
-                        {rf.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {rf.status === "pending" ? (
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => processRefund(rf.id, "approved")}
-                            disabled={processingId === rf.id}
-                            className="text-xs text-green-600 hover:underline disabled:opacity-50"
-                          >
-                            Setujui
-                          </button>
-                          <button
-                            onClick={() => processRefund(rf.id, "rejected", "Tidak memenuhi syarat refund")}
-                            disabled={processingId === rf.id}
-                            className="text-xs text-red-500 hover:underline disabled:opacity-50"
-                          >
-                            Tolak
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400">
-                          {rf.processedAt
-                            ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short" }).format(new Date(rf.processedAt))
-                            : "—"}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
+      <style jsx>{`
+        .tr-page { display:flex; flex-direction:column; gap:20px; max-width:1200px; }
+        .tr-header { display:flex; align-items:center; justify-content:space-between; }
+        .tr-title { font-size:20px; font-weight:800; color:#1D1D1F; }
+        .tr-sub { font-size:13px; color:#6E6E73; margin-top:3px; }
+
+        .tr-summary-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+        .tr-summary-card { background:white; border-radius:16px; padding:18px 20px; display:flex; align-items:center; gap:14px; border:1px solid rgba(0,0,0,0.06); box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+        .tr-summary-icon { font-size:28px; }
+        .tr-summary-value { font-size:18px; font-weight:800; }
+        .tr-summary-label { font-size:11px; color:#6E6E73; margin-top:2px; }
+
+        .tr-filters { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+        .tr-search-form { display:flex; gap:8px; flex:1; min-width:240px; }
+        .tr-input { flex:1; padding:9px 14px; border-radius:10px; border:1.5px solid #E5E5EA; font-size:13px; outline:none; }
+        .tr-input:focus { border-color:#0077A8; box-shadow:0 0 0 3px rgba(0,119,168,0.1); }
+        .tr-search-btn { padding:9px 16px; border-radius:10px; background:#0077A8; color:white; border:none; font-size:13px; font-weight:600; cursor:pointer; }
+        .tr-status-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+        .tr-tab { padding:7px 14px; border-radius:999px; font-size:12px; font-weight:600; border:1.5px solid #E5E5EA; background:white; cursor:pointer; color:#6E6E73; transition:all 0.18s; }
+        .tr-tab-active { background:#0077A8; color:white; border-color:#0077A8; }
+
+        .tr-table-wrap { background:white; border-radius:18px; overflow:hidden; border:1px solid rgba(0,0,0,0.06); box-shadow:0 1px 4px rgba(0,0,0,0.06); overflow-x:auto; }
+        .tr-table { width:100%; border-collapse:collapse; min-width:800px; }
+        .tr-table thead tr { background:#F9FAFB; border-bottom:1px solid #F0F0F5; }
+        .tr-table th { padding:12px 14px; font-size:11px; font-weight:700; color:#6E6E73; text-transform:uppercase; letter-spacing:0.05em; text-align:left; white-space:nowrap; }
+        .tr-table td { padding:11px 14px; font-size:13px; border-bottom:1px solid #F5F5F7; vertical-align:middle; }
+        .tr-table tr:last-child td { border-bottom:none; }
+        .tr-table tr:hover td { background:#FAFAFA; }
+
+        .tr-id { font-size:11px; font-family:monospace; background:#F3F4F6; padding:2px 6px; border-radius:5px; color:#6B7280; }
+        .tr-user-name { font-size:13px; font-weight:600; }
+        .tr-user-email { font-size:11px; color:#9CA3AF; }
+        .tr-product { font-size:13px; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .tr-more { font-size:10px; color:#9CA3AF; }
+        .tr-method { font-size:11px; background:#F5F5F7; padding:3px 8px; border-radius:6px; color:#6E6E73; text-transform:uppercase; }
+        .tr-badge { font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; display:inline-block; }
+        .tr-amount { font-size:13px; font-weight:700; color:#1D1D1F; }
+        .tr-orig { font-size:10px; color:#9CA3AF; text-decoration:line-through; }
+        .tr-date { font-size:12px; color:#6E6E73; }
+
+        .tr-loading { display:flex; justify-content:center; padding:48px; }
+        .tr-spinner { width:32px; height:32px; border-radius:50%; border:3px solid #0077A8; border-top-color:transparent; animation:spin 0.8s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .tr-empty { display:flex; flex-direction:column; align-items:center; gap:8px; padding:48px; color:#9CA3AF; font-size:14px; }
+        .tr-empty p:first-child { font-size:32px; }
+
+        .tr-pagination { display:flex; align-items:center; justify-content:center; gap:16px; }
+        .tr-page-btn { padding:8px 16px; border-radius:10px; border:1.5px solid #E5E5EA; background:white; font-size:13px; font-weight:600; cursor:pointer; color:#1D1D1F; transition:all 0.18s; }
+        .tr-page-btn:hover:not(:disabled) { border-color:#0077A8; color:#0077A8; }
+        .tr-page-btn:disabled { opacity:0.4; cursor:not-allowed; }
+        .tr-page-info { font-size:13px; color:#6E6E73; }
+      `}</style>
     </div>
   );
 }

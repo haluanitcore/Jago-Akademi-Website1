@@ -6,10 +6,9 @@ import { prisma } from "../db/prisma.js";
 import { AppError, successResponse } from "../types/index.js";
 
 const router = Router();
-router.use(authenticate);
 
 // GET /api/subscription/me — current subscription status
-router.get("/me", async (req: Request, res: Response, next: NextFunction) => {
+router.get("/me", authenticate, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;
     const sub = await prisma.subscription.findUnique({ where: { userId } });
@@ -28,7 +27,7 @@ const subscribeSchema = z.object({
 });
 
 // POST /api/subscription — create or renew subscription (called after payment)
-router.post("/", validateBody(subscribeSchema), async (req: Request, res: Response, next: NextFunction) => {
+router.post("/", authenticate, validateBody(subscribeSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;
     const { planType, orderId } = req.body as z.infer<typeof subscribeSchema>;
@@ -50,7 +49,7 @@ router.post("/", validateBody(subscribeSchema), async (req: Request, res: Respon
 });
 
 // PATCH /api/subscription/cancel — cancel subscription
-router.patch("/cancel", async (req: Request, res: Response, next: NextFunction) => {
+router.patch("/cancel", authenticate, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;
     const sub = await prisma.subscription.findUnique({ where: { userId } });
@@ -106,7 +105,7 @@ router.get("/plans", async (_req: Request, res: Response, next: NextFunction) =>
 });
 
 // PATCH /api/subscription/:userId — admin manage subscription
-router.patch("/:userId", async (req: Request, res: Response, next: NextFunction) => {
+router.patch("/:userId", authenticate, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const isAdmin = req.user?.roles.includes("super_admin" as never);
     if (!isAdmin) throw new AppError(403, "Akses ditolak.");
