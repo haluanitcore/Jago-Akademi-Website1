@@ -305,7 +305,7 @@ export function ECourseCatalog() {
               return (
                 <ProgramCard
                   key={course.id}
-                  href={`/kursus/${course.slug}`}
+                  href={`/checkout/${course.slug}`}
                   title={course.title}
                   description={course.trainer?.name ? `Bersama ${course.trainer.name}` : (course.shortDesc ?? undefined)}
                   unitLabel="E-Course"

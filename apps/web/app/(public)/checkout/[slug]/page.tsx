@@ -3,6 +3,7 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
+import { getToken } from "@/lib/auth/token";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -11,8 +12,8 @@ type ItemInfo = {
   title: string;
   price: number;
   coverUrl?: string | null;
-  /** "course" | "event" */
-  itemType: "course" | "event";
+  /** "course" | "event" | "ebook" */
+  itemType: "course" | "event" | "ebook";
   /** Extra label shown below title */
   subtitle?: string;
 };
@@ -25,15 +26,12 @@ type CouponResult = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// Default export component parameters promise bug fixed in P2
 function getApiBase() {
   return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 }
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("jg_token");
-}
-
+// Format Rp helper
 function formatRp(amount: number) {
   return `Rp ${amount.toLocaleString("id-ID")}`;
 }
@@ -49,10 +47,11 @@ function CheckoutContent() {
 
   /**
    * type=event  → checkout mode event (itemId must be provided via query)
+   * type=ebook  → checkout mode ebook (slug is the ebook slug)
    * type=course (or absent) → checkout mode course (slug is the course slug)
    */
-  const itemType = (searchParams.get("type") ?? "course") as "course" | "event";
-  // For event checkout the UUID is passed explicitly; for course we resolve it via the API
+  const itemType = (searchParams.get("type") ?? "course") as "course" | "event" | "ebook";
+  // For event checkout the UUID is passed explicitly; for course/ebook we resolve it via the API
   const queryItemId = searchParams.get("itemId");
 
   const [item, setItem] = useState<ItemInfo | null>(null);
@@ -94,6 +93,24 @@ function CheckoutContent() {
             });
           } else {
             setError("Event tidak ditemukan.");
+          }
+        } else if (itemType === "ebook") {
+          const res = await fetch(`${getApiBase()}/api/ebooks/${slug}`, {
+            headers: { Authorization: `Bearer ${getToken()}` },
+          });
+          const data = await res.json();
+          if (data.success && data.data) {
+            const ebook = data.data;
+            setItem({
+              id: ebook.id,
+              title: ebook.title,
+              price: Number(ebook.salePrice ?? ebook.price),
+              coverUrl: ebook.coverUrl,
+              itemType: "ebook",
+              subtitle: "Akses seumur hidup setelah pembelian",
+            });
+          } else {
+            setError("E-Book tidak ditemukan.");
           }
         } else {
           // Default: course
@@ -173,8 +190,18 @@ function CheckoutContent() {
       });
       const data = await res.json();
       if (data.success) {
-        // paymentUrl is the DOKU hosted payment page
-        window.location.href = data.data.paymentUrl;
+        if (data.data.free) {
+          const redirectUrl =
+            itemType === "ebook"
+              ? `/ebook/${slug}`
+              : itemType === "event"
+                ? `/event/${slug}`
+                : `/belajar/${slug}`;
+          window.location.href = redirectUrl;
+        } else {
+          // paymentUrl is the DOKU hosted payment page
+          window.location.href = data.data.paymentUrl;
+        }
       } else {
         setError(data.error?.message ?? "Gagal memproses checkout.");
       }
@@ -186,10 +213,10 @@ function CheckoutContent() {
   }
 
   // ── Design tokens per item type ───────────────────────────────────────────────
-  const accentColor  = itemType === "event" ? "#7C3AED" : "var(--brand-cyan-strong)";
-  const accentBg     = itemType === "event" ? "rgba(124,58,237,0.08)" : "var(--surface-accent-soft)";
-  const accentBorder = itemType === "event" ? "rgba(124,58,237,0.2)" : "rgba(0,119,168,0.15)";
-  const coverEmoji   = itemType === "event" ? "🎤" : "📚";
+  const accentColor  = itemType === "event" ? "#7C3AED" : itemType === "ebook" ? "#2563EB" : "var(--brand-cyan-strong)";
+  const accentBg     = itemType === "event" ? "rgba(124,58,237,0.08)" : itemType === "ebook" ? "rgba(37,99,235,0.08)" : "var(--surface-accent-soft)";
+  const accentBorder = itemType === "event" ? "rgba(124,58,237,0.2)" : itemType === "ebook" ? "rgba(37,99,235,0.2)" : "rgba(0,119,168,0.15)";
+  const coverEmoji   = itemType === "event" ? "🎤" : itemType === "ebook" ? "📖" : "📚";
 
   // ── Loading state ─────────────────────────────────────────────────────────────
   if (loading) {
@@ -208,7 +235,7 @@ function CheckoutContent() {
 
   // ── Error state (item not found) ──────────────────────────────────────────────
   if (error && !item) {
-    const backHref = itemType === "event" ? "/event" : "/e-course";
+    const backHref = itemType === "event" ? "/event" : itemType === "ebook" ? "/ebook" : "/e-course";
     return (
       <div
         className="flex min-h-screen flex-col items-center justify-center gap-4 px-4"
@@ -223,7 +250,7 @@ function CheckoutContent() {
         >
           <p className="mb-3 font-semibold" style={{ color: "#B91C1C" }}>⚠️ {error}</p>
           <Link href={backHref} className="btn btn-outline btn-sm">
-            {itemType === "event" ? "← Kembali ke Event" : "← Kembali ke E-Course"}
+            {itemType === "event" ? "← Kembali ke Event" : itemType === "ebook" ? "← Kembali ke E-Book" : "← Kembali ke E-Course"}
           </Link>
         </div>
       </div>
@@ -231,7 +258,7 @@ function CheckoutContent() {
   }
 
   const finalAmount = coupon ? coupon.finalAmount : (item?.price ?? 0);
-  const priceLabel  = itemType === "event" ? "Harga tiket" : "Harga kursus";
+  const priceLabel  = itemType === "event" ? "Harga tiket" : itemType === "ebook" ? "Harga e-book" : "Harga kursus";
 
   // ── Main render ───────────────────────────────────────────────────────────────
   return (
@@ -241,11 +268,11 @@ function CheckoutContent() {
         {/* Breadcrumb */}
         <nav className="mb-6 flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
           <Link
-            href={itemType === "event" ? "/event" : "/e-course"}
+            href={itemType === "event" ? "/event" : itemType === "ebook" ? "/ebook" : "/e-course"}
             className="transition-colors hover:underline"
             style={{ color: "var(--text-muted)" }}
           >
-            {itemType === "event" ? "Event" : "E-Course"}
+            {itemType === "event" ? "Event" : itemType === "ebook" ? "E-Book" : "E-Course"}
           </Link>
           <span aria-hidden="true" style={{ color: "var(--border-strong)" }}>/</span>
           <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>Checkout</span>
@@ -301,7 +328,7 @@ function CheckoutContent() {
                     className="badge mt-2"
                     style={{ background: accentBg, color: accentColor, border: `1px solid ${accentBorder}` }}
                   >
-                    {itemType === "event" ? "Event" : "E-Course"}
+                    {itemType === "event" ? "Event" : itemType === "ebook" ? "E-Book" : "E-Course"}
                   </span>
                 </div>
               </div>

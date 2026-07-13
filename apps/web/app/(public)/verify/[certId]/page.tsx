@@ -29,9 +29,10 @@ async function getCertificate(code: string): Promise<CertData | null> {
 export async function generateMetadata({
   params,
 }: {
-  params: { certId: string };
+  params: Promise<{ certId: string }>;
 }): Promise<Metadata> {
-  const cert = await getCertificate(params.certId);
+  const { certId } = await params;
+  const cert = await getCertificate(certId);
   if (!cert) return { title: "Sertifikat Tidak Ditemukan" };
   return {
     title: `Sertifikat ${cert.holderName}`,
@@ -42,9 +43,10 @@ export async function generateMetadata({
 export default async function VerifyCertPage({
   params,
 }: {
-  params: { certId: string };
+  params: Promise<{ certId: string }>;
 }) {
-  const cert = await getCertificate(params.certId);
+  const { certId } = await params;
+  const cert = await getCertificate(certId);
 
   if (!cert) {
     return (
@@ -57,7 +59,7 @@ export default async function VerifyCertPage({
           </div>
           <h1 className="text-xl font-bold text-[#1D1D1F]">Sertifikat Tidak Ditemukan</h1>
           <p className="text-sm text-[#6E6E73]">
-            Kode sertifikat <strong>{params.certId}</strong> tidak valid atau belum diterbitkan.
+            Kode sertifikat <strong>{certId}</strong> tidak valid atau belum diterbitkan.
           </p>
           <Link href="/" className="text-sm text-[#0077A8] hover:underline">
             Kembali ke beranda

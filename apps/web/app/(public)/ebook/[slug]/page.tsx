@@ -29,8 +29,9 @@ async function getEBook(slug: string): Promise<EBook | null> {
   }
 }
 
-export default async function EBookDetailPage({ params }: { params: { slug: string } }) {
-  const book = await getEBook(params.slug);
+export default async function EBookDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const book = await getEBook(slug);
   if (!book) notFound();
 
   const displayPrice = book.salePrice ?? book.price;

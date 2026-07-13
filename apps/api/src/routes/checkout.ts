@@ -105,6 +105,69 @@ router.post("/", authenticate, async (req, res, next) => {
       }
     }
 
+    // If the final payment amount is Rp 0 (natively free or coupon discounted 100%), fulfill immediately!
+    if (finalAmount === 0) {
+      const order = await prisma.order.create({
+        data: {
+          userId,
+          totalAmount: price,
+          discountAmount,
+          finalAmount: 0,
+          status: "paid",
+          paidAt: new Date(),
+          paymentMethod: "free",
+          couponId: couponId ?? null,
+          referralCode: resolvedReferralCode ?? null,
+          items: {
+            create: {
+              itemType,
+              itemId,
+              itemTitle,
+              quantity: 1,
+              unitPrice: price,
+              totalPrice: price,
+            },
+          },
+        },
+        include: { user: { select: { name: true, email: true } } },
+      });
+
+      if (couponId) await incrementCouponUsage(couponId);
+
+      await prisma.paymentTransaction.create({
+        data: {
+          orderId: order.id,
+          gateway: "free",
+          gatewayTxId: `FREE-${order.id.slice(0, 8).toUpperCase()}`,
+          amount: 0,
+          status: "success",
+        },
+      });
+
+      if (itemType === "course") {
+        await prisma.courseEnrollment.upsert({
+          where: { courseId_userId: { courseId: itemId, userId } },
+          create: { courseId: itemId, userId },
+          update: {},
+        });
+      } else if (itemType === "event") {
+        await prisma.eventRegistration.upsert({
+          where: { eventId_userId: { eventId: itemId, userId } },
+          create: { eventId: itemId, userId, orderId: order.id, status: "confirmed" },
+          update: { status: "confirmed", orderId: order.id },
+        });
+        await prisma.event.update({
+          where: { id: itemId },
+          data: { totalSold: { increment: 1 } },
+        });
+      }
+
+      // No email notification needed for free items — the user is redirected
+      // directly to the product page on success.
+
+      return res.json(successResponse({ orderId: order.id, paymentUrl: null, finalAmount: 0, free: true }));
+    }
+
     const order = await prisma.order.create({
       data: {
         userId,
@@ -169,14 +232,15 @@ router.post("/", authenticate, async (req, res, next) => {
     });
 
     // Non-blocking notification (queued in prod, inline in dev/test).
-    await enqueueEmail({
+    // Fire-and-forget: never block the checkout response on email delivery.
+    enqueueEmail({
       type: "payment-pending",
       to: order.user.email,
       name: order.user.name,
       orderId: order.id,
       amount: finalAmount,
       paymentUrl,
-    });
+    }).catch(() => {});
 
     return res.json(successResponse({ orderId: order.id, paymentUrl, finalAmount }));
   } catch (err) {

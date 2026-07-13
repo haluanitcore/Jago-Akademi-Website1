@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getToken } from "@/lib/auth/token";
 
 type Props = {
   ebookId: string;
@@ -14,12 +15,8 @@ function getApiBase() {
   return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 }
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("jg_token");
-}
 
-export default function EBookActions({ ebookId, price }: Props) {
+export default function EBookActions({ ebookId, ebookSlug, price }: Props) {
   const router = useRouter();
   const [hasPurchased, setHasPurchased] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -44,34 +41,7 @@ export default function EBookActions({ ebookId, price }: Props) {
   }, [ebookId]);
 
   async function handleBuy() {
-    const token = getToken();
-    if (!token) {
-      router.push(`/login?redirect=/ebook/${ebookId}`);
-      return;
-    }
-
-    setBuying(true);
-    setError("");
-    try {
-      const res = await fetch(`${getApiBase()}/api/checkout`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ itemType: "ebook", itemId: ebookId }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        window.location.href = data.data.paymentUrl;
-      } else {
-        setError(data.error?.message ?? "Gagal memproses pembelian.");
-      }
-    } catch {
-      setError("Terjadi kesalahan. Coba lagi.");
-    } finally {
-      setBuying(false);
-    }
+    router.push(`/checkout/${ebookSlug}?type=ebook`);
   }
 
   if (hasPurchased && fileUrl) {

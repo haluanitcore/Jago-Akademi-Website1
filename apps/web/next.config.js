@@ -17,7 +17,7 @@ const nextConfig = {
   async redirects() {
     return [
       { source: "/kursus", destination: "/e-course", permanent: true },
-      { source: "/kursus/:path*", destination: "/e-course/:path*", permanent: true },
+      { source: "/kursus/:path*", destination: "/checkout/:path*", permanent: true },
       // /lms index → the B2B LMS landing (/clients). The /lms/* namespace is the
       // multi-tenant LMS app, so only the exact /lms path redirects.
       { source: "/lms", destination: "/clients", permanent: false },
