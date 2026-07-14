@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getToken } from "@/lib/auth/token";
 
 type Order = {
   id: string;
@@ -25,10 +26,6 @@ const STATUS_LABEL: Record<string, string> = {
   paid: "Lunas", pending: "Menunggu", failed: "Gagal", expired: "Kadaluarsa", refunded: "Refund",
 };
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("access_token") || sessionStorage.getItem("jg_token");
-}
 
 export default function AdminTransaksiPage() {
   const [orders, setOrders] = useState<Order[]>([]);

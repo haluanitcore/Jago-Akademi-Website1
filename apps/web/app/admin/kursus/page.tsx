@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getToken } from "@/lib/auth/token";
 
 type Course = {
   id: string;
@@ -35,10 +36,6 @@ const LEVEL_LABEL: Record<string, string> = {
   advanced:     "🔴 Mahir",
 };
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("access_token") || sessionStorage.getItem("jg_token");
-}
 
 export default function AdminKursusPage() {
   const [courses, setCourses] = useState<Course[]>([]);

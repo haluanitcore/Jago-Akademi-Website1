@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getToken } from "@/lib/auth/token";
 
 type OrderItem = { itemTitle: string | null; itemType: string };
 type Order = {
@@ -27,13 +28,6 @@ const TYPE_ICON: Record<string, string> = {
   subscription: "⭐",
 };
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return (
-    sessionStorage.getItem("access_token") ||
-    sessionStorage.getItem("jg_token")
-  );
-}
 
 export default function PesananDashboardPage() {
   const router = useRouter();

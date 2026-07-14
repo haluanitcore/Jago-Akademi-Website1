@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { getValidToken } from "@/lib/auth/token";
 
 type Lesson = {
   id: string;
@@ -17,13 +18,18 @@ type Lesson = {
 
 export default function LmsCoursePlayerPage() {
   const { tenantSlug, courseId } = useParams<{ tenantSlug: string; courseId: string }>();
+  const router = useRouter();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
 
   const fetchLessons = useCallback(async () => {
-    const res = await fetch(`/api/lms/portal/${tenantSlug}/courses/${courseId}/lessons`);
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
+    const res = await fetch(`/api/lms/portal/${tenantSlug}/courses/${courseId}/lessons`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     const data = await res.json();
     if (data.success) {
       setLessons(data.data);
@@ -32,14 +38,17 @@ export default function LmsCoursePlayerPage() {
       }
     }
     setLoading(false);
-  }, [tenantSlug, courseId, activeLesson]);
+  }, [tenantSlug, courseId, activeLesson, router]);
 
   useEffect(() => { fetchLessons(); }, [fetchLessons]);
 
   async function markComplete(lessonId: string) {
     setCompleting(true);
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
     await fetch(`/api/lms/portal/${tenantSlug}/courses/${courseId}/lessons/${lessonId}/complete`, {
       method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
     });
     await fetchLessons();
     setCompleting(false);

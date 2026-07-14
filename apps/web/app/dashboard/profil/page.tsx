@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { getToken } from "@/lib/auth/token";
 
 type UserProfile = {
   id: string;
@@ -17,10 +18,6 @@ type UserProfile = {
 
 const API = ""; // Relative path → Next.js proxy → backend
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("access_token") || sessionStorage.getItem("jg_token");
-}
 
 export default function ProfilPage() {
   const router = useRouter();

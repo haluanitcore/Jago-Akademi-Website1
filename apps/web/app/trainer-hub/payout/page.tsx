@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getValidToken } from "@/lib/auth/token";
 
 type Payout = {
   id: string;
@@ -26,6 +28,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function TrainerPayoutPage() {
+  const router = useRouter();
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -33,20 +36,31 @@ export default function TrainerPayoutPage() {
   const [form, setForm] = useState({ amount: "", bankName: "", accountNo: "", accountName: "" });
 
   useEffect(() => {
-    fetch("/api/trainer/payouts")
-      .then((r) => r.json())
-      .then((d) => { if (d.success) setPayouts(d.data); })
-      .finally(() => setLoading(false));
-  }, []);
+    (async () => {
+      const token = await getValidToken();
+      if (!token) { router.replace("/masuk"); return; }
+      try {
+        const r = await fetch("/api/trainer/payouts", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = await r.json();
+        if (d.success) setPayouts(d.data);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setMsg("");
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
     try {
       const res = await fetch("/api/trainer/payouts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ...form, amount: parseFloat(form.amount) }),
       });
       const data = await res.json();

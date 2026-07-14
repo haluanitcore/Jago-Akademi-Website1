@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getToken } from "@/lib/auth/token";
 
 type EBook = {
   id: string;
@@ -20,9 +21,7 @@ export default function EbookPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token =
-      sessionStorage.getItem("access_token") ||
-      sessionStorage.getItem("jg_token");
+    const token = getToken();
     if (!token) { router.replace("/masuk"); return; }
 
     fetch(`/api/ebooks/my`, {
@@ -30,10 +29,15 @@ export default function EbookPage() {
     })
       .then((r) => r.json())
       .then((body) => {
-        if (body.success) setEbooks(body.data ?? []);
-        else setError(body.error?.message ?? "Gagal memuat data.");
+        if (body.success && Array.isArray(body.data)) {
+          setEbooks(body.data);
+        } else {
+          setError(body.error?.message ?? "Gagal memuat e-book.");
+        }
       })
-      .catch(() => setError("Tidak dapat terhubung ke server."))
+      .catch(() => {
+        setError("Gagal memuat e-book.");
+      })
       .finally(() => setLoading(false));
   }, [router]);
 

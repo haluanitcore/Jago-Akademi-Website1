@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { getToken } from "@/lib/auth/token";
 
 type Plan = {
   id: string;
@@ -22,11 +23,6 @@ type Subscription = {
   isExpired: boolean;
 } | null;
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("access_token") || sessionStorage.getItem("jg_token");
-}
-
 export default function BerlanggananDashboardPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [currentSub, setCurrentSub] = useState<Subscription | undefined>(undefined);
@@ -37,13 +33,24 @@ export default function BerlanggananDashboardPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/subscription/plans").then((r) => r.json()),
+      fetch("/api/subscription/plans")
+        .then((r) => r.json())
+        .catch(() => ({ success: false, data: [] })),
       fetch("/api/subscription/me", {
         headers: { Authorization: `Bearer ${getToken()}` },
-      }).then((r) => r.json()).catch(() => ({ success: true, data: null })),
+      })
+        .then((r) => r.json())
+        .catch(() => ({ success: true, data: null })),
     ]).then(([plansRes, subRes]) => {
-      if (plansRes.success) setPlans(plansRes.data);
-      if (subRes.success) setCurrentSub(subRes.data);
+      if (plansRes.success && Array.isArray(plansRes.data) && plansRes.data.length > 0) {
+        setPlans(plansRes.data);
+      } else {
+        setMsg("Gagal memuat daftar paket. Silakan muat ulang halaman.");
+        setMsgType("error");
+      }
+      if (subRes.success) {
+        setCurrentSub(subRes.data);
+      }
     }).finally(() => setLoading(false));
   }, []);
 
@@ -80,13 +87,13 @@ export default function BerlanggananDashboardPage() {
       {/* Header */}
       <div className="bs-header">
         <div>
-          <h1 className="bs-title">Paket Berlangganan</h1>
-          <p className="bs-subtitle">Akses semua kursus premium tanpa batas</p>
+          <h1 className="bs-title">Status Berlangganan</h1>
+          <p className="bs-subtitle">Kelola dan tingkatkan akses belajar premium Anda</p>
         </div>
       </div>
 
       {/* Current subscription status */}
-      {currentSub?.isActive && (
+      {currentSub?.isActive ? (
         <div className="bs-active-banner">
           <div className="bs-active-icon">✅</div>
           <div className="bs-active-info">
@@ -103,6 +110,19 @@ export default function BerlanggananDashboardPage() {
             </p>
           </div>
           <div className="bs-active-badge">Aktif</div>
+        </div>
+      ) : (
+        <div className="bs-inactive-banner">
+          <div className="bs-inactive-icon">🔒</div>
+          <div className="bs-inactive-info">
+            <p className="bs-inactive-title">Belum Berlangganan Premium</p>
+            <p className="bs-inactive-desc">
+              Anda saat ini menggunakan akun gratis. Berlangganan untuk membuka semua fitur.
+            </p>
+          </div>
+          <Link href="/berlangganan" className="bs-inactive-cta">
+            Pelajari Paket
+          </Link>
         </div>
       )}
 
@@ -243,6 +263,22 @@ export default function BerlanggananDashboardPage() {
           padding: 14px 18px; display: flex; align-items: center; gap: 10px;
           font-size: 13px; color: #92400E;
         }
+
+        /* Inactive banner */
+        .bs-inactive-banner {
+          background: #F4F4F5; border: 1px solid #E4E4E7; border-radius: 16px;
+          padding: 16px 20px; display: flex; align-items: center; gap: 14px;
+        }
+        .bs-inactive-icon { font-size: 28px; flex-shrink: 0; }
+        .bs-inactive-info { flex: 1; }
+        .bs-inactive-title { font-size: 14.5px; font-weight: 700; color: #27272A; }
+        .bs-inactive-desc { font-size: 12px; color: #71717A; margin-top: 3px; }
+        .bs-inactive-cta {
+          background: #0077A8; color: white; font-size: 12px; font-weight: 700;
+          padding: 8px 16px; border-radius: 8px; flex-shrink: 0; text-decoration: none;
+          transition: background 0.2s;
+        }
+        .bs-inactive-cta:hover { background: #005f87; }
 
         .bs-msg { padding: 14px 18px; border-radius: 12px; font-size: 13px; font-weight: 500; }
         .bs-msg-success { background: #DCFCE7; border: 1px solid #86EFAC; color: #166534; }

@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
+import { getValidToken } from "@/lib/auth/token";
 
 // ─── Animated check-mark SVG (CSS stroke-dasharray trick) ─────────────────────
 function AnimatedCheckmark() {
@@ -108,10 +109,18 @@ function SuccessContent() {
   const isMock = params.get("mock") === "1";
   const [mounted, setMounted] = useState(false);
 
+  const [tokenReady, setTokenReady] = useState(false);
+
   useEffect(() => {
     // Small delay so CSS animations trigger after mount
     const t = setTimeout(() => setMounted(true), 50);
     return () => clearTimeout(t);
+  }, []);
+
+  // Ensure token is still valid (auto-refresh if needed)
+  // so subsequent navigation to /dashboard/kursus doesn't redirect to /masuk
+  useEffect(() => {
+    getValidToken().then((t) => setTokenReady(!!t));
   }, []);
 
   return (
@@ -192,7 +201,7 @@ function SuccessContent() {
         >
           <Link
             id="success-start-learning-btn"
-            href="/belajar"
+            href={tokenReady ? "/dashboard/kursus" : "/masuk?redirect=/dashboard/kursus"}
             className="btn btn-primary btn-lg flex-1 justify-center"
           >
             Mulai Belajar

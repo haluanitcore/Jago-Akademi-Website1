@@ -7,6 +7,7 @@ import {
   ArrowLeft, Building2, Users, Layers, BarChart3,
   ChevronRight, ToggleLeft, ToggleRight, Mail,
 } from "lucide-react";
+import { getToken } from "@/lib/auth/token";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,14 +47,6 @@ type Member = { id: string; name: string; email: string; role: string };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return (
-    sessionStorage.getItem("access_token") ||
-    sessionStorage.getItem("jg_token") ||
-    localStorage.getItem("jg_access_token")
-  );
-}
 
 function authHeaders() {
   return { Authorization: `Bearer ${getToken() ?? ""}`, "Content-Type": "application/json" };

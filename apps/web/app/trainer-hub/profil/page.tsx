@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getValidToken } from "@/lib/auth/token";
 
 type UserProfile = {
   id: string;
@@ -18,12 +20,9 @@ type UserProfile = {
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("access_token");
-}
 
 export default function TrainerProfilPage() {
+  const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,13 +39,14 @@ export default function TrainerProfilPage() {
   });
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) return;
-    fetch(`${API}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.json())
-      .then((d) => {
+    (async () => {
+      const token = await getValidToken();
+      if (!token) { router.replace("/masuk"); return; }
+      try {
+        const r = await fetch(`${API}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = await r.json();
         if (d.success) {
           setUser(d.data);
           setForm({
@@ -58,16 +58,19 @@ export default function TrainerProfilPage() {
             location: d.data.profile?.location ?? "",
           });
         }
-      })
-      .finally(() => setLoading(false));
-  }, []);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [router]);
 
   async function handleSave(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError(null);
     setSaved(false);
-    const token = getToken();
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
     const res = await fetch(`${API}/api/users/me`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },

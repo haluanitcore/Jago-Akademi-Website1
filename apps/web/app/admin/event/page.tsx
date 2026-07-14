@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getToken } from "@/lib/auth/token";
 
 type Event = {
   id: string;
@@ -30,10 +31,6 @@ const TYPE_LABEL: Record<string, string> = {
   seminar: "🎤 Seminar", webinar: "💻 Webinar", workshop: "🔧 Workshop", bootcamp: "⚡ Bootcamp",
 };
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("access_token") || sessionStorage.getItem("jg_token");
-}
 
 export default function AdminEventPage() {
   const [events, setEvents] = useState<Event[]>([]);

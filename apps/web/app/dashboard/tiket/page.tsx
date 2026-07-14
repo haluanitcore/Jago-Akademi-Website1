@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getToken } from "@/lib/auth/token";
 
 type EventInfo = {
   id: string;
@@ -27,10 +28,6 @@ type Registration = {
 
 const API = ""; // Relative path → Next.js proxy → backend
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("access_token") || sessionStorage.getItem("jg_token");
-}
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("id-ID", {

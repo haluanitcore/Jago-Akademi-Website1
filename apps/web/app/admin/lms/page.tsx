@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, X, Building2, Layers, Users, ChevronRight } from "lucide-react";
+import { getToken } from "@/lib/auth/token";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,14 +32,6 @@ type AssignForm = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return (
-    sessionStorage.getItem("access_token") ||
-    sessionStorage.getItem("jg_token") ||
-    localStorage.getItem("jg_access_token")
-  );
-}
 
 function authHeaders() {
   const token = getToken();

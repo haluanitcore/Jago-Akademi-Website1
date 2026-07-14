@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getToken } from "@/lib/auth/token";
 
 type Review = {
   id: string;
@@ -12,10 +13,6 @@ type Review = {
   course: { title: string } | null;
 };
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("access_token") || sessionStorage.getItem("jg_token");
-}
 
 export default function AdminReviewPage() {
   const [reviews, setReviews] = useState<Review[]>([]);

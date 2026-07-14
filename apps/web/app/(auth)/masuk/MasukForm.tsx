@@ -2,9 +2,22 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { login, buildGoogleLoginUrl } from "@/lib/auth/api";
+import { setToken } from "@/lib/auth/token";
+
+// Only allow same-origin relative redirects (A4: prevent open-redirect via the
+// `redirect` query param). Anything protocol-relative ("//evil.com") or absolute
+// ("https://evil.com") is rejected and falls back to the default destination.
+function safeRedirect(raw: string | null): string | null {
+  if (!raw) return null;
+  if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+  return raw;
+}
 
 export function MasukForm() {
+  const searchParams = useSearchParams();
+  const redirectUrl = safeRedirect(searchParams.get("redirect"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,10 +37,13 @@ export function MasukForm() {
       return;
     }
 
-    // Store access token in both storages: sessionStorage for current tab, localStorage for cross-tab
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("access_token", result.data.accessToken);
-      localStorage.setItem("jg_access_token", result.data.accessToken);
+    // Persist token via centralized utility (sessionStorage + localStorage)
+    setToken(result.data.accessToken);
+
+    // If a redirect URL was provided (e.g. from checkout), go there
+    if (redirectUrl) {
+      window.location.href = redirectUrl;
+      return;
     }
 
     // Fetch role to determine redirect target

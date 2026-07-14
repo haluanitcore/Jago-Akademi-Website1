@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { getValidToken } from "@/lib/auth/token";
 
 type Analytics = {
   courseId: string;
@@ -19,20 +20,29 @@ type Analytics = {
 
 export default function CourseAnalyticsPage() {
   const { courseId } = useParams<{ courseId: string }>();
+  const router = useRouter();
   const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`/api/trainer/courses/${courseId}/analytics`)
-      .then((r) => r.json())
-      .then((d) => {
+    (async () => {
+      const token = await getValidToken();
+      if (!token) { router.replace("/masuk"); return; }
+      try {
+        const r = await fetch(`/api/trainer/courses/${courseId}/analytics`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = await r.json();
         if (d.success) setData(d.data);
         else setError(d.error?.message ?? "Gagal memuat data.");
-      })
-      .catch(() => setError("Gagal memuat data."))
-      .finally(() => setLoading(false));
-  }, [courseId]);
+      } catch {
+        setError("Gagal memuat data.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [courseId, router]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-[#6E6E73]">Memuat...</div>;
   if (error || !data) return <div className="min-h-screen flex items-center justify-center text-red-500">{error || "Data tidak ditemukan."}</div>;

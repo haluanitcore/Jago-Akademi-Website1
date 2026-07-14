@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Search, X, Download } from "lucide-react";
+import { getToken } from "@/lib/auth/token";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,14 +59,6 @@ const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> 
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return (
-    sessionStorage.getItem("access_token") ||
-    sessionStorage.getItem("jg_token") ||
-    localStorage.getItem("jg_access_token")
-  );
-}
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString("id-ID", {

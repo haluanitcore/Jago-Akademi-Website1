@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { getValidToken } from "@/lib/auth/token";
 
 type LmsCert = {
   id: string;
@@ -14,15 +15,25 @@ type LmsCert = {
 
 export default function LmsCertificatesPage() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
+  const router = useRouter();
   const [certs, setCerts] = useState<LmsCert[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/lms/portal/${tenantSlug}/certificates`)
-      .then((r) => r.json())
-      .then((d) => { if (d.success) setCerts(d.data); })
-      .finally(() => setLoading(false));
-  }, [tenantSlug]);
+    (async () => {
+      const token = await getValidToken();
+      if (!token) { router.replace("/masuk"); return; }
+      try {
+        const r = await fetch(`/api/lms/portal/${tenantSlug}/certificates`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = await r.json();
+        if (d.success) setCerts(d.data);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [tenantSlug, router]);
 
   return (
     <div className="min-h-screen bg-[#F5F5F7]">

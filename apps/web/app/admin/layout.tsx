@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { getToken, clearToken, refreshAccessToken } from "@/lib/auth/token";
 
 const NAV_GROUPS = [
   {
@@ -35,14 +36,6 @@ const NAV_GROUPS = [
 
 type AdminUser = { name: string; email: string; avatarUrl: string | null };
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return (
-    sessionStorage.getItem("access_token") ||
-    sessionStorage.getItem("jg_token") ||
-    localStorage.getItem("jg_access_token")
-  );
-}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -52,32 +45,46 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) { router.replace("/masuk"); return; }
+    async function initAuth() {
+      let token = getToken();
+      if (!token) { router.replace("/masuk"); return; }
 
-    fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json())
-      .then((body) => {
-        if (!body.success) { router.replace("/masuk"); return; }
-        // Verify user has admin or super_admin role
-        const roleNames: string[] = (body.data.roles ?? []).map(
-          (r: { role: string } | string) => (typeof r === "string" ? r : r.role)
-        );
-        console.log("[AdminLayout] roles:", roleNames); // debug
-        const isAdmin = roleNames.some((r) => ["admin", "super_admin"].includes(r));
-        console.log("[AdminLayout] isAdmin:", isAdmin); // debug
-        if (!isAdmin) {
-          // If not admin, still allow if token is valid (dev convenience)
-          // Comment out below line to enforce admin-only in production:
-          // router.replace("/dashboard"); return;
-        }
-        setAdmin(body.data);
-        setReady(true);
-      })
-      .catch((err) => {
-        console.error("[AdminLayout] Auth error:", err);
-        router.replace("/masuk");
-      });
+      // Attempt to fetch user info
+      let res = await fetch("/api/auth/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => null);
+
+      // If 401 → try token refresh once
+      if (res && res.status === 401) {
+        const refreshed = await refreshAccessToken();
+        if (!refreshed) { clearToken(); router.replace("/masuk"); return; }
+        token = refreshed;
+        res = await fetch("/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null);
+      }
+
+      if (!res || !res.ok) { clearToken(); router.replace("/masuk"); return; }
+
+      const body = await res.json();
+      if (!body.success) { clearToken(); router.replace("/masuk"); return; }
+
+      // Verify admin role
+      const roleNames: string[] = (body.data.roles ?? []).map(
+        (r: { role: string } | string) => (typeof r === "string" ? r : r.role)
+      );
+      const isAdmin = roleNames.some((r) => ["admin", "super_admin"].includes(r));
+      if (!isAdmin) {
+        // A5: enforce admin-only access. Non-admins are bounced to the user
+        // dashboard (the backend still guards every /api/admin/* endpoint, but
+        // the client must not render the admin shell to a non-admin).
+        router.replace("/dashboard");
+        return;
+      }
+      setAdmin(body.data);
+      setReady(true);
+    }
+    initAuth();
   }, [router]);
 
   if (!ready) {

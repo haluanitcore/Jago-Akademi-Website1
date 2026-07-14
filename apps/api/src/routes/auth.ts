@@ -289,10 +289,18 @@ router.get(
           isVerified: true,
           createdAt: true,
           roles: { select: { role: true } },
+          profile: { select: { phone: true, bio: true } },
         },
       });
       if (!user) return next(new AppError(404, "Pengguna tidak ditemukan."));
-      res.json(successResponse(user));
+
+      // Flatten profile fields into the top-level response
+      const { profile, ...rest } = user;
+      res.json(successResponse({
+        ...rest,
+        phone: profile?.phone ?? null,
+        bio: profile?.bio ?? null,
+      }));
     } catch (err) {
       next(err);
     }

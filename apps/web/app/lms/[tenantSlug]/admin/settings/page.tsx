@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { getValidToken } from "@/lib/auth/token";
 
 type TenantSettings = {
   id: string;
@@ -25,6 +26,7 @@ const PLAN_LABELS: Record<string, string> = {
 
 export default function LmsAdminSettingsPage() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
+  const router = useRouter();
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [settings, setSettings] = useState<TenantSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,13 +42,16 @@ export default function LmsAdminSettingsPage() {
   });
 
   const fetchData = useCallback(async () => {
-    const meRes = await fetch("/api/lms/portal/me");
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
+    const authHeaders = { Authorization: `Bearer ${token}` };
+    const meRes = await fetch("/api/lms/portal/me", { headers: authHeaders });
     const meData = await meRes.json();
     const myTenant = meData.data?.find((t: { slug: string; id: string }) => t.slug === tenantSlug);
     if (!myTenant) { setLoading(false); return; }
     setTenantId(myTenant.id);
 
-    const res = await fetch(`/api/lms/tenants/${myTenant.id}`);
+    const res = await fetch(`/api/lms/tenants/${myTenant.id}`, { headers: authHeaders });
     const data = await res.json();
     if (data.success) {
       const t: TenantSettings = data.data;
@@ -59,7 +64,7 @@ export default function LmsAdminSettingsPage() {
       });
     }
     setLoading(false);
-  }, [tenantSlug]);
+  }, [tenantSlug, router]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -77,9 +82,11 @@ export default function LmsAdminSettingsPage() {
       customDomain: form.customDomain || undefined,
     };
 
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
     const res = await fetch(`/api/lms/tenants/${tenantId}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(body),
     });
     const data = await res.json();

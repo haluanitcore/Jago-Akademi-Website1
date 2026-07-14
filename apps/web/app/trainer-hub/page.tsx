@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getValidToken } from "@/lib/auth/token";
 
 type DashboardData = {
   totalCourses: number;
@@ -14,20 +16,29 @@ type DashboardData = {
 };
 
 export default function TrainerHubPage() {
+  const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/trainer/dashboard")
-      .then((r) => r.json())
-      .then((d) => {
+    (async () => {
+      const token = await getValidToken();
+      if (!token) { router.replace("/masuk"); return; }
+      try {
+        const r = await fetch("/api/trainer/dashboard", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = await r.json();
         if (d.success) setData(d.data);
         else setError(d.error?.message ?? "Gagal memuat data.");
-      })
-      .catch(() => setError("Gagal memuat data."))
-      .finally(() => setLoading(false));
-  }, []);
+      } catch {
+        setError("Gagal memuat data.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [router]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-[#6E6E73]">Memuat...</div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;

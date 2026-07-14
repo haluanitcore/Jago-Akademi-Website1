@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { getValidToken } from "@/lib/auth/token";
 
 type Course = {
   id: string;
@@ -15,6 +16,7 @@ type Course = {
 
 export default function LmsAdminCoursesPage() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
+  const router = useRouter();
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,25 +25,30 @@ export default function LmsAdminCoursesPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const meRes = await fetch("/api/lms/portal/me");
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
+    const authHeaders = { Authorization: `Bearer ${token}` };
+    const meRes = await fetch("/api/lms/portal/me", { headers: authHeaders });
     const meData = await meRes.json();
     const myTenant = meData.data?.find((t: { slug: string; id: string }) => t.slug === tenantSlug);
     if (!myTenant) { setLoading(false); return; }
     setTenantId(myTenant.id);
-    const res = await fetch(`/api/lms/tenants/${myTenant.id}/courses`);
+    const res = await fetch(`/api/lms/tenants/${myTenant.id}/courses`, { headers: authHeaders });
     const data = await res.json();
     setCourses(data.data ?? []);
     setLoading(false);
-  }, [tenantSlug]);
+  }, [tenantSlug, router]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   async function createCourse(e: React.FormEvent) {
     e.preventDefault();
     if (!tenantId) return;
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
     const res = await fetch(`/api/lms/tenants/${tenantId}/courses`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(form),
     });
     if (res.ok) { setShowForm(false); setForm({ title: "", description: "", status: "draft" }); fetchData(); }

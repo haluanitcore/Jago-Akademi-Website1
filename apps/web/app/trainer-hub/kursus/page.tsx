@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getValidToken } from "@/lib/auth/token";
 
 type Course = {
   id: string;
@@ -12,15 +14,25 @@ type Course = {
 };
 
 export default function TrainerCoursesPage() {
+  const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/trainer/dashboard")
-      .then((r) => r.json())
-      .then((d) => { if (d.success) setCourses(d.data.courses); })
-      .finally(() => setLoading(false));
-  }, []);
+    (async () => {
+      const token = await getValidToken();
+      if (!token) { router.replace("/masuk"); return; }
+      try {
+        const r = await fetch("/api/trainer/dashboard", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = await r.json();
+        if (d.success) setCourses(d.data.courses);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-[#F5F5F7]">

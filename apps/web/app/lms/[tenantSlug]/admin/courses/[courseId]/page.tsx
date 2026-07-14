@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { getValidToken } from "@/lib/auth/token";
 
 type Lesson = {
   id: string;
@@ -18,6 +19,7 @@ type Batch = { id: string; name: string };
 
 export default function LmsAdminCourseBuilderPage() {
   const { tenantSlug, courseId } = useParams<{ tenantSlug: string; courseId: string }>();
+  const router = useRouter();
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -27,21 +29,24 @@ export default function LmsAdminCourseBuilderPage() {
   const [assigning, setAssigning] = useState(false);
 
   const fetchData = useCallback(async () => {
-    const meRes = await fetch("/api/lms/portal/me");
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
+    const authHeaders = { Authorization: `Bearer ${token}` };
+    const meRes = await fetch("/api/lms/portal/me", { headers: authHeaders });
     const meData = await meRes.json();
     const myTenant = meData.data?.find((t: { slug: string; id: string }) => t.slug === tenantSlug);
     if (!myTenant) return;
     setTenantId(myTenant.id);
     const [lessonRes, batchRes] = await Promise.all([
-      fetch(`/api/lms/tenants/${myTenant.id}/courses/${courseId}/lessons`),
-      fetch(`/api/lms/tenants/${myTenant.id}/batches`),
+      fetch(`/api/lms/tenants/${myTenant.id}/courses/${courseId}/lessons`, { headers: authHeaders }),
+      fetch(`/api/lms/tenants/${myTenant.id}/batches`, { headers: authHeaders }),
     ]);
     const lessonData = await lessonRes.json();
     const batchData = await batchRes.json();
     setLessons(lessonData.data ?? []);
     setBatches(batchData.data ?? []);
     setLoading(false);
-  }, [tenantSlug, courseId]);
+  }, [tenantSlug, courseId, router]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -55,9 +60,11 @@ export default function LmsAdminCourseBuilderPage() {
       durationMins: lessonForm.durationMins ? Number(lessonForm.durationMins) : undefined,
       sortOrder: lessons.length,
     };
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
     const res = await fetch(`/api/lms/tenants/${tenantId}/courses/${courseId}/lessons`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(body),
     });
     if (res.ok) { setLessonForm({ title: "", content: "", videoUrl: "", durationMins: "" }); fetchData(); }
@@ -65,7 +72,12 @@ export default function LmsAdminCourseBuilderPage() {
 
   async function deleteLesson(lessonId: string) {
     if (!tenantId || !confirm("Hapus pelajaran ini?")) return;
-    await fetch(`/api/lms/tenants/${tenantId}/courses/${courseId}/lessons/${lessonId}`, { method: "DELETE" });
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
+    await fetch(`/api/lms/tenants/${tenantId}/courses/${courseId}/lessons/${lessonId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
     fetchData();
   }
 
@@ -73,9 +85,11 @@ export default function LmsAdminCourseBuilderPage() {
     e.preventDefault();
     if (!tenantId || !assignBatchId) return;
     setAssigning(true);
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
     await fetch(`/api/lms/tenants/${tenantId}/courses/${courseId}/assign`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ batchId: assignBatchId, isMandatory: true }),
     });
     setAssigning(false);

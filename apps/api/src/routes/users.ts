@@ -1,22 +1,63 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
+import multer from "multer";
+import path from "node:path";
+import fs from "node:fs";
 import { prisma } from "../db/prisma.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { writeAudit } from "../services/audit/log.js";
-import { successResponse } from "../types/index.js";
+import { hashPassword, verifyPassword } from "../services/auth/hash.js";
+import { AppError, successResponse } from "../types/index.js";
 import { REFRESH_COOKIE } from "../services/auth/token.js";
+import { env } from "../config/env.js";
 
 const router = Router();
 
-// PATCH /api/users/me — update name, avatarUrl, and profile (bio, headline, linkedin, location)
+// ---------------------------------------------------------------------------
+// Avatar upload setup (multer)
+// ---------------------------------------------------------------------------
+const ALLOWED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+function ensureDir(dir: string) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+
+const avatarStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const dir = path.join(env.UPLOAD_DIR, "avatars");
+    ensureDir(dir);
+    cb(null, dir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  },
+});
+
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_AVATAR_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new AppError(400, `Format tidak didukung. Gunakan: ${ALLOWED_AVATAR_TYPES.join(", ")}`));
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/users/me — update name, phone, bio, headline, linkedin, location
+// ---------------------------------------------------------------------------
 router.patch(
   "/me",
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.user!;
-      const { name, avatarUrl, bio, headline, linkedin, location } = req.body as {
+      const { name, avatarUrl, phone, bio, headline, linkedin, location } = req.body as {
         name?: string;
         avatarUrl?: string;
+        phone?: string;
         bio?: string;
         headline?: string;
         linkedin?: string;
@@ -32,11 +73,12 @@ router.patch(
         select: { id: true, name: true, email: true, avatarUrl: true },
       });
 
-      if (bio !== undefined || headline !== undefined || linkedin !== undefined || location !== undefined) {
+      if (phone !== undefined || bio !== undefined || headline !== undefined || linkedin !== undefined || location !== undefined) {
         await prisma.userProfile.upsert({
           where: { userId: id },
-          create: { userId: id, bio, headline, linkedin, location },
+          create: { userId: id, phone, bio, headline, linkedin, location },
           update: {
+            ...(phone !== undefined ? { phone } : {}),
             ...(bio !== undefined ? { bio } : {}),
             ...(headline !== undefined ? { headline } : {}),
             ...(linkedin !== undefined ? { linkedin } : {}),
@@ -45,14 +87,110 @@ router.patch(
         });
       }
 
-      res.json(successResponse(user));
+      // Return user with profile fields flattened
+      const profile = await prisma.userProfile.findUnique({ where: { userId: id } });
+      res.json(successResponse({
+        ...user,
+        phone: profile?.phone ?? null,
+        bio: profile?.bio ?? null,
+      }));
     } catch (err) {
       next(err);
     }
   },
 );
 
+// ---------------------------------------------------------------------------
+// POST /api/users/me/avatar — upload avatar image
+// ---------------------------------------------------------------------------
+router.post(
+  "/me/avatar",
+  authenticate,
+  (req: Request, res: Response, next: NextFunction) => {
+    avatarUpload.single("avatar")(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return next(new AppError(400, "Ukuran foto maks. 5 MB."));
+        }
+        return next(new AppError(400, err.message));
+      }
+      if (err) return next(err);
+      next();
+    });
+  },
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.file) return next(new AppError(400, "Tidak ada file yang diunggah."));
+
+      const { id } = req.user!;
+      const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+      await prisma.user.update({
+        where: { id },
+        data: { avatarUrl },
+      });
+
+      res.json(successResponse({ avatarUrl }));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// PATCH /api/users/me/password — change password
+// ---------------------------------------------------------------------------
+router.patch(
+  "/me/password",
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.user!;
+      const { currentPassword, newPassword } = req.body as {
+        currentPassword?: string;
+        newPassword?: string;
+      };
+
+      if (!currentPassword || !newPassword) {
+        return next(new AppError(400, "Password lama dan baru harus diisi."));
+      }
+      if (newPassword.length < 8) {
+        return next(new AppError(400, "Password baru minimal 8 karakter."));
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: { passwordHash: true, authProvider: true },
+      });
+
+      if (!user) return next(new AppError(404, "Pengguna tidak ditemukan."));
+
+      // Users who signed up via Google (or other OAuth) may not have a password
+      if (!user.passwordHash) {
+        return next(new AppError(400, "Akun Anda menggunakan login sosial dan tidak memiliki password."));
+      }
+
+      const valid = await verifyPassword(currentPassword, user.passwordHash);
+      if (!valid) {
+        return next(new AppError(400, "Password lama tidak sesuai."));
+      }
+
+      const newHash = await hashPassword(newPassword);
+      await prisma.user.update({
+        where: { id },
+        data: { passwordHash: newHash },
+      });
+
+      res.json(successResponse({ message: "Password berhasil diubah." }));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
 // DELETE /api/users/me — PDP right to erasure (anonymize, not hard-delete)
+// ---------------------------------------------------------------------------
 router.delete(
   "/me",
   authenticate,
@@ -115,8 +253,10 @@ router.delete(
   },
 );
 
+// ---------------------------------------------------------------------------
 // GET /api/users/me/export — PDP right to data access/portability (BL-18).
 // Returns a downloadable JSON bundle of everything we hold about the caller.
+// ---------------------------------------------------------------------------
 router.get(
   "/me/export",
   authenticate,
@@ -181,3 +321,4 @@ router.get(
 );
 
 export default router;
+

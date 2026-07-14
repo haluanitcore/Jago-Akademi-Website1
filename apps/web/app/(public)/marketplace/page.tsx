@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { BookMarked, Search, X, Tag } from "lucide-react";
+import { BookMarked, Search, X, Tag, Video, Package, Layers, Sparkles, ShoppingBag } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
-type EBook = {
+type MarketplaceItem = {
   id: string;
   slug: string;
   title: string;
@@ -15,10 +15,100 @@ type EBook = {
   salePrice: string | null;
   coverUrl: string | null;
   author: string | null;
-  pages: number | null;
+  type: "ebook" | "recording" | "module";
+  badge?: string;
   category: string | null;
-  totalSold: number;
+  extraInfo?: string; // e.g. "3 jam video", "12 file template", "180 halaman"
 };
+
+// ─── Dummy Data for Extended Categories ──────────────────────────────────────
+
+const MOCK_RECORDINGS: MarketplaceItem[] = [
+  {
+    id: "rec-1",
+    slug: "nextjs-15-ai-integration-recording",
+    title: "Rekaman Workshop: Next.js 15 & AI Integration Masterclass",
+    description: "Rekaman penuh workshop intensif membangun aplikasi AI-Agents dengan Next.js 15, Vercel AI SDK, dan Gemini API.",
+    price: "249000",
+    salePrice: "149000",
+    coverUrl: null,
+    author: "Rian Ferdinand",
+    type: "recording",
+    badge: "Terlaris",
+    category: "Next.js",
+    extraInfo: "4.5 jam video HD",
+  },
+  {
+    id: "rec-2",
+    slug: "docker-for-production-recording",
+    title: "Rekaman Webinar: Docker & Kubernetes untuk Pemula",
+    description: "Panduan praktis deploy aplikasi microservices ke VPS dan cloud provider menggunakan Docker Compose.",
+    price: "150000",
+    salePrice: "99000",
+    coverUrl: null,
+    author: "Fahri Hamzah",
+    type: "recording",
+    category: "DevOps",
+    extraInfo: "3 jam video + Slide",
+  },
+  {
+    id: "rec-3",
+    slug: "figma-to-code-uiux-recording",
+    title: "Rekaman Live: Mengubah Desain Figma Menjadi Code Tailwind",
+    description: "Belajar workflow slicing UI premium secara pixel-perfect dari Figma ke HTML & React TailwindCSS.",
+    price: "120000",
+    salePrice: null,
+    coverUrl: null,
+    author: "Nabila Putri",
+    type: "recording",
+    category: "Design to Code",
+    extraInfo: "2.5 jam video",
+  }
+];
+
+const MOCK_MODULES: MarketplaceItem[] = [
+  {
+    id: "mod-1",
+    slug: "tailwind-flexbox-grid-cheatsheet",
+    title: "TailwindCSS Premium Cheatsheet & Boilerplates Bundle",
+    description: "Template layout siap pakai, components premium, dan cheatsheet shortcut flexbox/grid terlengkap.",
+    price: "75000",
+    salePrice: "39000",
+    coverUrl: null,
+    author: "Jago Akademi Dev",
+    type: "module",
+    badge: "Populer",
+    category: "TailwindCSS",
+    extraInfo: "25+ Template File",
+  },
+  {
+    id: "mod-2",
+    slug: "express-prisma-backend-template",
+    title: "Backend Express, TypeScript & Prisma Production Boilerplate",
+    description: "Boilerplate backend siap pakai dengan JWT auth, role management, audit logging, dan database migrations.",
+    price: "199000",
+    salePrice: "129000",
+    coverUrl: null,
+    author: "Developer Team",
+    type: "module",
+    badge: "Premium",
+    category: "Express.js",
+    extraInfo: "Production Ready Repo",
+  },
+  {
+    id: "mod-3",
+    slug: "react-animation-framer-motion-snippets",
+    title: "Framer Motion Micro-Animations Snippets Library",
+    description: "Koleksi script micro-animations interaktif siap salin-tempel untuk mempercantik UI/UX aplikasi React & Next.js.",
+    price: "85000",
+    salePrice: null,
+    coverUrl: null,
+    author: "Design Team",
+    type: "module",
+    category: "React / Animations",
+    extraInfo: "50+ Animasi Siap Pakai",
+  }
+];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -36,108 +126,149 @@ function getDiscount(price: string, salePrice: string | null): number | null {
   return Math.round(((orig - sale) / orig) * 100);
 }
 
-// ─── Skeleton card ─────────────────────────────────────────────────────────────
+// ─── Skeleton Card ─────────────────────────────────────────────────────────────
 
 function SkeletonCard() {
   return (
-    <div className="card overflow-hidden !p-0">
-      <div className="skeleton" style={{ aspectRatio: "3/4" }} />
+    <div className="card overflow-hidden !p-0" style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)" }}>
+      <div className="skeleton animate-pulse" style={{ aspectRatio: "3/4", background: "rgba(255,255,255,0.05)" }} />
       <div className="flex flex-col gap-2.5 p-4">
-        <div className="skeleton h-3 w-16" />
-        <div className="skeleton h-4 w-full" />
-        <div className="skeleton h-4 w-2/3" />
-        <div className="skeleton mt-1 h-5 w-24" />
+        <div className="skeleton h-3 w-16 animate-pulse" style={{ background: "rgba(255,255,255,0.05)" }} />
+        <div className="skeleton h-4 w-full animate-pulse" style={{ background: "rgba(255,255,255,0.05)" }} />
+        <div className="skeleton h-4 w-2/3 animate-pulse" style={{ background: "rgba(255,255,255,0.05)" }} />
+        <div className="skeleton mt-1 h-5 w-24 animate-pulse" style={{ background: "rgba(255,255,255,0.05)" }} />
       </div>
     </div>
   );
 }
 
-// ─── E-Book card ──────────────────────────────────────────────────────────────
+// ─── Item Card ────────────────────────────────────────────────────────────────
 
-function EBookCard({ book }: { book: EBook }) {
-  const discount = getDiscount(book.price, book.salePrice);
-  const saleNum = book.salePrice ? Number(book.salePrice) : Number(book.price);
+function ProductCard({ item }: { item: MarketplaceItem }) {
+  const discount = getDiscount(item.price, item.salePrice);
+  const saleNum = item.salePrice ? Number(item.salePrice) : Number(item.price);
+
+  const getIcon = () => {
+    switch (item.type) {
+      case "recording":
+        return <Video size={36} style={{ color: "var(--brand-pink-strong)", opacity: 0.8 }} />;
+      case "module":
+        return <Package size={36} style={{ color: "#EAB308", opacity: 0.8 }} />;
+      default:
+        return <BookMarked size={36} style={{ color: "var(--brand-cyan-strong)", opacity: 0.8 }} />;
+    }
+  };
+
+  const getFallbackGradient = () => {
+    switch (item.type) {
+      case "recording":
+        return "linear-gradient(135deg, rgba(236,72,153,0.08) 0%, rgba(204,0,82,0.05) 100%)";
+      case "module":
+        return "linear-gradient(135deg, rgba(234,179,8,0.08) 0%, rgba(202,138,4,0.05) 100%)";
+      default:
+        return "linear-gradient(135deg, var(--surface-accent-soft) 0%, rgba(0,119,168,0.05) 100%)";
+    }
+  };
+
+  // Link destination: EBooks go to detail route, others to general checkout/contact
+  const destinationHref = item.type === "ebook"
+    ? `/ebook/${item.slug}`
+    : `/checkout/${item.slug}?type=module&itemId=${item.id}`;
 
   return (
     <Link
-      href={`/ebook/${book.slug}`}
-      className="card group flex flex-col overflow-hidden !p-0"
-      aria-label={book.title}
+      href={destinationHref}
+      className="card group flex flex-col overflow-hidden !p-0 transition-all duration-300 hover:translate-y-[-4px] hover:shadow-e2"
+      style={{
+        background: "var(--surface-card)",
+        border: "1px solid var(--border-subtle)",
+        borderRadius: "16px",
+      }}
+      aria-label={item.title}
     >
-      {/* Cover */}
-      <div
-        className="relative overflow-hidden"
-        style={{ aspectRatio: "3/4" }}
-      >
-        {book.coverUrl ? (
+      {/* Cover/Placeholder Area */}
+      <div className="relative overflow-hidden" style={{ aspectRatio: "3/4" }}>
+        {item.coverUrl ? (
           <img
-            src={book.coverUrl}
-            alt={book.title}
+            src={item.coverUrl}
+            alt={item.title}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div
-            className="flex h-full w-full flex-col items-center justify-center gap-3"
-            style={{ background: "linear-gradient(135deg, var(--surface-accent-soft) 0%, rgba(124,58,237,0.06) 100%)" }}
+            className="flex h-full w-full flex-col items-center justify-center gap-3 p-4"
+            style={{ background: getFallbackGradient() }}
           >
-            <BookMarked
-              size={40}
-              aria-hidden="true"
-              style={{ color: "var(--brand-cyan-strong)", opacity: 0.6 }}
-            />
-            <p
-              className="px-4 text-center text-xs font-semibold leading-tight"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              {book.title}
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+              {getIcon()}
+            </div>
+            <p className="px-2 text-center text-xs font-semibold leading-normal text-[var(--text-secondary)] line-clamp-3">
+              {item.title}
             </p>
           </div>
         )}
 
-        {/* Discount badge */}
+        {/* Badge */}
+        {item.badge && (
+          <span
+            className="absolute left-2.5 top-2.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
+            style={{ background: item.type === "recording" ? "var(--brand-pink-strong)" : "var(--brand-cyan)" }}
+          >
+            {item.badge}
+          </span>
+        )}
+
+        {/* Discount Badge */}
         {discount && (
           <span
-            className="absolute right-2 top-2 rounded-full px-2 py-0.5 text-xs font-bold"
-            style={{ background: "var(--brand-pink)", color: "#fff" }}
+            className="absolute right-2.5 top-2.5 rounded-full px-2 py-0.5 text-xs font-bold text-white bg-green-600"
           >
             -{discount}%
           </span>
         )}
       </div>
 
-      {/* Info */}
+      {/* Product Details */}
       <div className="flex flex-1 flex-col gap-1.5 p-4">
-        {book.category && (
-          <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--brand-cyan-strong)" }}>
-            {book.category}
-          </p>
-        )}
-        <h3
-          className="font-display text-sm font-bold leading-snug text-[var(--text-primary)] line-clamp-2 group-hover:text-[var(--brand-cyan-strong)] transition-colors"
-        >
-          {book.title}
+        <div className="flex items-center gap-1.5">
+          {item.category && (
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--brand-cyan-strong)" }}>
+              {item.category}
+            </p>
+          )}
+          <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded" style={{
+            background: item.type === "ebook" ? "rgba(0,212,255,0.08)" : item.type === "recording" ? "rgba(236,72,153,0.08)" : "rgba(234,179,8,0.08)",
+            color: item.type === "ebook" ? "var(--brand-cyan)" : item.type === "recording" ? "var(--brand-pink-strong)" : "#EAB308"
+          }}>
+            {item.type === "ebook" ? "E-Book" : item.type === "recording" ? "Rekaman" : "Modul"}
+          </span>
+        </div>
+        
+        <h3 className="font-display text-sm font-bold leading-snug text-[var(--text-primary)] line-clamp-2 group-hover:text-[var(--brand-cyan-strong)] transition-colors">
+          {item.title}
         </h3>
-        {book.author && (
-          <p className="text-xs" style={{ color: "var(--text-muted)" }}>{book.author}</p>
+        
+        {item.author && (
+          <p className="text-xs text-[var(--text-muted)]">oleh {item.author}</p>
         )}
 
-        <div className="mt-auto pt-2">
-          {book.salePrice ? (
+        <div className="mt-auto pt-3 border-t border-[var(--border-subtle)] flex flex-col gap-1">
+          {item.salePrice ? (
             <div className="flex items-baseline gap-2">
-              <span className="text-base font-bold" style={{ color: "var(--brand-cyan-strong)" }}>
-                {`Rp ${Number(book.salePrice).toLocaleString("id-ID")}`}
+              <span className="text-base font-extrabold" style={{ color: "var(--text-primary)" }}>
+                {`Rp ${Number(item.salePrice).toLocaleString("id-ID")}`}
               </span>
-              <span className="text-xs line-through" style={{ color: "var(--text-muted)" }}>
-                {`Rp ${Number(book.price).toLocaleString("id-ID")}`}
+              <span className="text-xs line-through text-[var(--text-muted)]">
+                {`Rp ${Number(item.price).toLocaleString("id-ID")}`}
               </span>
             </div>
           ) : (
-            <span className="text-base font-bold" style={{ color: saleNum === 0 ? "#16A34A" : "var(--brand-cyan-strong)" }}>
-              {formatPrice(book.price, book.salePrice)}
+            <span className="text-base font-extrabold text-[var(--text-primary)]">
+              {formatPrice(item.price, item.salePrice)}
             </span>
           )}
-          {book.pages && (
-            <p className="mt-1 text-[11px]" style={{ color: "var(--text-muted)" }}>{book.pages} halaman</p>
+          {item.extraInfo && (
+            <p className="text-[10px] text-[var(--text-muted)]">{item.extraInfo}</p>
           )}
         </div>
       </div>
@@ -145,153 +276,207 @@ function EBookCard({ book }: { book: EBook }) {
   );
 }
 
-// ─── Marketplace catalog (client component for filtering) ─────────────────────
+// ─── Marketplace Catalog Component ───────────────────────────────────────────
 
 function MarketplaceCatalog() {
-  const [books, setBooks] = useState<EBook[] | null>(null);
-  const [total, setTotal] = useState(0);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<"all" | "ebook" | "recording" | "module">("all");
+  const [dbBooks, setDbBooks] = useState<MarketplaceItem[] | null>(null);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function fetchBooks(q: string, cat: string) {
-    setBooks(null);
-    const qs = new URLSearchParams({ limit: "24" });
-    if (cat) qs.set("category", cat);
-
-    fetch(`${API}/api/ebooks?${qs}`)
+  // Fetch real EBooks from Backend
+  useEffect(() => {
+    fetch(`${API}/api/ebooks?limit=50`)
       .then((r) => r.json())
       .then((d) => {
-        if (d?.success) {
-          let data: EBook[] = Array.isArray(d.data) ? d.data : [];
-          // Client-side text filter when API doesn't support ?q=
-          if (q) {
-            const lq = q.toLowerCase();
-            data = data.filter(
-              (b) =>
-                b.title.toLowerCase().includes(lq) ||
-                (b.author?.toLowerCase().includes(lq)) ||
-                (b.category?.toLowerCase().includes(lq)),
-            );
-          }
-          setBooks(data);
-          setTotal(d.meta?.total ?? data.length);
-
-          // Collect unique categories
-          const cats = [...new Set(data.map((b) => b.category).filter(Boolean))] as string[];
-          if (cats.length > 0) setCategories(cats);
+        if (d?.success && Array.isArray(d.data)) {
+          const mapped: MarketplaceItem[] = d.data.map((b: any) => ({
+            id: b.id,
+            slug: b.slug,
+            title: b.title,
+            description: b.description,
+            price: b.price,
+            salePrice: b.salePrice,
+            coverUrl: b.coverUrl,
+            author: b.author,
+            type: "ebook",
+            category: b.category,
+            extraInfo: b.pages ? `${b.pages} Halaman` : undefined
+          }));
+          setDbBooks(mapped);
         } else {
-          setBooks([]);
-          setTotal(0);
+          setDbBooks([]);
         }
       })
-      .catch(() => { setBooks([]); setTotal(0); });
-  }
-
-  useEffect(() => {
-    fetchBooks("", "");
+      .catch(() => setDbBooks([]));
   }, []);
 
-  function handleSearch(q: string) {
-    setQuery(q);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchBooks(q, activeCategory), 350);
-  }
+  // Compute items displayed depending on active category, search query, and tabs
+  const getFilteredItems = (): MarketplaceItem[] => {
+    let items: MarketplaceItem[] = [];
 
-  function handleCategory(cat: string) {
-    setActiveCategory(cat);
-    fetchBooks(query, cat);
-  }
+    // Combine depending on active Tab
+    if (activeTab === "all") {
+      items = [...(dbBooks ?? []), ...MOCK_RECORDINGS, ...MOCK_MODULES];
+    } else if (activeTab === "ebook") {
+      items = dbBooks ?? [];
+    } else if (activeTab === "recording") {
+      items = MOCK_RECORDINGS;
+    } else if (activeTab === "module") {
+      items = MOCK_MODULES;
+    }
+
+    // Apply Search filter
+    if (query) {
+      const qLower = query.toLowerCase();
+      items = items.filter(
+        (item) =>
+          item.title.toLowerCase().includes(qLower) ||
+          (item.author && item.author.toLowerCase().includes(qLower)) ||
+          (item.category && item.category.toLowerCase().includes(qLower))
+      );
+    }
+
+    // Apply Category Filter
+    if (activeCategory) {
+      items = items.filter((item) => item.category === activeCategory);
+    }
+
+    return items;
+  };
+
+  const filteredItems = getFilteredItems();
+
+  // Categories extraction helper
+  const allCategories = Array.from(
+    new Set(
+      [...(dbBooks ?? []), ...MOCK_RECORDINGS, ...MOCK_MODULES]
+        .map((item) => item.category)
+        .filter(Boolean)
+    )
+  ) as string[];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
-
-      {/* Section header */}
-      <div className="mb-8">
-        <p className="eyebrow mb-3">Marketplace</p>
-        <h1
-          className="mb-3 text-4xl font-extrabold tracking-tight"
-          style={{ color: "var(--text-primary)", fontFamily: "var(--font-display)" }}
-        >
-          E-Book & Modul <span className="text-accent">Eksklusif</span>
+      
+      {/* Section Header */}
+      <div className="mb-10 text-center sm:text-left">
+        <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold" style={{ background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.15)", color: "var(--brand-cyan)" }}>
+          <ShoppingBag size={12} /> Marketplace
+        </span>
+        <h1 className="mt-4 mb-3 text-4xl font-extrabold tracking-tight text-[var(--text-primary)] font-display">
+          Koleksi Materi & <span className="text-accent" style={{ background: "linear-gradient(135deg, var(--brand-cyan) 0%, var(--brand-pink) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Modul Eksklusif</span>
         </h1>
-        <p className="max-w-2xl text-lg leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-          Beli e-book, modul, dan materi digital langsung dari trainer dan kreator terbaik Jago Akademi. Akses seumur hidup, download kapan saja.
+        <p className="max-w-2xl text-base leading-relaxed text-[var(--text-secondary)]">
+          Dapatkan e-book berkualitas, rekaman penuh webinar eksklusif, serta template boilerplate source code terbaik untuk mengakselerasi proses belajarmu.
         </p>
       </div>
 
-      {/* Features strip */}
+      {/* Feature Badges Strip */}
       <div className="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
-          { icon: "📥", text: "Download PDF" },
-          { icon: "♾️", text: "Akses Seumur Hidup" },
-          { icon: "💳", text: "Bayar Sekali" },
-          { icon: "⭐", text: "Konten Terkurasi" },
+          { icon: "📥", text: "Download Instan" },
+          { icon: "♾️", text: "Akses Selamanya" },
+          { icon: "💳", text: "Satu Kali Bayar" },
+          { icon: "⭐", text: "Telah Terverifikasi" },
         ].map((f) => (
           <div
             key={f.text}
-            className="flex items-center gap-2.5 rounded-xl p-3"
-            style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)", boxShadow: "var(--shadow-e1)" }}
+            className="flex items-center gap-2.5 rounded-2xl p-4 transition-all duration-200 hover:scale-[1.02]"
+            style={{
+              background: "var(--surface-card)",
+              border: "1px solid var(--border-subtle)",
+              boxShadow: "var(--shadow-e1)",
+            }}
           >
             <span className="text-xl">{f.icon}</span>
-            <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>{f.text}</span>
+            <span className="text-xs font-bold text-[var(--text-secondary)]">{f.text}</span>
           </div>
         ))}
       </div>
 
-      {/* Search + category filter */}
-      <div className="mb-7 flex flex-wrap gap-3">
+      {/* Navigation Tabs */}
+      <div className="mb-8 flex flex-wrap border-b border-[var(--border-subtle)] pb-px gap-2">
+        {[
+          { id: "all", label: "Semua Produk", icon: Layers },
+          { id: "ebook", label: "E-Book", icon: BookMarked },
+          { id: "recording", label: "Rekaman Event", icon: Video },
+          { id: "module", label: "Modul Praktis", icon: Package },
+        ].map((tab) => {
+          const TabIcon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id as any);
+                setActiveCategory("");
+              }}
+              className="flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-all border-b-2"
+              style={{
+                borderColor: isActive ? "var(--brand-cyan)" : "transparent",
+                color: isActive ? "var(--brand-cyan)" : "var(--text-secondary)",
+              }}
+            >
+              <TabIcon size={16} />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Filters (Search & Categories) */}
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         {/* Search */}
-        <div className="relative" style={{ minWidth: "220px", maxWidth: "360px", flex: 1 }}>
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} aria-hidden="true" />
+        <div className="relative w-full sm:max-w-xs">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
           <input
             id="marketplace-search-input"
             type="search"
             value={query}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Cari e-book atau modul..."
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cari produk..."
             className="input-dark w-full pl-9 pr-8"
-            aria-label="Cari e-book"
+            aria-label="Cari produk"
           />
           {query && (
             <button
               id="marketplace-search-clear-btn"
-              onClick={() => handleSearch("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 transition-colors hover:bg-[var(--border-subtle)]"
+              onClick={() => setQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 hover:bg-[var(--border-subtle)]"
               aria-label="Hapus pencarian"
             >
-              <X size={14} style={{ color: "var(--text-muted)" }} aria-hidden="true" />
+              <X size={14} className="text-[var(--text-muted)]" aria-hidden="true" />
             </button>
           )}
         </div>
 
-        {/* Category pills */}
-        {categories.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+        {/* Category Pills */}
+        {allCategories.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
             <button
               id="marketplace-cat-all-btn"
-              onClick={() => handleCategory("")}
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition-all"
+              onClick={() => setActiveCategory("")}
+              className="rounded-full px-3.5 py-1.5 text-xs font-bold transition-all border"
               style={
                 activeCategory === ""
-                  ? { background: "var(--brand-cyan)", color: "var(--text-on-accent)" }
-                  : { background: "var(--surface-card)", color: "var(--text-secondary)", border: "1px solid var(--border-default)" }
+                  ? { background: "var(--brand-cyan)", color: "#fff", borderColor: "var(--brand-cyan)" }
+                  : { background: "var(--surface-card)", color: "var(--text-secondary)", borderColor: "var(--border-default)" }
               }
             >
-              <Tag size={12} aria-hidden="true" />
-              Semua
+              Semua Topik
             </button>
-            {categories.map((cat) => (
+            {allCategories.map((cat) => (
               <button
                 id={`marketplace-cat-${cat.toLowerCase().replace(/\s+/g, "-")}-btn`}
                 key={cat}
-                onClick={() => handleCategory(cat)}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition-all"
+                onClick={() => setActiveCategory(cat)}
+                className="rounded-full px-3.5 py-1.5 text-xs font-bold transition-all border"
                 style={
                   activeCategory === cat
-                    ? { background: "var(--brand-cyan)", color: "var(--text-on-accent)" }
-                    : { background: "var(--surface-card)", color: "var(--text-secondary)", border: "1px solid var(--border-default)" }
+                    ? { background: "var(--brand-cyan)", color: "#fff", borderColor: "var(--brand-cyan)" }
+                    : { background: "var(--surface-card)", color: "var(--text-secondary)", borderColor: "var(--border-default)" }
                 }
               >
                 {cat}
@@ -301,54 +486,43 @@ function MarketplaceCatalog() {
         )}
       </div>
 
-      {/* Results count */}
-      {books !== null && (
-        <p className="mb-5 text-sm" style={{ color: "var(--text-muted)" }}>
-          {books.length > 0 ? `${books.length} produk tersedia` : ""}
-          {query && ` untuk "${query}"`}
-        </p>
-      )}
-
-      {/* Grid */}
-      {books === null ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      {/* Grid Area */}
+      {dbBooks === null ? (
+        <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
-      ) : books.length === 0 ? (
+      ) : filteredItems.length === 0 ? (
         <div
           className="flex flex-col items-center gap-4 rounded-2xl py-16 text-center"
           style={{ background: "var(--surface-card)", border: "1px solid var(--border-subtle)" }}
         >
-          <div
-            className="flex h-16 w-16 items-center justify-center rounded-full"
-            style={{ background: "var(--surface-accent-soft)" }}
-          >
-            <BookMarked size={32} style={{ color: "var(--brand-cyan-strong)" }} />
+          <div className="flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "rgba(255,255,255,0.03)" }}>
+            <BookMarked size={32} style={{ color: "var(--brand-cyan)" }} />
           </div>
           <div>
-            <h2 className="mb-1 text-lg font-bold" style={{ color: "var(--text-primary)" }}>
-              {query ? `Tidak ada hasil untuk "${query}"` : "E-Book segera hadir"}
-            </h2>
-            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-              {query ? "Coba kata kunci lain atau hapus filter." : "Kami sedang menyiapkan koleksi e-book terbaik untukmu."}
+            <h3 className="text-lg font-bold text-[var(--text-primary)]">
+              {query ? `Tidak ada hasil untuk "${query}"` : "Materi segera hadir"}
+            </h3>
+            <p className="text-sm text-[var(--text-secondary)] mt-1">
+              {query ? "Coba gunakan kata kunci pencarian lain atau setel ulang filter." : "Kami sedang mengkurasi konten digital terbaik untuk kategori ini."}
             </p>
           </div>
           {query && (
-            <button onClick={() => handleSearch("")} className="btn btn-outline btn-sm">
+            <button onClick={() => setQuery("")} className="btn btn-outline btn-sm mt-2">
               Hapus Pencarian
             </button>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {books.map((book) => <EBookCard key={book.id} book={book} />)}
+        <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {filteredItems.map((item) => (
+            <ProductCard key={item.id} item={item} />
+          ))}
         </div>
       )}
     </div>
   );
 }
-
-// ─── Page export ──────────────────────────────────────────────────────────────
 
 export default function MarketplacePage() {
   return (

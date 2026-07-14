@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getToken } from "@/lib/auth/token";
 
 type User = {
   id: string;
@@ -13,10 +14,6 @@ type User = {
   _count?: { enrollments: number; orders: number };
 };
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("access_token") || sessionStorage.getItem("jg_token");
-}
 
 const ROLES_COLOR: Record<string, string> = {
   super_admin: "bg-purple-100 text-purple-700",

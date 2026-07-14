@@ -2,13 +2,14 @@
 
 import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { getToken } from "@/lib/auth/token";
 
 export default function CoursePlayerEntryPage() {
   const router = useRouter();
   const { slug } = useParams<{ slug: string }>();
 
   useEffect(() => {
-    const token = sessionStorage.getItem("access_token");
+    const token = getToken();
     if (!token) { router.replace("/masuk"); return; }
 
     // Find the course by slug then get enrollment, redirect to first lesson

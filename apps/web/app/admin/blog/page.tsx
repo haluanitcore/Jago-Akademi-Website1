@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getToken } from "@/lib/auth/token";
 
 type BlogPost = {
   id: string;
@@ -21,10 +22,6 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   archived:  { label: "Arsip",   cls: "bg-gray-100 text-gray-500" },
 };
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("access_token") || sessionStorage.getItem("jg_token");
-}
 
 export default function AdminBlogPage() {
   const [posts, setPosts] = useState<BlogPost[]>([]);

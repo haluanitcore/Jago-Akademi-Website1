@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { getValidToken } from "@/lib/auth/token";
 
 type TenantStat = {
   id: string;
@@ -13,22 +14,26 @@ type TenantStat = {
 
 export default function LmsAdminDashboardPage() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
+  const router = useRouter();
   const [stat, setStat] = useState<TenantStat | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStat = async () => {
-      const meRes = await fetch("/api/lms/portal/me");
+      const token = await getValidToken();
+      if (!token) { router.replace("/masuk"); return; }
+      const authHeaders = { Authorization: `Bearer ${token}` };
+      const meRes = await fetch("/api/lms/portal/me", { headers: authHeaders });
       const meData = await meRes.json();
       const myTenant = meData.data?.find((t: { slug: string; id: string }) => t.slug === tenantSlug);
       if (!myTenant) { setLoading(false); return; }
-      const detailRes = await fetch(`/api/lms/tenants/${myTenant.id}`);
+      const detailRes = await fetch(`/api/lms/tenants/${myTenant.id}`, { headers: authHeaders });
       const detailData = await detailRes.json();
       if (detailData.success) setStat(detailData.data);
       setLoading(false);
     };
     fetchStat();
-  }, [tenantSlug]);
+  }, [tenantSlug, router]);
 
   if (loading) return <div className="p-6 text-center text-[#6E6E73]">Memuat...</div>;
   if (!stat) return <div className="p-6 text-center text-red-500">Tidak ada akses atau tenant tidak ditemukan.</div>;

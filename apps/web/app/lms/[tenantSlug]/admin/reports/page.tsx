@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { getValidToken } from "@/lib/auth/token";
 
 type ReportRow = {
   userId: string;
@@ -22,6 +23,7 @@ type Batch = { id: string; name: string };
 
 export default function LmsAdminReportsPage() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
+  const router = useRouter();
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [rows, setRows] = useState<ReportRow[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -29,22 +31,25 @@ export default function LmsAdminReportsPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
-    const meRes = await fetch("/api/lms/portal/me");
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
+    const authHeaders = { Authorization: `Bearer ${token}` };
+    const meRes = await fetch("/api/lms/portal/me", { headers: authHeaders });
     const meData = await meRes.json();
     const myTenant = meData.data?.find((t: { slug: string; id: string }) => t.slug === tenantSlug);
     if (!myTenant) return;
     setTenantId(myTenant.id);
 
     const [reportRes, batchRes] = await Promise.all([
-      fetch(`/api/lms/tenants/${myTenant.id}/reports/completion${selectedBatch ? `?batchId=${selectedBatch}` : ""}`),
-      fetch(`/api/lms/tenants/${myTenant.id}/batches`),
+      fetch(`/api/lms/tenants/${myTenant.id}/reports/completion${selectedBatch ? `?batchId=${selectedBatch}` : ""}`, { headers: authHeaders }),
+      fetch(`/api/lms/tenants/${myTenant.id}/batches`, { headers: authHeaders }),
     ]);
     const reportData = await reportRes.json();
     const batchData = await batchRes.json();
     setRows(reportData.data ?? []);
     setBatches(batchData.data ?? []);
     setLoading(false);
-  }, [tenantSlug, selectedBatch]);
+  }, [tenantSlug, selectedBatch, router]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

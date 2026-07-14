@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { getValidToken } from "@/lib/auth/token";
 
 type Batch = {
   id: string;
@@ -16,6 +17,7 @@ type Batch = {
 
 export default function LmsAdminBatchesPage() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
+  const router = useRouter();
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,25 +31,30 @@ export default function LmsAdminBatchesPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const tenantDetail = await fetch(`/api/lms/portal/me`);
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
+    const authHeaders = { Authorization: `Bearer ${token}` };
+    const tenantDetail = await fetch(`/api/lms/portal/me`, { headers: authHeaders });
     const meData = await tenantDetail.json();
     const myTenant = meData.data?.find((t: { slug: string; id: string }) => t.slug === tenantSlug);
     if (!myTenant) { setLoading(false); return; }
     setTenantId(myTenant.id);
-    const batchRes = await fetch(`/api/lms/tenants/${myTenant.id}/batches`);
+    const batchRes = await fetch(`/api/lms/tenants/${myTenant.id}/batches`, { headers: authHeaders });
     const batchData = await batchRes.json();
     setBatches(batchData.data ?? []);
     setLoading(false);
-  }, [tenantSlug]);
+  }, [tenantSlug, router]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   async function createBatch(e: React.FormEvent) {
     e.preventDefault();
     if (!tenantId) return;
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
     const res = await fetch(`/api/lms/tenants/${tenantId}/batches`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(form),
     });
     if (res.ok) { setShowForm(false); setForm({ name: "", description: "" }); fetchData(); }
@@ -74,10 +81,12 @@ export default function LmsAdminBatchesPage() {
     e.preventDefault();
     if (!tenantId || !inviteEmails.trim()) return;
     setInviting(true);
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
     const emails = inviteEmails.split(/[\n,]+/).map((v) => v.trim()).filter(Boolean);
     const res = await fetch(`/api/lms/tenants/${tenantId}/invites`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ emails, batchId: inviteBatchId || undefined }),
     });
     const data = await res.json();

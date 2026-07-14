@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { setToken } from "@/lib/auth/token";
 
 /**
  * OAuth callback landing (TASK-055).
@@ -37,7 +38,8 @@ function CallbackHandler() {
       return;
     }
 
-    sessionStorage.setItem("access_token", token);
+    // Persist via centralized utility (sessionStorage + localStorage cross-tab)
+    setToken(token);
     // Remove the token from the visible URL before navigating away.
     window.history.replaceState(null, "", "/auth/callback");
     router.replace("/dashboard");

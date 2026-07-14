@@ -7,6 +7,7 @@ import VideoPlayer from "../../../../components/player/VideoPlayer";
 import CourseSidebar, { type SidebarSection } from "../../../../components/player/CourseSidebar";
 import QuizInterface from "../../../../components/player/QuizInterface";
 import { getVideoUrl, getQuiz, updateProgress } from "../../../../lib/api/enrollment";
+import { getToken } from "@/lib/auth/token";
 
 type Lesson = {
   id: string;
@@ -53,7 +54,7 @@ export default function LessonPlayerPage() {
   const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
   useEffect(() => {
-    const t = sessionStorage.getItem("access_token");
+    const t = getToken();
     if (!t) { router.replace("/masuk"); return; }
     setToken(t);
 

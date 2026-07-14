@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { getToken } from "@/lib/auth/token";
 import { CalendarDays, MapPin, Users, Clock, CheckCircle2, Mic2 } from "lucide-react";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -46,10 +47,6 @@ const TYPE_LABEL: Record<string, string> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("jg_token");
-}
 
 function formatPrice(price: string, salePrice: string | null) {
   const num = salePrice ? Number(salePrice) : Number(price);

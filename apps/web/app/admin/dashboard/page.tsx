@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getToken } from "@/lib/auth/token";
 
 type Stats = {
   totalUsers: number;
@@ -39,10 +40,6 @@ const STATUS_BADGE: Record<string, string> = {
   expired: "bg-gray-100 text-gray-500",
 };
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("access_token") || sessionStorage.getItem("jg_token");
-}
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);

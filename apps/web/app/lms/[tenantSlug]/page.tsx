@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { BookOpen, CheckCircle2, Award, BarChart3, Home, Folder, Trophy, User } from "lucide-react";
+import { getValidToken } from "@/lib/auth/token";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -198,15 +199,19 @@ function CourseCard({ c, slug, primary }: { c: CourseProgress; slug: string; pri
 
 export default function LmsPortalHomePage() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
+  const router = useRouter();
   const [courses, setCourses] = useState<CourseProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [tenant, setTenant] = useState<TenantInfo | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
+      const token = await getValidToken();
+      if (!token) { router.replace("/masuk"); return; }
+      const authHeaders = { Authorization: `Bearer ${token}` };
       const [meRes, coursesRes] = await Promise.all([
-        fetch("/api/lms/portal/me"),
-        fetch(`/api/lms/portal/${tenantSlug}/courses`),
+        fetch("/api/lms/portal/me", { headers: authHeaders }),
+        fetch(`/api/lms/portal/${tenantSlug}/courses`, { headers: authHeaders }),
       ]);
       const [meData, coursesData] = await Promise.all([meRes.json(), coursesRes.json()]);
 
@@ -216,7 +221,7 @@ export default function LmsPortalHomePage() {
       setLoading(false);
     };
     fetchData();
-  }, [tenantSlug]);
+  }, [tenantSlug, router]);
 
   const primary = tenant?.primaryColor ?? "#0077A8";
 
