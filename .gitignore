@@ -60,3 +60,8 @@ yarn-error.log*
 .claude/
 .gemini/
 jago_akademi_clarification_questions.docx.pdf
+
+# Build artifacts & tool output
+*.tsbuildinfo
+graphify-out/
+scratch/
