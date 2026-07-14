@@ -164,6 +164,10 @@ model Course {
   enrollments  CourseEnrollment[]
   certificates Certificate[]
 
+  // Hot path: trainer's course list, category listing, published filtering.
+  @@index([trainerId])
+  @@index([categoryId])
+  @@index([status])
   @@map("courses")
 }
 
@@ -256,6 +260,8 @@ model CourseEnrollment {
   @@unique([courseId, userId])
   // Hot path (TASK-021): student dashboard "my courses" lookups by user.
   @@index([userId])
+  // Course detail: enrollment count / roster lookups by course.
+  @@index([courseId])
   @@map("course_enrollments")
 }
 
@@ -314,6 +320,7 @@ model OrderItem {
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
+  @@index([orderId])
   @@map("order_items")
 }
 
@@ -471,6 +478,8 @@ model LmsBatch {
   members     LmsBatchMember[]
   assignments LmsCourseAssignment[]
 
+  // Tenant-scoped listing (every LMS query is scoped by tenantId).
+  @@index([tenantId])
   @@map("lms_batches")
 }
 
@@ -501,6 +510,8 @@ model LmsCourse {
   assignments LmsCourseAssignment[]
   enrollments LmsEnrollment[]
 
+  // Tenant-scoped listing (every LMS query is scoped by tenantId).
+  @@index([tenantId])
   @@map("lms_courses")
 }
 
@@ -518,6 +529,7 @@ model LmsLesson {
   progress LmsProgress[]
   quizzes  LmsQuiz[]
 
+  @@index([courseId])
   @@map("lms_lessons")
 }
 
@@ -711,6 +723,8 @@ model Review {
   user User @relation(fields: [userId], references: [id])
 
   @@unique([userId, itemType, itemId])
+  // Every product page lists reviews for its item.
+  @@index([itemType, itemId])
   @@map("reviews")
 }
 
