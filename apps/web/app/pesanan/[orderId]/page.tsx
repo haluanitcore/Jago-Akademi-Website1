@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { getToken } from "@/lib/auth/token";
 
 type OrderDetail = {
   id: string;
@@ -30,10 +31,6 @@ function getApiBase() {
   return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 }
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("jg_token");
-}
 
 export default function OrderDetailPage() {
   const { orderId } = useParams() as { orderId: string };
@@ -49,7 +46,7 @@ export default function OrderDetailPage() {
   useEffect(() => {
     const token = getToken();
     if (!token) {
-      router.push(`/login?redirect=/pesanan/${orderId}`);
+      router.push(`/masuk?redirect=/pesanan/${orderId}`);
       return;
     }
 

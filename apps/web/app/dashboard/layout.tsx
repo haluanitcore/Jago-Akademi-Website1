@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { getToken, setToken, clearToken, refreshAccessToken } from "@/lib/auth/token";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Beranda", icon: HomeIcon, exact: true },
@@ -29,44 +30,52 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [lmsTenants, setLmsTenants] = useState<LmsTenant[]>([]);
 
   useEffect(() => {
-    const token =
-      sessionStorage.getItem("access_token") ||
-      sessionStorage.getItem("jg_token") ||
-      localStorage.getItem("jg_access_token");
-    if (!token) {
-      router.replace("/masuk");
-      return;
-    }
-    // Sync to sessionStorage if from localStorage
-    if (!sessionStorage.getItem("access_token") && token) {
-      sessionStorage.setItem("access_token", token);
-    }
-    fetch(`/api/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.json())
-      .then((body) => {
-        if (body.success) {
-          setUser(body.data);
-          const roleNames: string[] = (body.data.roles ?? []).map(
-            (r: { role: string } | string) => (typeof r === "string" ? r : r.role)
-          );
-          setIsAdmin(roleNames.some((r) => ["admin", "super_admin"].includes(r)));
+    async function initAuth() {
+      let token = getToken();
+      if (!token) { router.replace("/masuk"); return; }
 
-          // Fetch LMS tenants for this user
-          fetch("/api/lms/portal/me", { headers: { Authorization: `Bearer ${token}` } })
-            .then((r) => r.json())
-            .then((b) => { if (b.success && Array.isArray(b.data)) setLmsTenants(b.data); })
-            .catch(() => {});
-        }
-      })
-      .catch(() => {});
+      // Sync from localStorage to sessionStorage if needed
+      if (!sessionStorage.getItem("access_token") && token) {
+        setToken(token);
+      }
+
+      // Attempt to fetch user info
+      let res = await fetch("/api/auth/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => null);
+
+      // If 401 → try token refresh once
+      if (res && res.status === 401) {
+        const refreshed = await refreshAccessToken();
+        if (!refreshed) { clearToken(); router.replace("/masuk"); return; }
+        token = refreshed;
+        res = await fetch("/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null);
+      }
+
+      if (!res || !res.ok) { clearToken(); router.replace("/masuk"); return; }
+
+      const body = await res.json();
+      if (!body.success) { clearToken(); router.replace("/masuk"); return; }
+
+      setUser(body.data);
+      const roleNames: string[] = (body.data.roles ?? []).map(
+        (r: { role: string } | string) => (typeof r === "string" ? r : r.role)
+      );
+      setIsAdmin(roleNames.some((r) => ["admin", "super_admin"].includes(r)));
+
+      // Fetch LMS tenants for this user
+      fetch("/api/lms/portal/me", { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.json())
+        .then((b) => { if (b.success && Array.isArray(b.data)) setLmsTenants(b.data); })
+        .catch(() => {});
+    }
+    initAuth();
   }, [router]);
 
   function logout() {
-    sessionStorage.removeItem("access_token");
-    sessionStorage.removeItem("jg_token");
-    localStorage.removeItem("jg_access_token");
+    clearToken();
     router.replace("/masuk");
   }
 
@@ -239,7 +248,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
 
         .sidebar-logo-link { display: flex; align-items: center; }
-        .sidebar-logo-img { filter: brightness(0) invert(1); height: 28px; width: auto; }
+        .sidebar-logo-img { height: 28px; width: auto; }
 
         .sidebar-close-btn {
           display: none;
