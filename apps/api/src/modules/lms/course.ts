@@ -3,7 +3,7 @@ import { authenticate } from "../../middleware/authenticate.js";
 import { prisma } from "../../db/prisma.js";
 import { successResponse, errorResponse, AppError } from "../../types/index.js";
 import { z } from "zod";
-import { requireSuperAdmin, requireLmsAdmin } from "./guards.js";
+import { requireSuperAdmin, requireLmsAdmin, assertCourseInTenant, assertLessonInTenant, assertBatchInTenant } from "./guards.js";
 
 const router = Router();
 
@@ -73,6 +73,7 @@ router.patch("/tenants/:tenantId/courses/:courseId", authenticate, async (req, r
 router.get("/tenants/:tenantId/courses/:courseId/lessons", authenticate, async (req, res, next) => {
   try {
     await requireLmsAdmin(req, res, async () => {
+      await assertCourseInTenant(req.params.courseId as string, req.params.tenantId as string);
       const lessons = await prisma.lmsLesson.findMany({
         where: { courseId: req.params.courseId },
         orderBy: { sortOrder: "asc" },
@@ -88,6 +89,7 @@ router.get("/tenants/:tenantId/courses/:courseId/lessons", authenticate, async (
 router.post("/tenants/:tenantId/courses/:courseId/lessons", authenticate, async (req, res, next) => {
   try {
     await requireLmsAdmin(req, res, async () => {
+      await assertCourseInTenant(req.params.courseId as string, req.params.tenantId as string);
       const body = lessonSchema.safeParse(req.body);
       if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
       const lesson = await prisma.lmsLesson.create({
@@ -103,6 +105,7 @@ router.post("/tenants/:tenantId/courses/:courseId/lessons", authenticate, async 
 router.patch("/tenants/:tenantId/courses/:courseId/lessons/:lessonId", authenticate, async (req, res, next) => {
   try {
     await requireLmsAdmin(req, res, async () => {
+      await assertLessonInTenant(req.params.lessonId as string, req.params.tenantId as string);
       const body = lessonSchema.partial().safeParse(req.body);
       if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
       const lesson = await prisma.lmsLesson.update({
@@ -119,6 +122,7 @@ router.patch("/tenants/:tenantId/courses/:courseId/lessons/:lessonId", authentic
 router.delete("/tenants/:tenantId/courses/:courseId/lessons/:lessonId", authenticate, async (req, res, next) => {
   try {
     await requireLmsAdmin(req, res, async () => {
+      await assertLessonInTenant(req.params.lessonId as string, req.params.tenantId as string);
       await prisma.lmsLesson.delete({ where: { id: req.params.lessonId } });
       return res.json(successResponse({ message: "Lesson dihapus." }));
     });
@@ -131,6 +135,7 @@ router.delete("/tenants/:tenantId/courses/:courseId/lessons/:lessonId", authenti
 router.post("/tenants/:tenantId/courses/:courseId/lessons/:lessonId/quizzes", authenticate, async (req, res, next) => {
   try {
     await requireLmsAdmin(req, res, async () => {
+      await assertLessonInTenant(req.params.lessonId as string, req.params.tenantId as string);
       const { question, options, answer } = req.body as {
         question: string;
         options: string[];
@@ -162,6 +167,10 @@ router.post("/tenants/:tenantId/courses/:courseId/assign", authenticate, async (
 
       const courseId = req.params.courseId as string;
       const tenantId = req.params.tenantId as string;
+      // Both the course (URL) and the batch (body) must belong to this tenant,
+      // otherwise an admin could assign across tenants or auto-enroll foreign members.
+      await assertCourseInTenant(courseId, tenantId);
+      await assertBatchInTenant(batchId, tenantId);
       const assignment = await prisma.lmsCourseAssignment.upsert({
         where: { batchId_courseId: { batchId, courseId } },
         create: {

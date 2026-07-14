@@ -22,15 +22,39 @@ router.get("/me", authenticate, async (req: Request, res: Response, next: NextFu
 });
 
 const subscribeSchema = z.object({
-  planType: z.enum(["monthly", "annual"]),
-  orderId: z.string().optional(),
+  orderId: z.string().min(1, "orderId wajib diisi."),
 });
 
-// POST /api/subscription — create or renew subscription (called after payment)
+// POST /api/subscription — activate/renew a subscription from a PAID order.
+//
+// Security (C1): activation must be backed by a paid order the caller owns that
+// actually contains a subscription line item. The plan is DERIVED from that order
+// item — never trusted from the request body — so a client cannot self-grant a
+// subscription without a verified payment. Each paid order can only activate once
+// (replay guard) to prevent extending a subscription indefinitely from one payment.
 router.post("/", authenticate, validateBody(subscribeSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;
-    const { planType, orderId } = req.body as z.infer<typeof subscribeSchema>;
+    const { orderId } = req.body as z.infer<typeof subscribeSchema>;
+
+    const order = await prisma.order.findFirst({
+      where: { id: orderId, userId, status: "paid" },
+      include: { items: true },
+    });
+    if (!order) throw new AppError(402, "Pembayaran belum terverifikasi.");
+
+    const subItem = order.items.find((item) => item.itemType === "subscription");
+    if (!subItem) throw new AppError(400, "Order ini tidak berisi paket langganan.");
+
+    const planType = subItem.itemId;
+    if (planType !== "monthly" && planType !== "annual") {
+      throw new AppError(400, "Paket langganan tidak valid.");
+    }
+
+    const existing = await prisma.subscription.findUnique({ where: { userId } });
+    if (existing?.orderId === orderId && existing.status === "active") {
+      throw new AppError(409, "Langganan dari order ini sudah diaktifkan.");
+    }
 
     const durationDays = planType === "annual" ? 365 : 30;
     const now = new Date();
@@ -104,14 +128,19 @@ router.get("/plans", async (_req: Request, res: Response, next: NextFunction) =>
   }
 });
 
+const adminUpdateSchema = z.object({
+  status: z.enum(["active", "cancelled", "expired"]).optional(),
+  expiresAt: z.string().datetime().optional(),
+});
+
 // PATCH /api/subscription/:userId — admin manage subscription
-router.patch("/:userId", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+router.patch("/:userId", authenticate, validateBody(adminUpdateSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const isAdmin = req.user?.roles.includes("super_admin" as never);
     if (!isAdmin) throw new AppError(403, "Akses ditolak.");
 
     const { userId } = req.params;
-    const { status, expiresAt } = req.body as { status?: string; expiresAt?: string };
+    const { status, expiresAt } = req.body as z.infer<typeof adminUpdateSchema>;
 
     const sub = await prisma.subscription.findUnique({ where: { userId } });
     if (!sub) throw new AppError(404, "Subscription tidak ditemukan.");

@@ -1,4 +1,5 @@
 import express from "express";
+import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import path from "node:path";
@@ -43,6 +44,17 @@ app.set("trust proxy", 1);
 
 // Request logging + X-Request-Id correlation (TASK-023) — before everything else.
 app.use(httpLogger);
+
+// Security headers (H6): HSTS, nosniff, frame-guard, referrer-policy, etc.
+// CSP is disabled here because this origin serves JSON/assets, not HTML documents
+// (CSP is enforced on the web origin in next.config.js). CORP is relaxed to
+// cross-origin so the web app (different origin) can load /uploads assets.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 
 app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
 // Capture raw body for webhook signature verification

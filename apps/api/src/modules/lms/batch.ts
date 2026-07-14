@@ -3,7 +3,7 @@ import { authenticate } from "../../middleware/authenticate.js";
 import { prisma } from "../../db/prisma.js";
 import { successResponse, errorResponse, AppError } from "../../types/index.js";
 import { z } from "zod";
-import { requireSuperAdmin, requireLmsAdmin } from "./guards.js";
+import { requireSuperAdmin, requireLmsAdmin, assertBatchInTenant } from "./guards.js";
 
 const router = Router();
 
@@ -50,6 +50,7 @@ router.post("/tenants/:tenantId/batches", authenticate, async (req, res, next) =
 router.patch("/tenants/:tenantId/batches/:batchId", authenticate, async (req, res, next) => {
   try {
     await requireLmsAdmin(req, res, async () => {
+      await assertBatchInTenant(req.params.batchId as string, req.params.tenantId as string);
       const body = batchSchema.partial().safeParse(req.body);
       if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
       const batch = await prisma.lmsBatch.update({
@@ -66,6 +67,7 @@ router.patch("/tenants/:tenantId/batches/:batchId", authenticate, async (req, re
 router.get("/tenants/:tenantId/batches/:batchId/members", authenticate, async (req, res, next) => {
   try {
     await requireLmsAdmin(req, res, async () => {
+      await assertBatchInTenant(req.params.batchId as string, req.params.tenantId as string);
       const members = await prisma.lmsBatchMember.findMany({
         where: { batchId: req.params.batchId },
         include: { user: { select: { id: true, name: true, email: true } } },

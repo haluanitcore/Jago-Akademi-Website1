@@ -115,7 +115,10 @@ export function verifyDokuWebhook(
   rawBody: string,
   receivedSignature: string
 ): boolean {
-  if (!env.DOKU_SECRET_KEY) return true; // dev mode: trust all
+  // Fail closed in production (H9). Env validation already requires the secret
+  // in production, so this branch is only reachable in dev/test — never trust an
+  // unsigned webhook when running for real.
+  if (!env.DOKU_SECRET_KEY) return env.NODE_ENV !== "production";
   if (!receivedSignature) return false;
   const expected = sign(clientId, requestId, timestamp, rawBody, env.DOKU_SECRET_KEY);
   return safeEqual(expected, receivedSignature);

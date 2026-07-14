@@ -1,6 +1,6 @@
 import { authenticate } from "../../middleware/authenticate.js";
 import { prisma } from "../../db/prisma.js";
-import { errorResponse } from "../../types/index.js";
+import { errorResponse, AppError } from "../../types/index.js";
 
 /** Allow only super admins. */
 export function requireSuperAdmin(
@@ -30,4 +30,32 @@ export async function requireLmsAdmin(
   });
   if (!role) return res.status(403).json(errorResponse("FORBIDDEN", "Akses ditolak."));
   next();
+}
+
+// ─── Tenant-scoping helpers (H1) ──────────────────────────────────────────────
+// `requireLmsAdmin` only proves the caller administers the tenant in the URL. It
+// does NOT prove that a nested resource addressed by its own id (courseId,
+// lessonId, batchId) belongs to that tenant. Without these checks an lms_admin of
+// tenant A could pass their own tenantId plus a foreign lessonId/batchId and reach
+// into tenant B. Every nested handler must resolve the child THROUGH the tenant.
+
+/** Verify a course belongs to the tenant; throws 404 otherwise. */
+export async function assertCourseInTenant(courseId: string, tenantId: string) {
+  const course = await prisma.lmsCourse.findFirst({ where: { id: courseId, tenantId } });
+  if (!course) throw new AppError(404, "Course tidak ditemukan.");
+  return course;
+}
+
+/** Verify a lesson belongs to a course in the tenant; throws 404 otherwise. */
+export async function assertLessonInTenant(lessonId: string, tenantId: string) {
+  const lesson = await prisma.lmsLesson.findFirst({ where: { id: lessonId, course: { tenantId } } });
+  if (!lesson) throw new AppError(404, "Lesson tidak ditemukan.");
+  return lesson;
+}
+
+/** Verify a batch belongs to the tenant; throws 404 otherwise. */
+export async function assertBatchInTenant(batchId: string, tenantId: string) {
+  const batch = await prisma.lmsBatch.findFirst({ where: { id: batchId, tenantId } });
+  if (!batch) throw new AppError(404, "Batch tidak ditemukan.");
+  return batch;
 }

@@ -33,6 +33,17 @@ const envSchema = z.object({
   SENTRY_DSN: z.string().optional(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).optional(),
   APP_VERSION: z.string().optional(),
+}).superRefine((val, ctx) => {
+  // Fail closed (H9): the DOKU webhook verifier trusts all requests when the
+  // secret is unset. That is only acceptable in dev/test — in production a
+  // missing secret would let anyone forge "paid" webhooks, so require it.
+  if (val.NODE_ENV === "production" && !val.DOKU_SECRET_KEY) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["DOKU_SECRET_KEY"],
+      message: "DOKU_SECRET_KEY is required in production (webhook signature verification).",
+    });
+  }
 });
 
 const parsed = envSchema.safeParse(process.env);
