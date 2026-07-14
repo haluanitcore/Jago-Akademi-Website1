@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getToken } from "@/lib/auth/token";
+import { downloadProtected } from "@/lib/download";
 
 type Certificate = {
   id: string;
@@ -109,15 +110,18 @@ export default function SertifikatPage() {
                   >
                     🔍 Verifikasi
                   </Link>
-                  <a
-                    href={`${apiBase}/api/certificates/${cert.code}/download`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadProtected(
+                        `${apiBase}/api/certificates/${cert.code}/download`,
+                        `sertifikat-${cert.code}.pdf`,
+                      ).catch(() => setError("Gagal mengunduh sertifikat."))
+                    }
                     className="sc-btn-download"
                   >
                     ⬇️ Unduh PDF
-                  </a>
+                  </button>
                 </div>
               </div>
             </div>

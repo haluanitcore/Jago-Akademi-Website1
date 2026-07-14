@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getValidToken } from "@/lib/auth/token";
+import { downloadProtected } from "@/lib/download";
 
 type ReportRow = {
   userId: string;
@@ -68,18 +69,32 @@ export default function LmsAdminReportsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-[#1D1D1F]">Laporan Completion</h1>
         <div className="flex gap-2">
-          <a
-            href={tenantId ? `/api/lms/tenants/${tenantId}/reports/completion/csv` : "#"}
-            className="px-3 py-2 text-xs text-[#0077A8] border border-[#0077A8] rounded-xl hover:bg-[#E8F4F9]"
+          <button
+            type="button"
+            disabled={!tenantId}
+            onClick={() =>
+              downloadProtected(
+                `/api/lms/tenants/${tenantId}/reports/completion/csv`,
+                `laporan-${tenantSlug}.csv`,
+              ).catch(() => {})
+            }
+            className="px-3 py-2 text-xs text-[#0077A8] border border-[#0077A8] rounded-xl hover:bg-[#E8F4F9] disabled:opacity-50"
           >
             Unduh CSV
-          </a>
-          <a
-            href={tenantId ? `/api/lms/tenants/${tenantId}/reports/completion/pdf` : "#"}
-            className="px-3 py-2 text-xs text-white bg-[#0077A8] rounded-xl hover:bg-[#005f87]"
+          </button>
+          <button
+            type="button"
+            disabled={!tenantId}
+            onClick={() =>
+              downloadProtected(
+                `/api/lms/tenants/${tenantId}/reports/completion/pdf`,
+                `laporan-${tenantSlug}.pdf`,
+              ).catch(() => {})
+            }
+            className="px-3 py-2 text-xs text-white bg-[#0077A8] rounded-xl hover:bg-[#005f87] disabled:opacity-50"
           >
             Unduh PDF
-          </a>
+          </button>
         </div>
       </div>
 
