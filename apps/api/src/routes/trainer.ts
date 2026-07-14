@@ -144,6 +144,36 @@ router.post("/payouts", requireTrainer, validateBody(payoutSchema), async (req: 
     const trainerId = req.user!.id;
     const { amount, bankName, accountNo, accountName } = req.body as z.infer<typeof payoutSchema>;
 
+    // M-trainer: reject payouts that exceed the trainer's available balance.
+    // Compute net revenue exactly like /dashboard (70% share of paid order items
+    // for the trainer's courses), then subtract payouts already requested/paid
+    // (everything except rejected ones) so a trainer cannot withdraw more than
+    // they have earned or double-withdraw the same revenue.
+    const courses = await prisma.course.findMany({
+      where: { trainerId },
+      select: { id: true },
+    });
+    const courseIds = courses.map((c) => c.id);
+
+    const [revenueAgg, payoutAgg] = await Promise.all([
+      prisma.orderItem.aggregate({
+        _sum: { totalPrice: true },
+        where: { itemType: "course", itemId: { in: courseIds }, order: { status: "paid" } },
+      }),
+      prisma.trainerPayout.aggregate({
+        _sum: { amount: true },
+        where: { trainerId, status: { not: "rejected" } },
+      }),
+    ]);
+
+    const netRevenue = Number(revenueAgg._sum.totalPrice ?? 0) * 0.7;
+    const committedPayouts = Number(payoutAgg._sum.amount ?? 0);
+    const availableBalance = netRevenue - committedPayouts;
+
+    if (amount > availableBalance) {
+      throw new AppError(400, "Jumlah melebihi saldo yang tersedia.");
+    }
+
     const payout = await prisma.trainerPayout.create({
       data: { trainerId, amount, bankName, accountNo, accountName },
     });

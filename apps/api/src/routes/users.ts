@@ -2,11 +2,13 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import multer from "multer";
 import path from "node:path";
 import fs from "node:fs";
+import { z } from "zod";
 import { prisma } from "../db/prisma.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { writeAudit } from "../services/audit/log.js";
 import { hashPassword, verifyPassword } from "../services/auth/hash.js";
-import { AppError, successResponse } from "../types/index.js";
+import { AppError, successResponse, errorResponse } from "../types/index.js";
+import { passwordSchema } from "./auth.js";
 import { REFRESH_COOKIE } from "../services/auth/token.js";
 import { env } from "../config/env.js";
 
@@ -140,23 +142,27 @@ router.post(
 // ---------------------------------------------------------------------------
 // PATCH /api/users/me/password — change password
 // ---------------------------------------------------------------------------
+// M1: enforce the shared password policy (min 8, not all-numeric) via Zod
+// instead of the old bare length check.
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Password lama harus diisi."),
+  newPassword: passwordSchema,
+});
+
 router.patch(
   "/me/password",
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.user!;
-      const { currentPassword, newPassword } = req.body as {
-        currentPassword?: string;
-        newPassword?: string;
-      };
 
-      if (!currentPassword || !newPassword) {
-        return next(new AppError(400, "Password lama dan baru harus diisi."));
+      const parsed = changePasswordSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res
+          .status(400)
+          .json(errorResponse("VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Validasi gagal."));
       }
-      if (newPassword.length < 8) {
-        return next(new AppError(400, "Password baru minimal 8 karakter."));
-      }
+      const { currentPassword, newPassword } = parsed.data;
 
       const user = await prisma.user.findUnique({
         where: { id },
@@ -176,10 +182,19 @@ router.patch(
       }
 
       const newHash = await hashPassword(newPassword);
-      await prisma.user.update({
-        where: { id },
-        data: { passwordHash: newHash },
-      });
+      // M1: change the hash and revoke every existing refresh token in one
+      // transaction so a password change logs out all other sessions, mirroring
+      // the reset-password flow in auth.ts.
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id },
+          data: { passwordHash: newHash },
+        }),
+        prisma.refreshToken.updateMany({
+          where: { userId: id, revokedAt: null },
+          data: { revokedAt: new Date() },
+        }),
+      ]);
 
       res.json(successResponse({ message: "Password berhasil diubah." }));
     } catch (err) {

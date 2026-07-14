@@ -192,8 +192,9 @@ router.post("/", authenticate, async (req, res, next) => {
       include: { user: { select: { name: true, email: true } } },
     });
 
-    // Increment coupon usage
-    if (couponId) await incrementCouponUsage(couponId);
+    // M-coupon: coupon usage is now incremented on payment SUCCESS in the webhook
+    // processor (order.couponId), so an abandoned/failed pending order no longer
+    // consumes a coupon slot. Free orders (fulfilled above) still count inline.
 
     // Create DOKU payment
     const invoiceNumber = `JA-${order.id.slice(0, 8).toUpperCase()}`;

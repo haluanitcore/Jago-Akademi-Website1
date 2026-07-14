@@ -39,65 +39,81 @@ export async function processWebhookPayment(job: WebhookJob): Promise<void> {
     // Idempotency guard — already fulfilled, nothing more to do.
     if (order.status === "paid") return;
 
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { status: "paid", paidAt: new Date(), paymentMethod: channelId ?? "doku" },
-    });
-    await prisma.paymentTransaction.update({
-      where: { id: transaction.id },
-      data: { status: "success" },
-    });
-
-    // Grant access to purchased items.
-    for (const item of order.items) {
-      if (item.itemType === "course") {
-        await prisma.courseEnrollment.upsert({
-          where: { courseId_userId: { courseId: item.itemId, userId: order.userId } },
-          create: { courseId: item.itemId, userId: order.userId },
-          update: {},
-        });
-      } else if (item.itemType === "event") {
-        await prisma.eventRegistration.upsert({
-          where: { eventId_userId: { eventId: item.itemId, userId: order.userId } },
-          create: { eventId: item.itemId, userId: order.userId, orderId: order.id, status: "confirmed" },
-          update: { status: "confirmed", orderId: order.id },
-        });
-        await prisma.event.update({
-          where: { id: item.itemId },
-          data: { totalSold: { increment: 1 } },
-        });
-      }
-    }
-
-    // Affiliate commission (now safe from double-count thanks to the guard above).
-    if (order.referralCode) {
-      const affiliate = await prisma.affiliate.findFirst({
-        where: { code: order.referralCode, status: "active" },
+    // M-webhook: flip the order to paid and run every fulfillment side-effect in
+    // one atomic transaction. If any step fails the whole payment fulfillment
+    // rolls back instead of leaving an order half-fulfilled (e.g. marked paid but
+    // without enrollment/commission). Combined with the guard above this stays
+    // idempotent across DOKU webhook retries.
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id: order.id },
+        data: { status: "paid", paidAt: new Date(), paymentMethod: channelId ?? "doku" },
       });
-      if (affiliate) {
-        const commissionPct = Number(affiliate.commissionRate);
-        const commissionAmt = (Number(order.finalAmount) * commissionPct) / 100;
-        await prisma.affiliateCommission.create({
-          data: {
-            affiliateId: affiliate.id,
-            orderId: order.id,
-            referredUserId: order.userId,
-            commissionPct: affiliate.commissionRate,
-            grossAmount: order.finalAmount,
-            commissionAmt,
-            status: "pending",
-          },
-        });
-        await prisma.affiliate.update({
-          where: { id: affiliate.id },
-          data: {
-            totalConversions: { increment: 1 },
-            totalEarnings: { increment: commissionAmt },
-            balance: { increment: commissionAmt },
-          },
+      await tx.paymentTransaction.update({
+        where: { id: transaction.id },
+        data: { status: "success" },
+      });
+
+      // Grant access to purchased items.
+      for (const item of order.items) {
+        if (item.itemType === "course") {
+          await tx.courseEnrollment.upsert({
+            where: { courseId_userId: { courseId: item.itemId, userId: order.userId } },
+            create: { courseId: item.itemId, userId: order.userId },
+            update: {},
+          });
+        } else if (item.itemType === "event") {
+          await tx.eventRegistration.upsert({
+            where: { eventId_userId: { eventId: item.itemId, userId: order.userId } },
+            create: { eventId: item.itemId, userId: order.userId, orderId: order.id, status: "confirmed" },
+            update: { status: "confirmed", orderId: order.id },
+          });
+          await tx.event.update({
+            where: { id: item.itemId },
+            data: { totalSold: { increment: 1 } },
+          });
+        }
+      }
+
+      // M-coupon: consume coupon usage only on payment success, not at pending
+      // order creation, so abandoned/failed checkouts never burn a coupon slot.
+      if (order.couponId) {
+        await tx.coupon.update({
+          where: { id: order.couponId },
+          data: { usageCount: { increment: 1 } },
         });
       }
-    }
+
+      // Affiliate commission (now safe from double-count thanks to the guard above).
+      if (order.referralCode) {
+        const affiliate = await tx.affiliate.findFirst({
+          where: { code: order.referralCode, status: "active" },
+        });
+        if (affiliate) {
+          const commissionPct = Number(affiliate.commissionRate);
+          const commissionAmt = (Number(order.finalAmount) * commissionPct) / 100;
+          await tx.affiliateCommission.create({
+            data: {
+              affiliateId: affiliate.id,
+              orderId: order.id,
+              referredUserId: order.userId,
+              commissionPct: affiliate.commissionRate,
+              grossAmount: order.finalAmount,
+              commissionAmt,
+              status: "pending",
+            },
+          });
+          await tx.affiliate.update({
+            where: { id: affiliate.id },
+            data: {
+              totalConversions: { increment: 1 },
+              totalEarnings: { increment: commissionAmt },
+              balance: { increment: commissionAmt },
+            },
+          });
+        }
+      }
+    });
 
     // Notifications — best-effort so they never fail fulfillment.
     const courseName = order.items[0]?.itemTitle ?? "produk";
@@ -121,6 +137,10 @@ export async function processWebhookPayment(job: WebhookJob): Promise<void> {
       );
     }
   } else if (txStatus === "FAILED" || txStatus === "EXPIRED") {
+    // M-webhook: never overwrite an already-paid order. A late FAILED/EXPIRED
+    // webhook (or one racing a SUCCESS) must not revoke a completed purchase.
+    if (order.status === "paid") return;
+
     await prisma.order.update({
       where: { id: order.id },
       data: { status: txStatus === "FAILED" ? "failed" : "expired" },

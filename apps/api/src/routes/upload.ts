@@ -3,6 +3,7 @@ import multer from "multer";
 import path from "node:path";
 import fs from "node:fs";
 import { authenticate } from "../middleware/authenticate.js";
+import { authorize } from "../middleware/authorize.js";
 import { AppError, successResponse } from "../types/index.js";
 import { env } from "../config/env.js";
 
@@ -67,6 +68,8 @@ const videoUpload = multer({
 router.post(
   "/image",
   authenticate,
+  // H2/M2: uploads must be restricted to trainers/admins, not any logged-in user.
+  authorize("trainer", "super_admin"),
   (req: Request, res: Response, next: NextFunction) => {
     imageUpload.single("file")(req, res, (err) => {
       if (err instanceof multer.MulterError) {
@@ -94,6 +97,8 @@ router.post(
 router.post(
   "/video",
   authenticate,
+  // H2/M2: uploads must be restricted to trainers/admins, not any logged-in user.
+  authorize("trainer", "super_admin"),
   (req: Request, res: Response, next: NextFunction) => {
     videoUpload.single("file")(req, res, (err) => {
       if (err instanceof multer.MulterError) {

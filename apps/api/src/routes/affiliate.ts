@@ -89,15 +89,18 @@ router.post("/withdrawals", validateBody(withdrawSchema), async (req: Request, r
 
     const affiliate = await prisma.affiliate.findUnique({ where: { userId } });
     if (!affiliate) throw new AppError(404, "Anda belum terdaftar sebagai affiliate.");
-    if (Number(affiliate.balance) < amount) {
-      throw new AppError(400, `Saldo tidak cukup. Saldo tersedia: Rp ${Number(affiliate.balance).toLocaleString("id-ID")}`);
-    }
 
+    // M-affiliate: guard against a TOCTOU race by decrementing atomically with a
+    // `balance >= amount` predicate. Two concurrent requests can no longer both
+    // pass a stale balance read and overdraw the account.
     const withdrawal = await prisma.$transaction(async (tx) => {
-      await tx.affiliate.update({
-        where: { id: affiliate.id },
+      const debited = await tx.affiliate.updateMany({
+        where: { id: affiliate.id, balance: { gte: amount } },
         data: { balance: { decrement: amount } },
       });
+      if (debited.count !== 1) {
+        throw new AppError(400, "Saldo tidak mencukupi.");
+      }
       return tx.affiliateWithdrawal.create({
         data: { affiliateId: affiliate.id, amount, bankName, accountNo, accountName },
       });
@@ -137,6 +140,12 @@ router.patch("/withdrawals/:withdrawalId", async (req: Request, res: Response, n
     const { withdrawalId } = req.params;
     const { status } = req.body as { status: string };
     if (!["approved", "rejected", "paid"].includes(status)) throw new AppError(400, "Status tidak valid.");
+
+    // M-affiliate: only a still-pending withdrawal may be processed. Without this
+    // guard, a repeated "rejected" call would refund the balance multiple times.
+    const existing = await prisma.affiliateWithdrawal.findUnique({ where: { id: withdrawalId } });
+    if (!existing) throw new AppError(404, "Penarikan tidak ditemukan.");
+    if (existing.status !== "pending") throw new AppError(400, "Penarikan sudah diproses.");
 
     const withdrawal = await prisma.affiliateWithdrawal.update({
       where: { id: withdrawalId },

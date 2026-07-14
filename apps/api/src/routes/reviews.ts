@@ -60,6 +60,27 @@ router.post("/", authenticate, validateBody(reviewSchema), async (req: Request, 
     });
     if (existing) throw new AppError(409, "Anda sudah memberikan ulasan untuk item ini.");
 
+    // M-review: only buyers/enrolled users may review. For a course, enrollment
+    // (which also covers free enrollment) or a paid order item qualifies; for
+    // ebook/event a paid order item is required.
+    let hasPurchased = false;
+    if (itemType === "course") {
+      const enrollment = await prisma.courseEnrollment.findUnique({
+        where: { courseId_userId: { courseId: itemId, userId } },
+      });
+      hasPurchased = enrollment !== null;
+    }
+    if (!hasPurchased) {
+      const paidItem = await prisma.orderItem.findFirst({
+        where: { itemType, itemId, order: { userId, status: "paid" } },
+        select: { id: true },
+      });
+      hasPurchased = paidItem !== null;
+    }
+    if (!hasPurchased) {
+      throw new AppError(403, "Hanya pembeli yang dapat memberi ulasan.");
+    }
+
     const review = await prisma.review.create({
       data: { userId, itemType, itemId, rating, content },
       include: { user: { select: { id: true, name: true, avatarUrl: true } } },

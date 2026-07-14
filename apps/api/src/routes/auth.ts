@@ -66,11 +66,19 @@ async function issueTokens(
   return { accessToken };
 }
 
+// M1: shared password policy — min 8 chars and never all-numeric (rejects e.g.
+// "12345678"), reused across register / reset / change-password boundaries.
+export const passwordSchema = z
+  .string()
+  .min(8)
+  .max(128)
+  .refine((v) => !/^\d+$/.test(v), "Kata sandi tidak boleh hanya angka.");
+
 // POST /api/auth/register
 const registerSchema = z.object({
   name: z.string().min(2).max(100),
   email: z.string().email(),
-  password: z.string().min(8).max(128),
+  password: passwordSchema,
   consent: z.literal(true, { errorMap: () => ({ message: "Persetujuan privasi wajib diberikan." }) }),
 });
 
@@ -424,7 +432,7 @@ router.post(
 // POST /api/auth/reset-password
 const resetSchema = z.object({
   token: z.string().uuid(),
-  password: z.string().min(8).max(128),
+  password: passwordSchema,
 });
 
 router.post(
