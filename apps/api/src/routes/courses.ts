@@ -12,7 +12,7 @@ import {
   publishCourse,
   deleteCourse,
 } from "../services/course/courseService.js";
-import { AppError, successResponse, errorResponse } from "../types/index.js";
+import { AppError, successResponse } from "../types/index.js";
 
 const router = Router();
 

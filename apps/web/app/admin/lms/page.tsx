@@ -382,7 +382,7 @@ export default function AdminLMSPage() {
             <div style={{ textAlign: "center", padding: "48px 24px", background: "white", borderRadius: 16, border: "1px solid #E5E5EA" }}>
               <p style={{ fontSize: 32, marginBottom: 8 }}>🏢</p>
               <p style={{ fontSize: 15, fontWeight: 600, color: "#1D1D1F", marginBottom: 4 }}>Belum ada tenant</p>
-              <p style={{ fontSize: 13, color: "#6E6E73" }}>Klik "Buat Tenant Baru" untuk menambahkan perusahaan pertama.</p>
+              <p style={{ fontSize: 13, color: "#6E6E73" }}>Klik &quot;Buat Tenant Baru&quot; untuk menambahkan perusahaan pertama.</p>
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>

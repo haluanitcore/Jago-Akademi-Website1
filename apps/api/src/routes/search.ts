@@ -8,7 +8,6 @@ const router = Router();
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const q = (req.query.q as string | undefined)?.trim();
-    const type = (req.query.type as string | undefined) ?? "course";
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
 

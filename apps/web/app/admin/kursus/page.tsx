@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { getToken } from "@/lib/auth/token";
 
 type Course = {

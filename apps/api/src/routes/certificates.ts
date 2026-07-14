@@ -2,7 +2,6 @@ import { createReadStream, existsSync } from "node:fs";
 import { join } from "node:path";
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { prisma } from "../db/prisma.js";
-import { env } from "../config/env.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { issueCertificate } from "../services/certificate/certificateService.js";
 import { AppError, successResponse } from "../types/index.js";

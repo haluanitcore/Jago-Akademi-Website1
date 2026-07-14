@@ -390,7 +390,7 @@ export default function AdminTenantDetailPage() {
       {activeSection === "members" && (
         <div style={{ background: "white", borderRadius: 16, border: "1px solid #E5E5EA", overflow: "hidden" }}>
           {members.length === 0
-            ? <div style={{ textAlign: "center", padding: "48px 24px" }}><p style={{ color: "#6E6E73" }}>Belum ada anggota. Gunakan tombol "Undang" untuk mengundang pengguna.</p></div>
+            ? <div style={{ textAlign: "center", padding: "48px 24px" }}><p style={{ color: "#6E6E73" }}>Belum ada anggota. Gunakan tombol &quot;Undang&quot; untuk mengundang pengguna.</p></div>
             : (
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>

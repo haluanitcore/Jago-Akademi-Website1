@@ -3,7 +3,7 @@ import { authenticate } from "../../middleware/authenticate.js";
 import { prisma } from "../../db/prisma.js";
 import { successResponse, errorResponse, AppError } from "../../types/index.js";
 import { z } from "zod";
-import { requireSuperAdmin, requireLmsAdmin } from "./guards.js";
+import { requireSuperAdmin } from "./guards.js";
 
 const router = Router();
 

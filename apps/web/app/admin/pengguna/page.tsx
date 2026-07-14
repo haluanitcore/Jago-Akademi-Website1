@@ -132,7 +132,6 @@ export default function AdminPenggunaPage() {
             <tbody>
               {users.map((user) => {
                 const roleNames = user.roles?.map((r) => r.role.name) ?? [];
-                const primaryRole = roleNames[0] ?? "student";
                 const initials = user.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
                 return (
                   <tr key={user.id}>

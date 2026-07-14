@@ -20,8 +20,8 @@ export default function EBookActions({ ebookSlug, price }: Props) {
   const router = useRouter();
   const [hasPurchased, setHasPurchased] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
-  const [buying, setBuying] = useState(false);
-  const [error, setError] = useState("");
+  const [buying] = useState(false);
+  const [error] = useState("");
 
   useEffect(() => {
     const token = getToken();

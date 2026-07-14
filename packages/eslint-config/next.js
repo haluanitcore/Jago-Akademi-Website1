@@ -52,6 +52,9 @@ export const nextJsConfig = [
       ...pluginReactHooks.configs.recommended.rules,
       // React scope no longer necessary with new JSX transform.
       "react/react-in-jsx-scope": "off",
+      // `jsx` and `global` are valid styled-jsx attributes on <style> tags,
+      // not unknown DOM properties. Whitelist them so styled-jsx blocks lint clean.
+      "react/no-unknown-property": ["error", { ignore: ["jsx", "global"] }],
     },
   },
 ];

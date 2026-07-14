@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BookMarked, Search, X, Video, Package, Layers, ShoppingBag } from "lucide-react";
 
@@ -71,7 +71,6 @@ function SkeletonCard() {
 
 function ProductCard({ item }: { item: MarketplaceItem }) {
   const discount = getDiscount(item.price, item.salePrice);
-  const saleNum = item.salePrice ? Number(item.salePrice) : Number(item.price);
 
   const getIcon = () => {
     switch (item.type) {
@@ -208,7 +207,6 @@ function MarketplaceCatalog() {
   const [dbBooks, setDbBooks] = useState<MarketplaceItem[] | null>(null);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("");
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch real EBooks from Backend
   useEffect(() => {
@@ -327,7 +325,7 @@ function MarketplaceCatalog() {
             <button
               key={tab.id}
               onClick={() => {
-                setActiveTab(tab.id as any);
+                setActiveTab(tab.id as "all" | "ebook" | "recording" | "module");
                 setActiveCategory("");
               }}
               className="flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-all border-b-2"

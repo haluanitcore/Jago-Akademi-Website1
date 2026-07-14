@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate } from "../middleware/authenticate.js";
 import { prisma } from "../db/prisma.js";
 import { validateCoupon } from "../services/coupon/couponService.js";
-import { successResponse, errorResponse, AppError } from "../types/index.js";
+import { successResponse, errorResponse } from "../types/index.js";
 import { z } from "zod";
 
 const router = Router();

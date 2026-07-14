@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Sparkles, ArrowRight, ShieldCheck, Mail, User, Clock, Rocket, CheckCircle2 } from "lucide-react";
+import { Sparkles, ShieldCheck, Mail, User, Rocket, CheckCircle2 } from "lucide-react";
 
 export default function EarlyAccessPage() {
   const [email, setEmail] = useState("");
