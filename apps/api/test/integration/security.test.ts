@@ -36,7 +36,6 @@ describe("Authentication enforcement — 401 on missing JWT", () => {
     ["GET",    "/api/trainer/dashboard"],
     ["GET",    "/api/affiliate/me"],
     ["GET",    "/api/subscription/me"],
-    ["GET",    "/api/subscription/plans"],
     ["GET",    "/api/trainer/payouts"],
     ["POST",   "/api/reviews"],
     ["GET",    "/api/enrollments"],
@@ -98,9 +97,9 @@ describe("Input validation — schema rejection", () => {
     expect(res.body.error.message).toMatch(/itemType|itemId/i);
   });
 
-  it("GET /api/subscription/plans → 401 (all subscription routes require auth)", async () => {
+  it("GET /api/subscription/plans → 200 (pricing is intentionally public)", async () => {
     const res = await request(app).get("/api/subscription/plans");
-    expect([401, 403]).toContain(res.status);
+    expect(res.status).toBe(200);
   });
 });
 

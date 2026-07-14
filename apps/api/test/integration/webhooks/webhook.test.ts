@@ -11,6 +11,8 @@ vi.mock("../../../src/db/prisma.js", () => ({
     event: { update: vi.fn() },
     affiliate: { findFirst: vi.fn(), update: vi.fn() },
     affiliateCommission: { create: vi.fn() },
+    coupon: { update: vi.fn() },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -55,6 +57,12 @@ beforeEach(() => {
   vi.mocked(prisma.affiliate.findFirst).mockResolvedValue(null as never);
   vi.mocked(prisma.affiliate.update).mockResolvedValue({} as never);
   vi.mocked(prisma.affiliateCommission.create).mockResolvedValue({} as never);
+  vi.mocked(prisma.coupon.update).mockResolvedValue({} as never);
+  // Fulfillment now runs inside prisma.$transaction(cb); execute the callback
+  // with the mocked prisma as the transaction client so tx.* calls are asserted.
+  vi.mocked(prisma.$transaction).mockImplementation((cb: unknown) =>
+    (cb as (tx: typeof prisma) => Promise<unknown>)(prisma),
+  );
 });
 
 const webhookHeaders = {

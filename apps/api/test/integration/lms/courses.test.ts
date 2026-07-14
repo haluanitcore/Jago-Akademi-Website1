@@ -6,14 +6,19 @@ vi.mock("../../../src/db/prisma.js", () => ({
   prisma: {
     lmsCourse: {
       findMany: vi.fn(),
+      findFirst: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
     },
     lmsLesson: {
       findMany: vi.fn(),
+      findFirst: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
+    },
+    lmsBatch: {
+      findFirst: vi.fn(),
     },
     lmsQuiz: {
       create: vi.fn(),
@@ -70,6 +75,10 @@ beforeEach(() => {
   vi.mocked(prisma.lmsCourse.findMany).mockResolvedValue([mockCourse] as never);
   vi.mocked(prisma.lmsCourse.create).mockResolvedValue(mockCourse as never);
   vi.mocked(prisma.lmsCourse.update).mockResolvedValue(mockCourse as never);
+  // H1 tenant-scope guards resolve the child through the tenant before acting.
+  vi.mocked(prisma.lmsCourse.findFirst).mockResolvedValue(mockCourse as never);
+  vi.mocked(prisma.lmsLesson.findFirst).mockResolvedValue(mockLesson as never);
+  vi.mocked(prisma.lmsBatch.findFirst).mockResolvedValue({ id: "batch-1", tenantId: "tenant-1" } as never);
   vi.mocked(prisma.lmsLesson.findMany).mockResolvedValue([mockLesson] as never);
   vi.mocked(prisma.lmsLesson.create).mockResolvedValue(mockLesson as never);
   vi.mocked(prisma.lmsLesson.update).mockResolvedValue(mockLesson as never);

@@ -22,6 +22,12 @@ export default defineConfig({
       MEILISEARCH_KEY: "test-key",
       UPLOAD_DIR: "uploads",
       MAX_FILE_SIZE_MB: "10",
+      // Force the queue OFF in tests so jobs run inline and nothing tries to
+      // reach a real Redis (otherwise a REDIS_URL from a local .env makes
+      // cache/queue/webhook tests hang and /ready report redis "error").
+      // Set here (before dotenv, which never overrides existing vars) so tests
+      // are deterministic without external infrastructure.
+      REDIS_URL: "",
     },
     include: ["src/**/*.test.ts", "test/**/*.test.ts"],
     coverage: {

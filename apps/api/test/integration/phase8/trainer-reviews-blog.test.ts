@@ -5,8 +5,8 @@ import { app } from "../../../src/app.js";
 vi.mock("../../../src/db/prisma.js", () => ({
   prisma: {
     course: { findMany: vi.fn(), findFirst: vi.fn() },
-    courseEnrollment: { count: vi.fn() },
-    orderItem: { aggregate: vi.fn() },
+    courseEnrollment: { count: vi.fn(), findUnique: vi.fn() },
+    orderItem: { aggregate: vi.fn(), findFirst: vi.fn() },
     trainerPayout: { findMany: vi.fn(), create: vi.fn(), count: vi.fn(), update: vi.fn() },
     review: {
       findMany: vi.fn(), count: vi.fn(), aggregate: vi.fn(),
@@ -74,8 +74,10 @@ describe("GET /api/reviews", () => {
 describe("POST /api/reviews", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("creates a review", async () => {
+  it("creates a review when the user is enrolled/has purchased", async () => {
     mockPrisma.review.findUnique.mockResolvedValue(null);
+    // M-review: enrollment proves ownership for a course.
+    mockPrisma.courseEnrollment.findUnique.mockResolvedValue({ id: "enr-1" });
     mockPrisma.review.create.mockResolvedValue({
       id: "r1", rating: 4, content: "Oke", itemType: "course", itemId: "c1",
       user: { id: "trainer-1", name: "Trainer", avatarUrl: null },
@@ -84,6 +86,15 @@ describe("POST /api/reviews", () => {
     const res = await request(app).post("/api/reviews").send({ itemType: "course", itemId: "c1", rating: 4, content: "Oke" });
     expect(res.status).toBe(201);
     expect(res.body.data.rating).toBe(4);
+  });
+
+  it("rejects a review from a non-buyer (M-review)", async () => {
+    mockPrisma.review.findUnique.mockResolvedValue(null);
+    mockPrisma.courseEnrollment.findUnique.mockResolvedValue(null);
+    mockPrisma.orderItem.findFirst.mockResolvedValue(null);
+    const res = await request(app).post("/api/reviews").send({ itemType: "course", itemId: "c1", rating: 4 });
+    expect(res.status).toBe(403);
+    expect(mockPrisma.review.create).not.toHaveBeenCalled();
   });
 
   it("returns 409 if review already exists", async () => {

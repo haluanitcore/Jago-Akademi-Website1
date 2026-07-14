@@ -89,7 +89,7 @@ describe("GET /api/admin/users", () => {
   });
 });
 
-describe("PATCH /api/admin/users/:id/status", () => {
+describe("PATCH /api/admin/users/:id", () => {
   it("deactivates a user", async () => {
     vi.mocked(prisma.user.findUnique)
       .mockResolvedValueOnce(VALID_ADMIN as never)
@@ -97,7 +97,7 @@ describe("PATCH /api/admin/users/:id/status", () => {
     vi.mocked(prisma.user.update).mockResolvedValue({ ...VALID_USER, isActive: false } as never);
 
     const res = await request(app)
-      .patch("/api/admin/users/user-1/status")
+      .patch("/api/admin/users/user-1")
       .set(ADMIN_AUTH)
       .send({ isActive: false });
 
@@ -109,7 +109,7 @@ describe("PATCH /api/admin/users/:id/status", () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(VALID_ADMIN as never);
 
     const res = await request(app)
-      .patch("/api/admin/users/user-1/status")
+      .patch("/api/admin/users/user-1")
       .set(ADMIN_AUTH)
       .send({ isActive: "yes" });
 
@@ -131,7 +131,7 @@ describe("GET /api/admin/courses", () => {
   });
 });
 
-describe("PATCH /api/admin/courses/:id/approve", () => {
+describe("PATCH /api/admin/courses/:id", () => {
   it("publishes a draft course", async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(VALID_ADMIN as never);
     vi.mocked(prisma.course.findUnique).mockResolvedValue({ id: "c-1", status: "draft" } as never);
@@ -143,27 +143,15 @@ describe("PATCH /api/admin/courses/:id/approve", () => {
     } as never);
 
     const res = await request(app)
-      .patch("/api/admin/courses/c-1/approve")
-      .set(ADMIN_AUTH);
+      .patch("/api/admin/courses/c-1")
+      .set(ADMIN_AUTH)
+      .send({ status: "published" });
 
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe("published");
   });
 
-  it("returns 400 if already published", async () => {
-    vi.mocked(prisma.user.findUnique).mockResolvedValue(VALID_ADMIN as never);
-    vi.mocked(prisma.course.findUnique).mockResolvedValue({ id: "c-1", status: "published" } as never);
-
-    const res = await request(app)
-      .patch("/api/admin/courses/c-1/approve")
-      .set(ADMIN_AUTH);
-
-    expect(res.status).toBe(400);
-  });
-});
-
-describe("PATCH /api/admin/courses/:id/reject", () => {
-  it("reverts course to draft", async () => {
+  it("reverts a course to draft", async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(VALID_ADMIN as never);
     vi.mocked(prisma.course.findUnique).mockResolvedValue({ id: "c-1", status: "published" } as never);
     vi.mocked(prisma.course.update).mockResolvedValue({
@@ -173,10 +161,22 @@ describe("PATCH /api/admin/courses/:id/reject", () => {
     } as never);
 
     const res = await request(app)
-      .patch("/api/admin/courses/c-1/reject")
-      .set(ADMIN_AUTH);
+      .patch("/api/admin/courses/c-1")
+      .set(ADMIN_AUTH)
+      .send({ status: "draft" });
 
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe("draft");
+  });
+
+  it("returns 400 with invalid status", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(VALID_ADMIN as never);
+
+    const res = await request(app)
+      .patch("/api/admin/courses/c-1")
+      .set(ADMIN_AUTH)
+      .send({ status: "bogus" });
+
+    expect(res.status).toBe(400);
   });
 });

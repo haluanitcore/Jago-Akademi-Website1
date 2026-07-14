@@ -101,14 +101,19 @@ router.get("/users", async (req: Request, res: Response, next: NextFunction) => 
 });
 
 // PATCH /api/admin/users/:id — update user (isActive and/or isVerified)
-router.patch("/users/:id", async (req: Request, res: Response, next: NextFunction) => {
+const AdminUserUpdateSchema = z.object({
+  isActive: z.boolean().optional(),
+  isVerified: z.boolean().optional(),
+});
+
+router.patch("/users/:id", validateBody(AdminUserUpdateSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.params.id, deletedAt: null },
     });
     if (!user) return next(new AppError(404, "Pengguna tidak ditemukan."));
 
-    const { isActive, isVerified } = req.body as { isActive?: boolean; isVerified?: boolean };
+    const { isActive, isVerified } = req.body as z.infer<typeof AdminUserUpdateSchema>;
     const data: Record<string, boolean> = {};
     if (typeof isActive === "boolean") data.isActive = isActive;
     if (typeof isVerified === "boolean") data.isVerified = isVerified;
@@ -174,12 +179,17 @@ router.get("/courses", async (req: Request, res: Response, next: NextFunction) =
 });
 
 // PATCH /api/admin/courses/:id — generic course update (status, isFeatured)
-router.patch("/courses/:id", async (req: Request, res: Response, next: NextFunction) => {
+const AdminCourseUpdateSchema = z.object({
+  status: z.enum(["draft", "published", "archived"]).optional(),
+  isFeatured: z.boolean().optional(),
+});
+
+router.patch("/courses/:id", validateBody(AdminCourseUpdateSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const course = await prisma.course.findUnique({ where: { id: req.params.id } });
     if (!course) return next(new AppError(404, "Kursus tidak ditemukan."));
 
-    const { status, isFeatured } = req.body as { status?: string; isFeatured?: boolean };
+    const { status, isFeatured } = req.body as z.infer<typeof AdminCourseUpdateSchema>;
     const data: Record<string, unknown> = {};
     if (status === "published") { data.status = "published"; data.publishedAt = new Date(); }
     else if (status === "draft") { data.status = "draft"; data.publishedAt = null; }
