@@ -4,6 +4,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { getToken } from "@/lib/auth/token";
+import { getStoredReferral, clearStoredReferral } from "@/lib/affiliate/referral";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -186,10 +187,12 @@ function CheckoutContent() {
           itemType: item.itemType,
           itemId: item.id,
           couponCode: coupon?.code,
+          referralCode: getStoredReferral() ?? undefined,
         }),
       });
       const data = await res.json();
       if (data.success) {
+        clearStoredReferral();
         if (data.data.free) {
           const redirectUrl =
             itemType === "ebook"

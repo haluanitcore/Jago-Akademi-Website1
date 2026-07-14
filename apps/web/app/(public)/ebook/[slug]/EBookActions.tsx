@@ -16,7 +16,7 @@ function getApiBase() {
 }
 
 
-export default function EBookActions({ ebookId, ebookSlug, price }: Props) {
+export default function EBookActions({ ebookSlug, price }: Props) {
   const router = useRouter();
   const [hasPurchased, setHasPurchased] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -26,8 +26,10 @@ export default function EBookActions({ ebookId, ebookSlug, price }: Props) {
   useEffect(() => {
     const token = getToken();
     if (!token) return;
-    // Check if user already owns it
-    fetch(`${getApiBase()}/api/ebooks/${ebookId}/file`, {
+    // Check if the user already owns it. The backend resolves this endpoint by
+    // SLUG (not id), so we must pass ebookSlug here (H2) — passing the id 404'd
+    // and the owned-file buttons never appeared for paying customers.
+    fetch(`${getApiBase()}/api/ebooks/${ebookSlug}/file`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
@@ -38,7 +40,7 @@ export default function EBookActions({ ebookId, ebookSlug, price }: Props) {
         }
       })
       .catch(() => {});
-  }, [ebookId]);
+  }, [ebookSlug]);
 
   async function handleBuy() {
     router.push(`/checkout/${ebookSlug}?type=ebook`);

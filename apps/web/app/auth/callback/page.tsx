@@ -42,7 +42,26 @@ function CallbackHandler() {
     setToken(token);
     // Remove the token from the visible URL before navigating away.
     window.history.replaceState(null, "", "/auth/callback");
-    router.replace("/dashboard");
+
+    // Role-aware redirect so admins/trainers don't land on the student dashboard
+    // (mirrors password login). Falls back to /dashboard on any failure.
+    fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((me) => {
+        const roles: string[] = me?.success
+          ? (me.data.roles ?? []).map((r: { role: string } | string) =>
+              typeof r === "string" ? r : r.role,
+            )
+          : [];
+        if (roles.some((r) => ["admin", "super_admin"].includes(r))) {
+          router.replace("/admin/dashboard");
+        } else if (roles.includes("trainer")) {
+          router.replace("/trainer-hub");
+        } else {
+          router.replace("/dashboard");
+        }
+      })
+      .catch(() => router.replace("/dashboard"));
   }, [params, router]);
 
   if (error) {

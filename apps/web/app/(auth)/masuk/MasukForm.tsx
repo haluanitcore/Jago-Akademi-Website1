@@ -60,6 +60,11 @@ export function MasukForm() {
           window.location.href = "/admin/dashboard";
           return;
         }
+        // Trainers land on their own hub, not the student dashboard.
+        if (roleNames.includes("trainer")) {
+          window.location.href = "/trainer-hub";
+          return;
+        }
       }
     } catch {
       // fallback to dashboard

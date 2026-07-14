@@ -110,6 +110,12 @@ function SuccessContent() {
   const [mounted, setMounted] = useState(false);
 
   const [tokenReady, setTokenReady] = useState(false);
+  // DOKU redirects the browser here on RETURN — payment is only confirmed later
+  // via the webhook. So we must verify the order is actually `paid` before
+  // claiming success (previously this page showed "Berhasil" unconditionally).
+  const [verified, setVerified] = useState<"checking" | "paid" | "unpaid" | "error">(
+    isMock ? "paid" : "checking",
+  );
 
   useEffect(() => {
     // Small delay so CSS animations trigger after mount
@@ -117,11 +123,80 @@ function SuccessContent() {
     return () => clearTimeout(t);
   }, []);
 
-  // Ensure token is still valid (auto-refresh if needed)
-  // so subsequent navigation to /dashboard/kursus doesn't redirect to /masuk
+  // Ensure token is still valid (auto-refresh if needed) AND confirm the order
+  // status server-side before showing the success UI.
   useEffect(() => {
-    getValidToken().then((t) => setTokenReady(!!t));
-  }, []);
+    if (isMock) {
+      setTokenReady(true);
+      return;
+    }
+    (async () => {
+      const token = await getValidToken();
+      setTokenReady(!!token);
+      if (!orderId || !token) {
+        setVerified("error");
+        return;
+      }
+      try {
+        const res = await fetch(`/api/orders/${orderId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const body = await res.json();
+        setVerified(body.success && body.data?.status === "paid" ? "paid" : "unpaid");
+      } catch {
+        setVerified("error");
+      }
+    })();
+  }, [orderId, isMock]);
+
+  // Still confirming payment — show a neutral loading state.
+  if (verified === "checking") {
+    return (
+      <div
+        className="flex min-h-screen flex-col items-center justify-center gap-4 px-4"
+        style={{ background: "var(--surface-page)" }}
+      >
+        <div
+          className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
+          style={{ borderColor: "var(--brand-cyan-strong)", borderTopColor: "transparent" }}
+        />
+        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+          Memverifikasi pembayaran…
+        </p>
+      </div>
+    );
+  }
+
+  // Payment not confirmed yet (pending/failed) — do NOT claim success.
+  if (verified !== "paid") {
+    return (
+      <div
+        className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 py-16 text-center"
+        style={{ background: "var(--surface-page)" }}
+      >
+        <div className="w-full max-w-md flex flex-col items-center gap-4">
+          <div className="text-4xl" aria-hidden="true">⏳</div>
+          <h1 className="text-2xl font-extrabold" style={{ color: "var(--text-primary)" }}>
+            Pembayaran Belum Terkonfirmasi
+          </h1>
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            Kami belum menerima konfirmasi pembayaran untuk pesanan ini. Jika kamu
+            sudah membayar, status akan diperbarui otomatis dalam beberapa menit.
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row w-full">
+            {orderId && (
+              <Link href={`/pesanan/${orderId}`} className="btn btn-primary btn-lg flex-1 justify-center">
+                Lihat Status Pesanan
+              </Link>
+            )}
+            <Link href="/dashboard/pesanan" className="btn btn-outline btn-lg flex-1 justify-center">
+              Pesanan Saya
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

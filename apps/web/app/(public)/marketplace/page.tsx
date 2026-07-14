@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { BookMarked, Search, X, Tag, Video, Package, Layers, Sparkles, ShoppingBag } from "lucide-react";
+import { BookMarked, Search, X, Video, Package, Layers, ShoppingBag } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -21,94 +21,19 @@ type MarketplaceItem = {
   extraInfo?: string; // e.g. "3 jam video", "12 file template", "180 halaman"
 };
 
-// ─── Dummy Data for Extended Categories ──────────────────────────────────────
-
-const MOCK_RECORDINGS: MarketplaceItem[] = [
-  {
-    id: "rec-1",
-    slug: "nextjs-15-ai-integration-recording",
-    title: "Rekaman Workshop: Next.js 15 & AI Integration Masterclass",
-    description: "Rekaman penuh workshop intensif membangun aplikasi AI-Agents dengan Next.js 15, Vercel AI SDK, dan Gemini API.",
-    price: "249000",
-    salePrice: "149000",
-    coverUrl: null,
-    author: "Rian Ferdinand",
-    type: "recording",
-    badge: "Terlaris",
-    category: "Next.js",
-    extraInfo: "4.5 jam video HD",
-  },
-  {
-    id: "rec-2",
-    slug: "docker-for-production-recording",
-    title: "Rekaman Webinar: Docker & Kubernetes untuk Pemula",
-    description: "Panduan praktis deploy aplikasi microservices ke VPS dan cloud provider menggunakan Docker Compose.",
-    price: "150000",
-    salePrice: "99000",
-    coverUrl: null,
-    author: "Fahri Hamzah",
-    type: "recording",
-    category: "DevOps",
-    extraInfo: "3 jam video + Slide",
-  },
-  {
-    id: "rec-3",
-    slug: "figma-to-code-uiux-recording",
-    title: "Rekaman Live: Mengubah Desain Figma Menjadi Code Tailwind",
-    description: "Belajar workflow slicing UI premium secara pixel-perfect dari Figma ke HTML & React TailwindCSS.",
-    price: "120000",
-    salePrice: null,
-    coverUrl: null,
-    author: "Nabila Putri",
-    type: "recording",
-    category: "Design to Code",
-    extraInfo: "2.5 jam video",
-  }
-];
-
-const MOCK_MODULES: MarketplaceItem[] = [
-  {
-    id: "mod-1",
-    slug: "tailwind-flexbox-grid-cheatsheet",
-    title: "TailwindCSS Premium Cheatsheet & Boilerplates Bundle",
-    description: "Template layout siap pakai, components premium, dan cheatsheet shortcut flexbox/grid terlengkap.",
-    price: "75000",
-    salePrice: "39000",
-    coverUrl: null,
-    author: "Jago Akademi Dev",
-    type: "module",
-    badge: "Populer",
-    category: "TailwindCSS",
-    extraInfo: "25+ Template File",
-  },
-  {
-    id: "mod-2",
-    slug: "express-prisma-backend-template",
-    title: "Backend Express, TypeScript & Prisma Production Boilerplate",
-    description: "Boilerplate backend siap pakai dengan JWT auth, role management, audit logging, dan database migrations.",
-    price: "199000",
-    salePrice: "129000",
-    coverUrl: null,
-    author: "Developer Team",
-    type: "module",
-    badge: "Premium",
-    category: "Express.js",
-    extraInfo: "Production Ready Repo",
-  },
-  {
-    id: "mod-3",
-    slug: "react-animation-framer-motion-snippets",
-    title: "Framer Motion Micro-Animations Snippets Library",
-    description: "Koleksi script micro-animations interaktif siap salin-tempel untuk mempercantik UI/UX aplikasi React & Next.js.",
-    price: "85000",
-    salePrice: null,
-    coverUrl: null,
-    author: "Design Team",
-    type: "module",
-    category: "React / Animations",
-    extraInfo: "50+ Animasi Siap Pakai",
-  }
-];
+// Shape of an e-book record returned by GET /api/ebooks.
+type ApiEbook = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  price: string;
+  salePrice: string | null;
+  coverUrl: string | null;
+  author: string | null;
+  category: string | null;
+  pages?: number | null;
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -291,7 +216,7 @@ function MarketplaceCatalog() {
       .then((r) => r.json())
       .then((d) => {
         if (d?.success && Array.isArray(d.data)) {
-          const mapped: MarketplaceItem[] = d.data.map((b: any) => ({
+          const mapped: MarketplaceItem[] = (d.data as ApiEbook[]).map((b) => ({
             id: b.id,
             slug: b.slug,
             title: b.title,
@@ -316,16 +241,10 @@ function MarketplaceCatalog() {
   const getFilteredItems = (): MarketplaceItem[] => {
     let items: MarketplaceItem[] = [];
 
-    // Combine depending on active Tab
-    if (activeTab === "all") {
-      items = [...(dbBooks ?? []), ...MOCK_RECORDINGS, ...MOCK_MODULES];
-    } else if (activeTab === "ebook") {
-      items = dbBooks ?? [];
-    } else if (activeTab === "recording") {
-      items = MOCK_RECORDINGS;
-    } else if (activeTab === "module") {
-      items = MOCK_MODULES;
-    }
+    // Only real, purchasable inventory is shown. Recordings/modules were mock
+    // data with a broken checkout (EPIC 8: no fictional data) and were removed;
+    // the marketplace currently lists e-books sourced from the API.
+    items = dbBooks ?? [];
 
     // Apply Search filter
     if (query) {
@@ -351,7 +270,7 @@ function MarketplaceCatalog() {
   // Categories extraction helper
   const allCategories = Array.from(
     new Set(
-      [...(dbBooks ?? []), ...MOCK_RECORDINGS, ...MOCK_MODULES]
+      (dbBooks ?? [])
         .map((item) => item.category)
         .filter(Boolean)
     )
@@ -401,8 +320,6 @@ function MarketplaceCatalog() {
         {[
           { id: "all", label: "Semua Produk", icon: Layers },
           { id: "ebook", label: "E-Book", icon: BookMarked },
-          { id: "recording", label: "Rekaman Event", icon: Video },
-          { id: "module", label: "Modul Praktis", icon: Package },
         ].map((tab) => {
           const TabIcon = tab.icon;
           const isActive = activeTab === tab.id;
