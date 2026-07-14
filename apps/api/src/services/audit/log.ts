@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma.js";
+import { logger } from "../../lib/logger.js";
 
 type AuditPayload = {
   actorId?: string;
@@ -45,8 +46,8 @@ export async function writeAudit(payload: AuditPayload): Promise<void> {
         userAgent: payload.userAgent,
       },
     });
-  } catch {
+  } catch (err) {
     // Audit failure must never break the request
-    console.error("[audit] Failed to write audit log:", payload.action, payload.resource);
+    logger.error("audit log write failed", { action: payload.action, resource: payload.resource, err: String(err) });
   }
 }

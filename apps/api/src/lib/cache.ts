@@ -34,7 +34,15 @@ export async function cacheInvalidate(pattern: string): Promise<void> {
   const conn = await getRedisConnection();
   if (!conn) return;
   try {
-    const keys = await conn.keys(pattern);
+    // SCAN (cursor-based, non-blocking) instead of KEYS, which is O(N) and
+    // blocks the Redis event loop under load.
+    const keys: string[] = [];
+    let cursor = "0";
+    do {
+      const [next, batch] = await conn.scan(cursor, "MATCH", pattern, "COUNT", 100);
+      cursor = next;
+      keys.push(...batch);
+    } while (cursor !== "0");
     if (keys.length > 0) await conn.del(...keys);
   } catch (err) {
     logger.warn("cacheInvalidate failed", { pattern, err: String(err) });

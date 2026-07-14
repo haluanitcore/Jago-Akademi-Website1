@@ -66,6 +66,12 @@ router.patch(
         location?: string;
       };
 
+      // avatarUrl is normally a server path from the upload endpoint; reject
+      // client-supplied javascript:/data: or off-scheme values.
+      if (avatarUrl !== undefined && !(avatarUrl.startsWith("/") || /^https?:\/\//i.test(avatarUrl))) {
+        return res.status(400).json(errorResponse("VALIDATION_ERROR", "avatarUrl tidak valid."));
+      }
+
       const user = await prisma.user.update({
         where: { id },
         data: {

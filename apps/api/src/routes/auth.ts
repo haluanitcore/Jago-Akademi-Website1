@@ -318,7 +318,7 @@ router.get(
 // GET /api/auth/google
 router.get("/google", (req: Request, res: Response) => {
   const state = randomUUID();
-  res.cookie("oauth_state", state, { httpOnly: true, secure: env.COOKIE_SECURE, maxAge: 10 * 60 * 1000 });
+  res.cookie("oauth_state", state, { httpOnly: true, secure: env.COOKIE_SECURE, sameSite: "lax", maxAge: 10 * 60 * 1000 });
   res.redirect(buildGoogleAuthUrl(state));
 });
 
