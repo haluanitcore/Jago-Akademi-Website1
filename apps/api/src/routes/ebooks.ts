@@ -30,6 +30,32 @@ router.get("/", async (req, res, next) => {
   }
 });
 
+// GET /api/ebooks/my — list ebooks owned by authenticated user
+router.get("/my", authenticate, async (req, res, next) => {
+  try {
+    // Find all ebook IDs from paid orders
+    const orderItems = await prisma.orderItem.findMany({
+      where: {
+        itemType: "ebook",
+        order: { userId: req.user!.id, status: "paid" },
+      },
+      select: { itemId: true },
+    });
+
+    const ebookIds = orderItems.map((oi) => oi.itemId);
+    if (ebookIds.length === 0) return res.json(successResponse([]));
+
+    const ebooks = await prisma.eBook.findMany({
+      where: { id: { in: ebookIds } },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return res.json(successResponse(ebooks));
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Get single ebook detail
 router.get("/:slug", async (req, res, next) => {
   try {

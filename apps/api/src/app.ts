@@ -79,6 +79,7 @@ app.use("/api/coupons", couponsRouter);
 app.use("/api/webhooks", webhooksRouter);
 app.use("/api/ebooks", ebooksRouter);
 app.use("/api/leads", leadsRouter);
+app.use("/api/waitlist", leadsRouter);
 app.use("/api/testimonials", testimonialsRouter);
 app.use("/api/lms", lmsRouter);
 app.use("/api/events", eventsRouter);

@@ -100,33 +100,30 @@ router.get("/users", async (req: Request, res: Response, next: NextFunction) => 
   }
 });
 
-const UpdateUserStatusSchema = z.object({
-  isActive: z.boolean(),
-});
+// PATCH /api/admin/users/:id — update user (isActive and/or isVerified)
+router.patch("/users/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id, deletedAt: null },
+    });
+    if (!user) return next(new AppError(404, "Pengguna tidak ditemukan."));
 
-// PATCH /api/admin/users/:id/status — activate or deactivate a user
-router.patch(
-  "/users/:id/status",
-  validateBody(UpdateUserStatusSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const user = await prisma.user.findUnique({
-        where: { id: req.params.id, deletedAt: null },
-      });
-      if (!user) return next(new AppError(404, "Pengguna tidak ditemukan."));
+    const { isActive, isVerified } = req.body as { isActive?: boolean; isVerified?: boolean };
+    const data: Record<string, boolean> = {};
+    if (typeof isActive === "boolean") data.isActive = isActive;
+    if (typeof isVerified === "boolean") data.isVerified = isVerified;
 
-      const updated = await prisma.user.update({
-        where: { id: req.params.id },
-        data: { isActive: req.body.isActive },
-        select: { id: true, name: true, email: true, isActive: true },
-      });
+    const updated = await prisma.user.update({
+      where: { id: req.params.id },
+      data,
+      select: { id: true, name: true, email: true, isActive: true, isVerified: true },
+    });
 
-      res.json(successResponse(updated));
-    } catch (err) {
-      next(err);
-    }
+    res.json(successResponse(updated));
+  } catch (err) {
+    next(err);
   }
-);
+});
 
 const CourseListSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -176,35 +173,23 @@ router.get("/courses", async (req: Request, res: Response, next: NextFunction) =
   }
 });
 
-// PATCH /api/admin/courses/:id/approve — publish a course
-router.patch("/courses/:id/approve", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const course = await prisma.course.findUnique({ where: { id: req.params.id } });
-    if (!course) return next(new AppError(404, "Kursus tidak ditemukan."));
-    if (course.status === "published") return next(new AppError(400, "Kursus sudah dipublikasikan."));
-
-    const updated = await prisma.course.update({
-      where: { id: req.params.id },
-      data: { status: "published", publishedAt: new Date() },
-      select: { id: true, title: true, status: true, publishedAt: true },
-    });
-
-    res.json(successResponse(updated));
-  } catch (err) {
-    next(err);
-  }
-});
-
-// PATCH /api/admin/courses/:id/reject — revert course to draft
-router.patch("/courses/:id/reject", async (req: Request, res: Response, next: NextFunction) => {
+// PATCH /api/admin/courses/:id — generic course update (status, isFeatured)
+router.patch("/courses/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const course = await prisma.course.findUnique({ where: { id: req.params.id } });
     if (!course) return next(new AppError(404, "Kursus tidak ditemukan."));
 
+    const { status, isFeatured } = req.body as { status?: string; isFeatured?: boolean };
+    const data: Record<string, unknown> = {};
+    if (status === "published") { data.status = "published"; data.publishedAt = new Date(); }
+    else if (status === "draft") { data.status = "draft"; data.publishedAt = null; }
+    else if (status === "archived") { data.status = "archived"; }
+    if (typeof isFeatured === "boolean") data.isFeatured = isFeatured;
+
     const updated = await prisma.course.update({
       where: { id: req.params.id },
-      data: { status: "draft", publishedAt: null },
-      select: { id: true, title: true, status: true },
+      data,
+      select: { id: true, title: true, status: true, isFeatured: true, publishedAt: true },
     });
 
     res.json(successResponse(updated));
@@ -380,6 +365,301 @@ router.patch("/leads/:id", async (req: Request, res: Response, next: NextFunctio
       select: { id: true, status: true, updatedAt: true },
     });
     return res.json(successResponse(lead));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Admin: Orders (alias for transactions) ──────────────────────────────────
+
+// GET /api/admin/orders — alias for /transactions to match frontend
+router.get("/orders", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { page, limit, status, search } = TxListSchema.parse(req.query);
+    const skip = (page - 1) * limit;
+
+    const where = {
+      ...(status ? { status } : {}),
+      ...(search
+        ? {
+            OR: [
+              { id: { contains: search } },
+              { user: { name: { contains: search, mode: "insensitive" as const } } },
+              { user: { email: { contains: search, mode: "insensitive" as const } } },
+            ],
+          }
+        : {}),
+    };
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          items: { select: { itemType: true, itemTitle: true } },
+        },
+      }),
+      prisma.order.count({ where }),
+    ]);
+
+    res.json(successResponse(orders, { total, page, limit }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Admin: Events ────────────────────────────────────────────────────────────
+
+const EventListSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  status: z.string().optional(),
+  search: z.string().optional(),
+});
+
+// GET /api/admin/events
+router.get("/events", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { page, limit, status, search } = EventListSchema.parse(req.query);
+    const skip = (page - 1) * limit;
+
+    const where = {
+      ...(status ? { status } : {}),
+      ...(search ? { title: { contains: search, mode: "insensitive" as const } } : {}),
+    };
+
+    const [events, total] = await Promise.all([
+      prisma.event.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { startDate: "desc" },
+      }),
+      prisma.event.count({ where }),
+    ]);
+
+    res.json(successResponse(events, { total, page, limit }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/admin/events/:id
+router.patch("/events/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { status } = req.body as { status?: string };
+    const data: Record<string, unknown> = {};
+    if (status) data.status = status;
+
+    const event = await prisma.event.update({
+      where: { id: req.params.id },
+      data,
+    });
+    res.json(successResponse(event));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Admin: Blog ──────────────────────────────────────────────────────────────
+
+const BlogListSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  status: z.string().optional(),
+  search: z.string().optional(),
+});
+
+// GET /api/admin/blog
+router.get("/blog", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { page, limit, status, search } = BlogListSchema.parse(req.query);
+    const skip = (page - 1) * limit;
+
+    const where = {
+      ...(status ? { status } : {}),
+      ...(search ? { title: { contains: search, mode: "insensitive" as const } } : {}),
+    };
+
+    const [posts, total] = await Promise.all([
+      prisma.blogPost.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true, slug: true, title: true, excerpt: true,
+          coverUrl: true, category: true, status: true,
+          publishedAt: true, createdAt: true,
+          author: { select: { id: true, name: true } },
+        },
+      }),
+      prisma.blogPost.count({ where }),
+    ]);
+
+    res.json(successResponse(posts, { total, page, limit }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/admin/blog/:id
+router.patch("/blog/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { status } = req.body as { status?: string };
+    const data: Record<string, unknown> = {};
+    if (status === "published") { data.status = "published"; data.publishedAt = new Date(); }
+    else if (status) { data.status = status; data.publishedAt = null; }
+
+    const post = await prisma.blogPost.update({
+      where: { id: req.params.id },
+      data,
+      select: { id: true, title: true, status: true, publishedAt: true },
+    });
+    res.json(successResponse(post));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Admin: Reviews ───────────────────────────────────────────────────────────
+
+const ReviewListSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  approved: z.string().optional(),
+});
+
+// GET /api/admin/reviews
+router.get("/reviews", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { page, limit, approved } = ReviewListSchema.parse(req.query);
+    const skip = (page - 1) * limit;
+
+    const where = {
+      ...(approved === "true" ? { status: "published" } : {}),
+      ...(approved === "false" ? { status: "hidden" } : {}),
+    };
+
+    const [reviews, total] = await Promise.all([
+      prisma.review.findMany({
+        where,
+        include: { user: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.review.count({ where }),
+    ]);
+
+    res.json(successResponse(reviews, { total, page, limit }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/admin/reviews/:id — moderate (isApproved → status)
+router.patch("/reviews/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { isApproved } = req.body as { isApproved?: boolean };
+    const status = isApproved ? "published" : "hidden";
+
+    const review = await prisma.review.update({
+      where: { id: req.params.id },
+      data: { status },
+    });
+    res.json(successResponse(review));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/admin/reviews/:id
+router.delete("/reviews/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await prisma.review.delete({ where: { id: req.params.id } });
+    res.json(successResponse({ message: "Review dihapus." }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Admin: Coupons ───────────────────────────────────────────────────────────
+
+const AdminCouponSchema = z.object({
+  code: z.string().min(3).max(50).transform((v) => v.toUpperCase()),
+  type: z.enum(["percentage", "fixed"]),
+  value: z.number().positive(),
+  maxDiscount: z.number().positive().optional(),
+  minPurchase: z.number().min(0).default(0),
+  // Frontend sends maxUses/expiresAt — map to usageLimit/endDate
+  maxUses: z.number().int().positive().optional(),
+  usageLimit: z.number().int().positive().optional(),
+  expiresAt: z.string().datetime().optional().nullable(),
+  endDate: z.string().datetime().optional(),
+  description: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
+
+// GET /api/admin/coupons
+router.get("/coupons", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Number(req.query.limit) || 20);
+    const skip = (page - 1) * limit;
+
+    const [coupons, total] = await Promise.all([
+      prisma.coupon.findMany({ orderBy: { createdAt: "desc" }, skip, take: limit }),
+      prisma.coupon.count(),
+    ]);
+    res.json(successResponse(coupons, { total, page, limit }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/admin/coupons
+router.post("/coupons", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = AdminCouponSchema.safeParse(req.body);
+    if (!parsed.success) return next(new AppError(400, parsed.error.issues[0]?.message ?? "Validasi gagal."));
+
+    const { maxUses, expiresAt, usageLimit, endDate, ...rest } = parsed.data;
+    const coupon = await prisma.coupon.create({
+      data: {
+        ...rest,
+        usageLimit: usageLimit ?? maxUses ?? undefined,
+        endDate: endDate ?? (expiresAt ? new Date(expiresAt) : undefined),
+      },
+    });
+    res.status(201).json(successResponse(coupon));
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code === "P2002") {
+      return next(new AppError(409, "Kode kupon sudah digunakan."));
+    }
+    next(err);
+  }
+});
+
+// PATCH /api/admin/coupons/:id
+router.patch("/coupons/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = AdminCouponSchema.partial().safeParse(req.body);
+    if (!parsed.success) return next(new AppError(400, parsed.error.issues[0]?.message ?? "Validasi gagal."));
+
+    const { maxUses, expiresAt, usageLimit, endDate, ...rest } = parsed.data;
+    const coupon = await prisma.coupon.update({
+      where: { id: req.params.id },
+      data: {
+        ...rest,
+        ...(usageLimit !== undefined || maxUses !== undefined ? { usageLimit: usageLimit ?? maxUses } : {}),
+        ...(endDate !== undefined || expiresAt !== undefined ? { endDate: endDate ?? (expiresAt ? new Date(expiresAt) : null) } : {}),
+      },
+    });
+    res.json(successResponse(coupon));
   } catch (err) {
     next(err);
   }

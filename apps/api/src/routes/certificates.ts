@@ -9,6 +9,28 @@ import { AppError, successResponse } from "../types/index.js";
 
 const router = Router();
 
+// GET /api/certificates — list certificates for authenticated user
+router.get("/", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const certs = await prisma.certificate.findMany({
+      where: { userId: req.user!.id, isValid: true, revokedAt: null },
+      select: {
+        id: true,
+        code: true,
+        type: true,
+        issuedAt: true,
+        fileUrl: true,
+        course: { select: { id: true, title: true, slug: true, thumbnailUrl: true } },
+      },
+      orderBy: { issuedAt: "desc" },
+    });
+
+    return res.json(successResponse(certs));
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/certificates/:code — public verification endpoint
 router.get("/:code", async (req: Request, res: Response, next: NextFunction) => {
   try {
