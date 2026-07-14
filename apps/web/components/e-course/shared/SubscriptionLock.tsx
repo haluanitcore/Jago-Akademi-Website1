@@ -31,7 +31,7 @@ export function SubscriptionLock({ isLocked, children }: SubscriptionLockProps) 
             Berlangganan Jago Akademi untuk mengakses semua materi, video, dan sertifikat pembelajaran.
           </p>
           <Link
-            href="/e-course/berlangganan"
+            href="/berlangganan"
             className="btn btn-primary w-full justify-center"
           >
             Berlangganan Sekarang

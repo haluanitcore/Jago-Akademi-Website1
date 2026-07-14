@@ -222,9 +222,9 @@ export default function BerlanggananDashboardPage() {
 
       <p className="bs-legal">
         Dengan berlangganan Anda menyetujui{" "}
-        <Link href="/syarat-ketentuan" className="bs-legal-link">Syarat & Ketentuan</Link>
+        <Link href="/terms" className="bs-legal-link">Syarat & Ketentuan</Link>
         {" "}dan{" "}
-        <Link href="/kebijakan-privasi" className="bs-legal-link">Kebijakan Privasi</Link>
+        <Link href="/privacy" className="bs-legal-link">Kebijakan Privasi</Link>
         {" "}Jago Akademi.
       </p>
 

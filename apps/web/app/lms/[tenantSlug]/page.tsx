@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, CheckCircle2, Award, BarChart3, Home, Folder, Trophy, User } from "lucide-react";
+import { BookOpen, CheckCircle2, Award, BarChart3, Home, Trophy } from "lucide-react";
 import { getValidToken } from "@/lib/auth/token";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -34,10 +34,8 @@ type TenantInfo = {
 function Sidebar({ slug, tenant }: { slug: string; tenant: TenantInfo | null }) {
   const primary = tenant?.primaryColor ?? "#0077A8";
   const navItems = [
-    { href: `/lms/${slug}`,              icon: Home,     label: "Beranda" },
-    { href: `/lms/${slug}/courses`,      icon: Folder,   label: "Kursus Saya" },
+    { href: `/lms/${slug}`,              icon: Home,     label: "Kursus Saya" },
     { href: `/lms/${slug}/certificates`, icon: Trophy,   label: "Sertifikat" },
-    { href: `/lms/${slug}/profile`,      icon: User,     label: "Profil" },
   ];
 
   return (
