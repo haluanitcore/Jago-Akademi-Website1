@@ -28,21 +28,38 @@ services:
       timeout: 10s
       retries: 3
 
+  redis:
+    image: redis:7-alpine
+    restart: always
+    # Persistence for BullMQ jobs (TASK-022): AOF every second.
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    image: jago-api-vps:local
     restart: always
     depends_on:
       postgres:
         condition: service_healthy
       meilisearch:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "4010:4000"
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-jagouser}:${POSTGRES_PASSWORD}@postgres:5432/jago_akademi
+      REDIS_URL: redis://redis:6379
       PORT: 4000
       WEB_URL: ${WEB_URL}
       CORS_ORIGIN: ${WEB_URL}
@@ -71,6 +88,39 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+
+  # BullMQ worker (TASK-022) — reuses the api image, runs the worker entrypoint.
+  # Without this (and redis above) BullMQ is disabled and jobs run inline in the
+  # request path; async emails/certificates would block responses on the VPS.
+  worker:
+    image: jago-api-vps:local
+    restart: always
+    command: ["node", "dist/worker.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-jagouser}:${POSTGRES_PASSWORD}@postgres:5432/jago_akademi
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:?Required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Required}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Jago Akademi}
+      DOKU_CLIENT_ID: ${DOKU_CLIENT_ID}
+      DOKU_SECRET_KEY: ${DOKU_SECRET_KEY}
+      DOKU_BASE_URL: ${DOKU_BASE_URL:-https://api.doku.com}
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILISEARCH_KEY: ${MEILISEARCH_KEY}
+      UPLOAD_DIR: /app/uploads
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    volumes:
+      - uploads:/app/uploads
 
   web:
     build:
@@ -102,4 +152,5 @@ services:
 volumes:
   postgres_data:
   meilisearch_data:
+  redis_data:
   uploads:
