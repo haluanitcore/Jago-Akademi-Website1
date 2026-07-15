@@ -60,7 +60,8 @@ router.post("/invite/:token/accept", authenticate, async (req, res, next) => {
     if (invite.batchId) {
       await prisma.lmsBatchMember.upsert({
         where: { batchId_userId: { batchId: invite.batchId, userId } },
-        create: { batchId: invite.batchId, userId },
+        // Denormalize tenantId for row-level isolation (defense-in-depth); the invite (and its batch) belong to this tenant.
+        create: { batchId: invite.batchId, userId, tenantId: invite.tenantId },
         update: {},
       });
       // Auto-enroll in courses assigned to this batch

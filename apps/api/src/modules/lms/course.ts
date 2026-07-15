@@ -93,7 +93,8 @@ router.post("/tenants/:tenantId/courses/:courseId/lessons", authenticate, async 
       const body = lessonSchema.safeParse(req.body);
       if (!body.success) return res.status(400).json(errorResponse("VALIDATION_ERROR", body.error.issues[0]?.message ?? "Validasi gagal."));
       const lesson = await prisma.lmsLesson.create({
-        data: { ...body.data, courseId: req.params.courseId as string },
+        // Denormalize tenantId for row-level isolation (defense-in-depth); source of truth is the URL tenant, already asserted to own the course.
+        data: { ...body.data, courseId: req.params.courseId as string, tenantId: req.params.tenantId as string },
       });
       return res.status(201).json(successResponse(lesson));
     });
@@ -145,7 +146,8 @@ router.post("/tenants/:tenantId/courses/:courseId/lessons/:lessonId/quizzes", au
         return res.status(400).json(errorResponse("BAD_REQUEST", "question, options (min 2), dan answer diperlukan."));
       }
       const quiz = await prisma.lmsQuiz.create({
-        data: { lessonId: req.params.lessonId as string, question, options, answer },
+        // Denormalize tenantId for row-level isolation (defense-in-depth); the lesson was asserted to belong to this tenant above.
+        data: { lessonId: req.params.lessonId as string, question, options, answer, tenantId: req.params.tenantId as string },
       });
       return res.status(201).json(successResponse(quiz));
     });
@@ -176,6 +178,8 @@ router.post("/tenants/:tenantId/courses/:courseId/assign", authenticate, async (
         create: {
           batchId,
           courseId,
+          // Denormalize tenantId for row-level isolation (defense-in-depth); both batch and course were asserted in this tenant above.
+          tenantId,
           dueDate: dueDate ? new Date(dueDate) : null,
           isMandatory: isMandatory ?? true,
         },

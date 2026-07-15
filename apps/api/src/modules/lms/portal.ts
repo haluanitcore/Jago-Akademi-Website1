@@ -110,7 +110,8 @@ router.post("/portal/:tenantSlug/courses/:courseId/lessons/:lessonId/complete", 
 
     await prisma.lmsProgress.upsert({
       where: { enrollmentId_lessonId: { enrollmentId: enrollment.id, lessonId: lessonId as string } },
-      create: { enrollmentId: enrollment.id, lessonId: lessonId as string },
+      // Denormalize tenantId for row-level isolation (defense-in-depth); enrollment.tenantId matches this tenant (resolved from slug).
+      create: { enrollmentId: enrollment.id, lessonId: lessonId as string, tenantId: enrollment.tenantId },
       update: {},
     });
 

@@ -487,12 +487,16 @@ model LmsBatchMember {
   id       String   @id @default(uuid())
   batchId  String
   userId   String
+  // Denormalized from parent batch for row-level tenant isolation (defense-in-depth).
+  // Nullable so the backfill migration cannot fail on pre-existing rows; app populates on write.
+  tenantId String?
   joinedAt DateTime @default(now())
 
   batch LmsBatch @relation(fields: [batchId], references: [id])
   user  User     @relation(fields: [userId], references: [id])
 
   @@unique([batchId, userId])
+  @@index([tenantId])
   @@map("lms_batch_members")
 }
 
@@ -523,6 +527,9 @@ model LmsLesson {
   videoUrl     String?
   durationMins Int?
   sortOrder    Int      @default(0)
+  // Denormalized from parent course for row-level tenant isolation (defense-in-depth).
+  // Nullable so the backfill migration cannot fail on pre-existing rows; app populates on write.
+  tenantId     String?
   createdAt    DateTime @default(now())
 
   course   LmsCourse     @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -530,6 +537,7 @@ model LmsLesson {
   quizzes  LmsQuiz[]
 
   @@index([courseId])
+  @@index([tenantId])
   @@map("lms_lessons")
 }
 
@@ -539,10 +547,14 @@ model LmsQuiz {
   question  String   @db.Text
   options   Json
   answer    Int
+  // Denormalized from parent lesson->course for row-level tenant isolation (defense-in-depth).
+  // Nullable so the backfill migration cannot fail on pre-existing rows; app populates on write.
+  tenantId  String?
   createdAt DateTime @default(now())
 
   lesson LmsLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@map("lms_quizzes")
 }
 
@@ -552,12 +564,16 @@ model LmsCourseAssignment {
   courseId    String
   dueDate     DateTime?
   isMandatory Boolean   @default(true)
+  // Denormalized from parent course/batch for row-level tenant isolation (defense-in-depth).
+  // Nullable so the backfill migration cannot fail on pre-existing rows; app populates on write.
+  tenantId    String?
   assignedAt  DateTime  @default(now())
 
   batch  LmsBatch  @relation(fields: [batchId], references: [id])
   course LmsCourse @relation(fields: [courseId], references: [id])
 
   @@unique([batchId, courseId])
+  @@index([tenantId])
   @@map("lms_course_assignments")
 }
 
@@ -586,12 +602,16 @@ model LmsProgress {
   id           String   @id @default(uuid())
   enrollmentId String
   lessonId     String
+  // Denormalized from parent enrollment for row-level tenant isolation (defense-in-depth).
+  // Nullable so the backfill migration cannot fail on pre-existing rows; app populates on write.
+  tenantId     String?
   completedAt  DateTime @default(now())
 
   enrollment LmsEnrollment @relation(fields: [enrollmentId], references: [id])
   lesson     LmsLesson     @relation(fields: [lessonId], references: [id])
 
   @@unique([enrollmentId, lessonId])
+  @@index([tenantId])
   @@map("lms_progress")
 }
 
