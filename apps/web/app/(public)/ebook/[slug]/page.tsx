@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import EBookActions from "./EBookActions";
 
@@ -48,9 +49,9 @@ export default async function EBookDetailPage({ params }: { params: Promise<{ sl
         <div className="grid md:grid-cols-5 gap-10">
           {/* Cover */}
           <div className="md:col-span-2">
-            <div className="aspect-[3/4] bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl overflow-hidden shadow-sm flex items-center justify-center">
+            <div className="relative aspect-[3/4] bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl overflow-hidden shadow-sm flex items-center justify-center">
               {book.coverUrl ? (
-                <img src={book.coverUrl} alt={book.title} className="w-full h-full object-cover" />
+                <Image src={book.coverUrl} alt={book.title} fill sizes="(min-width: 768px) 40vw, 100vw" className="object-cover" />
               ) : (
                 <span className="text-8xl">📖</span>
               )}

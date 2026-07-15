@@ -164,6 +164,9 @@ export default function LmsAdminSettingsPage() {
             />
             {form.logoUrl && (
               <div className="mt-2 flex items-center gap-2">
+                {/* Kept as a plain <img>: live preview of a user-typed logo URL on an
+                    arbitrary host. The onError handler hides broken/partial URLs while
+                    typing — next/image errors on unconfigured hosts and cannot do this. */}
                 <img
                   src={form.logoUrl}
                   alt="Preview logo"

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { getToken } from "@/lib/auth/token";
 import { CalendarDays, MapPin, Users, Clock, CheckCircle2, Mic2 } from "lucide-react";
 
@@ -241,7 +242,7 @@ export default function EventDetailClient() {
       {/* ── Hero cover ─────────────────────────────────────────────────────────── */}
       <div className="relative aspect-video max-h-80 w-full overflow-hidden">
         {event.coverUrl ? (
-          <img src={event.coverUrl} alt={event.title} className="h-full w-full object-cover" />
+          <Image src={event.coverUrl} alt={event.title} fill priority sizes="100vw" className="object-cover" />
         ) : (
           <div
             className="flex h-full w-full items-center justify-center text-6xl"

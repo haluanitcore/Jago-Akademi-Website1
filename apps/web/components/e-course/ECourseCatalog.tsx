@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, BookOpen, Search, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Section, SectionHeader } from "@/components/ui/Section";
 import { ProgramCard } from "@/components/ui/ProgramCard";
@@ -312,11 +313,15 @@ export function ECourseCatalog() {
                   unitIcon={BookOpen}
                   media={
                     course.thumbnailUrl ? (
-                      <img
-                        src={course.thumbnailUrl}
-                        alt={course.title}
-                        className="aspect-video w-full object-cover"
-                      />
+                      <div className="relative aspect-video w-full">
+                        <Image
+                          src={course.thumbnailUrl}
+                          alt={course.title}
+                          fill
+                          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                          className="object-cover"
+                        />
+                      </div>
                     ) : (
                       <MediaPlaceholder type="foto" ratio="16:9" showRatio={false} />
                     )

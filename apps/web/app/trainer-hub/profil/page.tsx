@@ -114,6 +114,10 @@ export default function TrainerProfilPage() {
             <div className="flex items-center gap-4 mb-6">
               <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
                 {form.avatarUrl ? (
+                  // Kept as a plain <img>: this is a live preview of a URL the user is
+                  // typing into the form. The host is arbitrary/unvalidated and the
+                  // onError handler hides broken/partial URLs mid-type — behavior that
+                  // next/image (which errors on unconfigured hosts) cannot replicate.
                   <img
                     src={form.avatarUrl}
                     alt="Avatar"

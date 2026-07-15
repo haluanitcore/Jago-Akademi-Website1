@@ -3,6 +3,7 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { getToken } from "@/lib/auth/token";
 import { getStoredReferral, clearStoredReferral } from "@/lib/affiliate/referral";
 
@@ -313,7 +314,7 @@ function CheckoutContent() {
                   style={{ background: accentBg, border: `1px solid ${accentBorder}` }}
                 >
                   {item?.coverUrl ? (
-                    <img src={item.coverUrl} alt={item.title} className="h-full w-full object-cover" />
+                    <Image src={item.coverUrl} alt={item.title} width={80} height={56} className="h-full w-full object-cover" />
                   ) : (
                     coverEmoji
                   )}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { getDashboard, type DashboardData } from "../../lib/api/enrollment";
 import { MediaPlaceholder } from "@/components/shared/MediaPlaceholder";
 
@@ -132,7 +133,7 @@ export default function DashboardPage() {
                 <Link key={e.id} href={`/belajar/${e.course.slug}`} className="db-course-card">
                   <div className="db-course-thumb">
                     {e.course.thumbnailUrl ? (
-                      <img src={e.course.thumbnailUrl} alt={e.course.title} className="db-course-thumb-img" />
+                      <Image src={e.course.thumbnailUrl} alt={e.course.title} fill sizes="(min-width: 768px) 33vw, 100vw" className="db-course-thumb-img" />
                     ) : (
                       <MediaPlaceholder type="foto" ratio="16:9" showRatio={false} className="db-course-thumb-placeholder" />
                     )}

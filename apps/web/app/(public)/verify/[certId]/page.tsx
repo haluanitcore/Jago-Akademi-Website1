@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -100,7 +101,7 @@ export default async function VerifyCertPage({
 
         {/* Logo */}
         <div className="text-center">
-          <img src="/logo.png" alt="Jago Akademi" className="h-8 w-auto mx-auto" />
+          <Image src="/logo.png" alt="Jago Akademi" width={1037} height={190} className="h-8 w-auto mx-auto" />
         </div>
 
         {/* Detail */}

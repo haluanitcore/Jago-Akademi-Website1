@@ -95,6 +95,14 @@ const nextConfig = {
       { protocol: "https", hostname: "**.cloudflare.com" },
       { protocol: "https", hostname: "**.r2.dev" },
       { protocol: "https", hostname: "images.unsplash.com" },
+      // coverUrl/thumbnailUrl/avatarUrl/logoUrl are free-text admin/user fields
+      // (Prisma `String?`), so cover/thumbnail images can live on ANY https host.
+      // A broad https pattern lets next/image optimize them and mirrors the
+      // existing CSP `img-src 'self' data: blob: https:`. Narrow to the upload
+      // CDN(s) once media storage is fixed to a known origin.
+      { protocol: "https", hostname: "**" },
+      // Local API origin in development (NEXT_PUBLIC_API_URL default).
+      { protocol: "http", hostname: "localhost", port: "4000" },
     ],
     minimumCacheTTL: 60,
   },

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Library } from "lucide-react";
 import { Section, SectionHeader } from "@/components/ui/Section";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -68,12 +69,14 @@ export default async function EBookPage() {
               return (
                 <Reveal key={book.id} delay={(i % 4) * 0.05}>
                   <Link href={`/ebook/${book.slug}`} className="card group flex h-full flex-col overflow-hidden !p-0">
-                    <div className="border-b border-[var(--border-subtle)]">
+                    <div className="relative aspect-[3/4] w-full overflow-hidden border-b border-[var(--border-subtle)]">
                       {book.coverUrl ? (
-                        <img
+                        <Image
                           src={book.coverUrl}
                           alt={book.title}
-                          className="aspect-[3/4] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                          fill
+                          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                          className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                         />
                       ) : (
                         <MediaPlaceholder type="foto" ratio="3:4" showRatio={false} className="!rounded-none !border-0" />

@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { getMyEnrollments, type Enrollment } from "../../../lib/api/enrollment";
 import { MediaPlaceholder } from "@/components/shared/MediaPlaceholder";
 
@@ -202,7 +203,7 @@ export default function KursusSayaPage() {
                 {/* Thumbnail */}
                 <div className="ks-card-thumb">
                   {e.course.thumbnailUrl ? (
-                    <img src={e.course.thumbnailUrl} alt={e.course.title} className="ks-card-thumb-img" />
+                    <Image src={e.course.thumbnailUrl} alt={e.course.title} fill sizes="(min-width: 768px) 33vw, 100vw" className="ks-card-thumb-img" />
                   ) : (
                     <MediaPlaceholder type="foto" ratio="16:9" showRatio={false} className="ks-card-thumb-placeholder" />
                   )}

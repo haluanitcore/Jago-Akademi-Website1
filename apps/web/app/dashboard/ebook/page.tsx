@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { getToken } from "@/lib/auth/token";
 
 type EBook = {
@@ -88,7 +89,7 @@ export default function EbookPage() {
               {/* Cover */}
               <div className="eb-card-cover">
                 {book.coverUrl ? (
-                  <img src={book.coverUrl} alt={book.title} className="eb-cover-img" />
+                  <Image src={book.coverUrl} alt={book.title} fill sizes="(min-width: 768px) 25vw, 50vw" className="eb-cover-img" />
                 ) : (
                   <div className="eb-cover-placeholder">
                     <span className="eb-cover-emoji">📖</span>

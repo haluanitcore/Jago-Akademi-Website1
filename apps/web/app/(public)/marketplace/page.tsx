@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { BookMarked, Search, X, Video, Package, Layers, ShoppingBag } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -113,10 +114,12 @@ function ProductCard({ item }: { item: MarketplaceItem }) {
       {/* Cover/Placeholder Area */}
       <div className="relative overflow-hidden" style={{ aspectRatio: "3/4" }}>
         {item.coverUrl ? (
-          <img
+          <Image
             src={item.coverUrl}
             alt={item.title}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            fill
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div

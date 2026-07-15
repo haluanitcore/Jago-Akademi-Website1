@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowLeft, ArrowRight, Newspaper } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -120,12 +121,14 @@ export default function BlogListClient() {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {posts.map((post) => (
                 <Link key={post.id} href={`/blog/${post.slug}`} className="card group flex flex-col overflow-hidden !p-0">
-                  <div className="border-b border-[var(--border-subtle)]">
+                  <div className="relative aspect-video w-full overflow-hidden border-b border-[var(--border-subtle)]">
                     {post.coverUrl ? (
-                      <img
+                      <Image
                         src={post.coverUrl}
                         alt={post.title}
-                        className="aspect-video w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                        fill
+                        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                        className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                       />
                     ) : (
                       <MediaPlaceholder type="foto" ratio="16:9" showRatio={false} className="!rounded-none !border-0" />

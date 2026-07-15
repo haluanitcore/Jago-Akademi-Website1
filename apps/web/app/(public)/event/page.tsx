@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { CalendarDays, MapPin, Mic2, Users, Radio, Building2, Layers3 } from "lucide-react";
 import { Section, SectionHeader } from "@/components/ui/Section";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -96,11 +97,14 @@ function FeaturedHero({ event }: { event: EventItem }) {
         {/* Background */}
         <div className="absolute inset-0">
           {event.coverUrl ? (
-            <img
+            <Image
               src={event.coverUrl}
               alt=""
               aria-hidden="true"
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div
@@ -203,12 +207,14 @@ function EventCard({ ev, delay }: { ev: EventItem; delay: number }) {
         className="card group flex h-full flex-col overflow-hidden !p-0"
       >
         {/* Cover */}
-        <div className="border-b border-[var(--border-subtle)]">
+        <div className="relative aspect-video w-full overflow-hidden border-b border-[var(--border-subtle)]">
           {ev.coverUrl ? (
-            <img
+            <Image
               src={ev.coverUrl}
               alt={ev.title}
-              className="aspect-video w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              fill
+              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
             <MediaPlaceholder type="foto" ratio="16:9" showRatio={false} className="!rounded-none !border-0" />

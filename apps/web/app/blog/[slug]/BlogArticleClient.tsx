@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 type BlogPost = {
   id: string;
@@ -99,7 +100,9 @@ export default function BlogArticleClient() {
       <div className="max-w-3xl mx-auto px-6 py-8">
         <article className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden mb-8">
           {post.coverUrl && (
-            <img src={post.coverUrl} alt={post.title} className="w-full aspect-video object-cover" />
+            <div className="relative aspect-video w-full">
+              <Image src={post.coverUrl} alt={post.title} fill priority sizes="(min-width: 768px) 768px, 100vw" className="object-cover" />
+            </div>
           )}
           <div className="p-8">
             {post.category && (

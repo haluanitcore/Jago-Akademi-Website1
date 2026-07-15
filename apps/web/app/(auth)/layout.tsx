@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 // No `title` metadata here on purpose: each auth page sets its own title and the
 // root layout's `%s | Jago Akademi` template wraps it exactly once. Declaring a
@@ -20,7 +21,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             href="/"
             className="inline-flex min-h-10 items-center gap-2 text-[var(--text-primary)] transition-colors hover:text-[var(--brand-cyan-strong)]"
           >
-            <img src="/logo.png" alt="Jago Akademi" className="h-8 w-auto" />
+            <Image src="/logo.png" alt="Jago Akademi" width={1037} height={190} priority className="h-8 w-auto" />
           </Link>
         </div>
 

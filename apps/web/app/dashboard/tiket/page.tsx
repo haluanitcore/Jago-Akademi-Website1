@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { getToken } from "@/lib/auth/token";
 
 type EventInfo = {
@@ -100,7 +101,7 @@ export default function TiketPage() {
                 {/* Cover */}
                 <div className="tk-cover">
                   {ticket.event.coverUrl ? (
-                    <img src={ticket.event.coverUrl} alt="" className="tk-cover-img" />
+                    <Image src={ticket.event.coverUrl} alt="" width={80} height={80} className="tk-cover-img" />
                   ) : (
                     <div className="tk-cover-placeholder">
                       <span>{isOnline ? "🌐" : "📍"}</span>
