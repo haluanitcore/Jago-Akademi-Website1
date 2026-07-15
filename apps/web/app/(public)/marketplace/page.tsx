@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { BookMarked, Search, X, Video, Package, Layers, ShoppingBag } from "lucide-react";
+import { BookMarked, Search, X, Video, Package, ShoppingBag } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -206,7 +206,9 @@ function ProductCard({ item }: { item: MarketplaceItem }) {
 // ─── Marketplace Catalog Component ───────────────────────────────────────────
 
 function MarketplaceCatalog() {
-  const [activeTab, setActiveTab] = useState<"all" | "ebook" | "recording" | "module">("all");
+  // Finding #7: the "Semua/E-Book" tabs were dead after mock recordings/modules
+  // were removed — getFilteredItems ignored activeTab — so the tab state and UI
+  // were dropped. Search + category filters remain the sole controls.
   const [dbBooks, setDbBooks] = useState<MarketplaceItem[] | null>(null);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("");
@@ -238,7 +240,7 @@ function MarketplaceCatalog() {
       .catch(() => setDbBooks([]));
   }, []);
 
-  // Compute items displayed depending on active category, search query, and tabs
+  // Compute items displayed depending on active category and search query.
   const getFilteredItems = (): MarketplaceItem[] => {
     let items: MarketplaceItem[] = [];
 
@@ -314,34 +316,6 @@ function MarketplaceCatalog() {
             <span className="text-xs font-bold text-[var(--text-secondary)]">{f.text}</span>
           </div>
         ))}
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="mb-8 flex flex-wrap border-b border-[var(--border-subtle)] pb-px gap-2">
-        {[
-          { id: "all", label: "Semua Produk", icon: Layers },
-          { id: "ebook", label: "E-Book", icon: BookMarked },
-        ].map((tab) => {
-          const TabIcon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setActiveTab(tab.id as "all" | "ebook" | "recording" | "module");
-                setActiveCategory("");
-              }}
-              className="flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-all border-b-2"
-              style={{
-                borderColor: isActive ? "var(--brand-cyan)" : "transparent",
-                color: isActive ? "var(--brand-cyan)" : "var(--text-secondary)",
-              }}
-            >
-              <TabIcon size={16} />
-              {tab.label}
-            </button>
-          );
-        })}
       </div>
 
       {/* Filters (Search & Categories) */}

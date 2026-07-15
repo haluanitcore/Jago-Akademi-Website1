@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -28,6 +29,37 @@ async function getEBook(slug: string): Promise<EBook | null> {
   } catch {
     return null;
   }
+}
+
+// Finding #5: e-book detail previously shipped no metadata, so crawlers and
+// social shares fell back to the generic site title. Emit real SEO metadata
+// server-side (matches the blog/[slug] and event/[slug] convention).
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const book = await getEBook(slug);
+
+  if (!book) {
+    return { title: "E-Book tidak ditemukan — Jago Akademi" };
+  }
+
+  const description =
+    (book.description ?? `${book.title} — e-book di Jago Akademi.`)
+      .slice(0, 160)
+      .replace(/\s+/g, " ")
+      .trim();
+
+  return {
+    title: `${book.title} — E-Book Jago Akademi`,
+    description,
+    alternates: { canonical: `/ebook/${book.slug}` },
+    openGraph: {
+      title: book.title,
+      description,
+      type: "website",
+      url: `/ebook/${book.slug}`,
+      ...(book.coverUrl ? { images: [{ url: book.coverUrl }] } : {}),
+    },
+  };
 }
 
 export default async function EBookDetailPage({ params }: { params: Promise<{ slug: string }> }) {

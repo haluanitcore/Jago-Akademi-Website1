@@ -7,7 +7,7 @@ import VideoPlayer from "../../../../components/player/VideoPlayer";
 import CourseSidebar, { type SidebarSection } from "../../../../components/player/CourseSidebar";
 import QuizInterface from "../../../../components/player/QuizInterface";
 import { getVideoUrl, getQuiz, updateProgress } from "../../../../lib/api/enrollment";
-import { getToken } from "@/lib/auth/token";
+import { getValidToken } from "@/lib/auth/token";
 
 type Lesson = {
   id: string;
@@ -50,15 +50,28 @@ export default function LessonPlayerPage() {
   const [reviewContent, setReviewContent] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone, setReviewDone] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
   useEffect(() => {
-    const t = getToken();
-    if (!t) { router.replace("/masuk"); return; }
-    setToken(t);
+    // Finding #2: reset lesson-specific state on every lessonId change so the
+    // previous lesson's video/quiz never lingers, and use an `ignore` flag to
+    // drop stale responses when navigation outpaces an in-flight fetch.
+    let ignore = false;
+    setLoading(true);
+    setVideoUrl(null);
+    setQuiz(null);
+    setLesson(null);
+    setError(null);
 
     async function load() {
+      // Finding #2: refresh-aware token read (avoids Bearer null / expired token).
+      const t = await getValidToken();
+      if (ignore) return;
+      if (!t) { router.replace("/masuk"); return; }
+      setToken(t);
+
       try {
         // Load course + enrollment in parallel
         const [courseRes, enrollRes] = await Promise.all([
@@ -71,6 +84,7 @@ export default function LessonPlayerPage() {
             credentials: "include",
           }).then((r) => r.json()),
         ]);
+        if (ignore) return;
 
         if (!courseRes.success) throw new Error("Kursus tidak ditemukan.");
         const courseData: CourseDetail = courseRes.data;
@@ -94,9 +108,9 @@ export default function LessonPlayerPage() {
         if (currentLesson.type === "video" && t) {
           try {
             const urlData = await getVideoUrl(lessonId, t);
-            setVideoUrl(urlData.url);
+            if (!ignore) setVideoUrl(urlData.url);
           } catch {
-            setVideoUrl(currentLesson.contentUrl);
+            if (!ignore) setVideoUrl(currentLesson.contentUrl);
           }
         }
 
@@ -104,19 +118,20 @@ export default function LessonPlayerPage() {
         if (currentLesson.type === "quiz" && t) {
           try {
             const quizData = await getQuiz(lessonId, t);
-            setQuiz(quizData);
+            if (!ignore) setQuiz(quizData);
           } catch {
             // No quiz found
           }
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Terjadi kesalahan.");
+        if (!ignore) setError(e instanceof Error ? e.message : "Terjadi kesalahan.");
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
       }
     }
 
     load();
+    return () => { ignore = true; };
   }, [slug, lessonId, router, API]);
 
   const handleVideoProgress = useCallback(
@@ -142,13 +157,25 @@ export default function LessonPlayerPage() {
     e.preventDefault();
     if (!course || !token) return;
     setReviewSubmitting(true);
-    await fetch(`${API}/api/reviews`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ itemType: "course", itemId: course.id, rating: reviewRating, content: reviewContent }),
-    });
-    setReviewDone(true);
-    setReviewSubmitting(false);
+    setReviewError(null);
+    // Finding #3: only mark the review done when the request actually succeeds;
+    // previously the unchecked fetch reported success even on failure.
+    try {
+      const res = await fetch(`${API}/api/reviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ itemType: "course", itemId: course.id, rating: reviewRating, content: reviewContent }),
+      });
+      const body = await res.json().catch(() => ({ success: false }));
+      if (!res.ok || !body.success) {
+        throw new Error(body.error?.message ?? "Gagal mengirim ulasan. Coba lagi.");
+      }
+      setReviewDone(true);
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : "Gagal mengirim ulasan. Coba lagi.");
+    } finally {
+      setReviewSubmitting(false);
+    }
   }
 
   // Navigate to next lesson
@@ -287,6 +314,9 @@ export default function LessonPlayerPage() {
                       rows={3}
                       className="w-full border border-[#E5E5EA] rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0077A8]"
                     />
+                    {reviewError && (
+                      <p role="alert" className="text-sm text-red-600">{reviewError}</p>
+                    )}
                     <div className="flex items-center gap-3">
                       <button type="submit" disabled={reviewSubmitting} className="px-4 py-2 bg-[#0077A8] text-white text-sm rounded-xl hover:bg-[#005f87] disabled:opacity-50">
                         {reviewSubmitting ? "Mengirim..." : "Kirim Ulasan"}

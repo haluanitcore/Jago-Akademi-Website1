@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { getToken } from "@/lib/auth/token";
+import { getValidToken } from "@/lib/auth/token";
 
 type UserProfile = {
   id: string;
@@ -42,21 +42,24 @@ export default function ProfilPage() {
   const [savingPass, setSavingPass] = useState(false);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) { router.replace("/masuk"); return; }
+    // Finding #4: refresh-aware token read avoids sending `Bearer null`.
+    (async () => {
+      const token = await getValidToken();
+      if (!token) { router.replace("/masuk"); return; }
 
-    fetch(`${API}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.json())
-      .then((body) => {
-        if (!body.success) throw new Error(body.error?.message ?? "Gagal memuat profil.");
-        const u: UserProfile = body.data;
-        setUser(u);
-        setForm({ name: u.name, phone: u.phone ?? "", bio: u.bio ?? "" });
+      fetch(`${API}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
       })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+        .then((r) => r.json())
+        .then((body) => {
+          if (!body.success) throw new Error(body.error?.message ?? "Gagal memuat profil.");
+          const u: UserProfile = body.data;
+          setUser(u);
+          setForm({ name: u.name, phone: u.phone ?? "", bio: u.bio ?? "" });
+        })
+        .catch((e) => setError(e.message))
+        .finally(() => setLoading(false));
+    })();
   }, [router]);
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -71,7 +74,9 @@ export default function ProfilPage() {
 
   async function uploadAvatar() {
     if (!avatarFile) return;
-    const token = getToken();
+    // Finding #4: refresh-aware token; redirect if the session is gone.
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
     setUploadingAvatar(true);
     setError(null);
     try {
@@ -96,10 +101,12 @@ export default function ProfilPage() {
 
   async function handleSave(e: FormEvent) {
     e.preventDefault();
+    // Finding #4: refresh-aware token; redirect if the session is gone.
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
     setSaving(true);
     setError(null);
     setSuccess(false);
-    const token = getToken();
     try {
       const res = await fetch(`${API}/api/users/me`, {
         method: "PATCH",
@@ -124,9 +131,11 @@ export default function ProfilPage() {
       setPassMsgType("error");
       return;
     }
+    // Finding #4: refresh-aware token; redirect if the session is gone.
+    const token = await getValidToken();
+    if (!token) { router.replace("/masuk"); return; }
     setSavingPass(true);
     setPassMsg("");
-    const token = getToken();
     try {
       const res = await fetch(`${API}/api/users/me/password`, {
         method: "PATCH",

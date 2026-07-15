@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getMyEnrollments, type Enrollment } from "../../../lib/api/enrollment";
 import { MediaPlaceholder } from "@/components/shared/MediaPlaceholder";
+import { getValidToken } from "@/lib/auth/token";
 
 type SortOption = "terbaru" | "terlama" | "progres-tinggi" | "progres-rendah" | "a-z";
 type FilterStatus = "semua" | "belajar" | "selesai" | "belum-mulai";
@@ -20,15 +21,17 @@ export default function KursusSayaPage() {
   const [filter, setFilter] = useState<FilterStatus>("semua");
 
   useEffect(() => {
-    const token =
-      sessionStorage.getItem("access_token") ||
-      sessionStorage.getItem("jg_token");
-    if (!token) { router.replace("/masuk"); return; }
+    // Finding #1: read token via getValidToken so a session persisted only in
+    // localStorage (new tab / restore) is honored instead of bouncing to /masuk.
+    (async () => {
+      const token = await getValidToken();
+      if (!token) { router.replace("/masuk"); return; }
 
-    getMyEnrollments(token)
-      .then(setEnrollments)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+      getMyEnrollments(token)
+        .then(setEnrollments)
+        .catch((e) => setError(e.message))
+        .finally(() => setLoading(false));
+    })();
   }, [router]);
 
   const filtered = useMemo(() => {

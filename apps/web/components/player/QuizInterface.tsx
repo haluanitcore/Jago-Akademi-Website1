@@ -105,7 +105,9 @@ export default function QuizInterface({ lessonId, passMark, questions, token, on
             <span className="text-[#0077A8] mr-2">{idx + 1}.</span>
             {q.question}
           </p>
-          <div className="space-y-2">
+          {/* Finding #8b: expose the option set as a radiogroup labelled by the
+              question so screen readers tie the choices to their prompt. */}
+          <div className="space-y-2" role="radiogroup" aria-label={`${idx + 1}. ${q.question}`}>
             {(q.options as string[]).map((opt, optIdx) => {
               const selected = answers[q.id] === optIdx;
               return (

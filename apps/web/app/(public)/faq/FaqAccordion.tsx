@@ -19,12 +19,19 @@ export default function FaqAccordion({ items }: Props) {
             {group.items.map((item, idx) => {
               const key = `${group.category}-${idx}`;
               const open = openKey === key;
+              // Finding #8a: tie the toggle button and its revealed panel together
+              // for assistive tech. Stable, DOM-safe ids derived from the key.
+              const safeKey = key.replace(/[^a-zA-Z0-9]+/g, "-");
+              const buttonId = `faq-btn-${safeKey}`;
+              const panelId = `faq-panel-${safeKey}`;
               return (
                 <div key={key} className="border border-[#E5E5EA] rounded-xl overflow-hidden">
                   <button
                     type="button"
+                    id={buttonId}
                     onClick={() => setOpenKey(open ? null : key)}
                     aria-expanded={open}
+                    aria-controls={panelId}
                     className="w-full text-left px-5 py-4 flex items-center justify-between gap-4 hover:bg-[#F5F5F7] transition-colors"
                   >
                     <span className="font-medium text-[#1D1D1F] text-sm">{item.q}</span>
@@ -39,7 +46,12 @@ export default function FaqAccordion({ items }: Props) {
                     </svg>
                   </button>
                   {open && (
-                    <div className="px-5 pb-5 text-sm text-[#3C3C43] leading-relaxed border-t border-[#E5E5EA] pt-3">
+                    <div
+                      id={panelId}
+                      role="region"
+                      aria-labelledby={buttonId}
+                      className="px-5 pb-5 text-sm text-[#3C3C43] leading-relaxed border-t border-[#E5E5EA] pt-3"
+                    >
                       {item.a}
                     </div>
                   )}

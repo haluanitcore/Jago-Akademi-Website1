@@ -4,7 +4,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { getToken } from "@/lib/auth/token";
+import { getValidToken } from "@/lib/auth/token";
 import { getStoredReferral, clearStoredReferral } from "@/lib/affiliate/referral";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -67,19 +67,21 @@ function CheckoutContent() {
 
   // ── Fetch item data ──────────────────────────────────────────────────────────
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      const returnPath = `/checkout/${slug}${window.location.search}`;
-      router.push(`/masuk?redirect=${encodeURIComponent(returnPath)}`);
-      return;
-    }
-
     async function fetchItem() {
+      // Finding #4: resolve a valid (refresh-aware) token so we never send
+      // `Bearer null`; redirect to /masuk when there is no usable session.
+      const token = await getValidToken();
+      if (!token) {
+        const returnPath = `/checkout/${slug}${window.location.search}`;
+        router.push(`/masuk?redirect=${encodeURIComponent(returnPath)}`);
+        return;
+      }
+
       try {
         if (itemType === "event") {
           // Fetch event by slug — we use slug in URL for readability; UUID comes via queryItemId
           const res = await fetch(`${getApiBase()}/api/events/${slug}`, {
-            headers: { Authorization: `Bearer ${getToken()}` },
+            headers: { Authorization: `Bearer ${token}` },
           });
           const data = await res.json();
           if (data.success && data.data) {
@@ -98,7 +100,7 @@ function CheckoutContent() {
           }
         } else if (itemType === "ebook") {
           const res = await fetch(`${getApiBase()}/api/ebooks/${slug}`, {
-            headers: { Authorization: `Bearer ${getToken()}` },
+            headers: { Authorization: `Bearer ${token}` },
           });
           const data = await res.json();
           if (data.success && data.data) {
@@ -117,7 +119,7 @@ function CheckoutContent() {
         } else {
           // Default: course
           const res = await fetch(`${getApiBase()}/api/courses/${slug}`, {
-            headers: { Authorization: `Bearer ${getToken()}` },
+            headers: { Authorization: `Bearer ${token}` },
           });
           const data = await res.json();
           if (data.success && data.data) {
@@ -147,6 +149,9 @@ function CheckoutContent() {
   // ── Coupon ───────────────────────────────────────────────────────────────────
   async function applyCoupon() {
     if (!couponCode.trim() || !item) return;
+    // Finding #4: use a refresh-aware token; bounce to /masuk if the session is gone.
+    const token = await getValidToken();
+    if (!token) { router.push(`/masuk?redirect=${encodeURIComponent(`/checkout/${slug}${window.location.search}`)}`); return; }
     setValidatingCoupon(true);
     setCouponError("");
     try {
@@ -154,7 +159,7 @@ function CheckoutContent() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${getToken()}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ code: couponCode, subtotal: item.price }),
       });
@@ -175,6 +180,9 @@ function CheckoutContent() {
   // ── Checkout ─────────────────────────────────────────────────────────────────
   async function handleCheckout() {
     if (!item) return;
+    // Finding #4: use a refresh-aware token; bounce to /masuk if the session is gone.
+    const token = await getValidToken();
+    if (!token) { router.push(`/masuk?redirect=${encodeURIComponent(`/checkout/${slug}${window.location.search}`)}`); return; }
     setCheckingOut(true);
     setError("");
     try {
@@ -182,7 +190,7 @@ function CheckoutContent() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${getToken()}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           itemType: item.itemType,

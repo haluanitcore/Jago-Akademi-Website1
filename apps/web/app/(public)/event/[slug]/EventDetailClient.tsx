@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { getToken } from "@/lib/auth/token";
+import { getValidToken } from "@/lib/auth/token";
 import { CalendarDays, MapPin, Users, Clock, CheckCircle2, Mic2 } from "lucide-react";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -167,18 +167,26 @@ export default function EventDetailClient() {
 
   // Fetch registration status (if logged in)
   useEffect(() => {
-    const token = getToken();
-    if (!token || !event) return;
-    fetch(`${API}/api/events/${slug}/registration`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.json())
-      .then((data) => { if (data.success) setRegistration(data.data); })
-      .catch(() => {});
+    if (!event) return;
+    // Finding #4: refresh-aware token; skip the call entirely (no `Bearer null`)
+    // when the visitor is not logged in.
+    let ignore = false;
+    (async () => {
+      const token = await getValidToken();
+      if (ignore || !token) return;
+      fetch(`${API}/api/events/${slug}/registration`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => r.json())
+        .then((data) => { if (!ignore && data.success) setRegistration(data.data); })
+        .catch(() => {});
+    })();
+    return () => { ignore = true; };
   }, [slug, event]);
 
   async function handleRegister() {
-    const token = getToken();
+    // Finding #4: refresh-aware token; redirect to login if no valid session.
+    const token = await getValidToken();
     if (!token) { router.push(`/masuk?redirect=/event/${slug}`); return; }
     if (!event) return;
 

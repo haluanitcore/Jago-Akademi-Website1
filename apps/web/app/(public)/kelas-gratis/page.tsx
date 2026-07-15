@@ -4,7 +4,10 @@ import { LandingTemplate } from "@/components/landing/LandingTemplate";
 import { FreeCourseCatalog } from "@/components/kelas-gratis/FreeCourseCatalog";
 
 export const metadata: Metadata = {
-  title: "Kelas Gratis — Mulai Belajar Tanpa Biaya | Jago Akademi",
+  // Finding #6: root layout applies the "%s | Jago Akademi" template, so a
+  // manual "| Jago Akademi" here produced a doubled suffix. Use `absolute` to
+  // set the full title verbatim and bypass the template.
+  title: { absolute: "Kelas Gratis — Mulai Belajar Tanpa Biaya | Jago Akademi" },
   description:
     "Akses kelas gratis Jago Akademi sebagai langkah pertama upgrade skill-mu. Daftar sekarang, dapatkan akses materi pengantar, dan lanjutkan ke jenjang berikutnya.",
   alternates: { canonical: "/kelas-gratis" },

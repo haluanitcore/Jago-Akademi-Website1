@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getToken } from "@/lib/auth/token";
+import { getValidToken } from "@/lib/auth/token";
 
 type Plan = {
   id: string;
@@ -24,6 +25,7 @@ type Subscription = {
 } | null;
 
 export default function BerlanggananDashboardPage() {
+  const router = useRouter();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [currentSub, setCurrentSub] = useState<Subscription | undefined>(undefined);
   const [loading, setLoading] = useState(true);
@@ -32,16 +34,22 @@ export default function BerlanggananDashboardPage() {
   const [msgType, setMsgType] = useState<"success" | "error">("success");
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/subscription/plans")
-        .then((r) => r.json())
-        .catch(() => ({ success: false, data: [] })),
-      fetch("/api/subscription/me", {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      })
-        .then((r) => r.json())
-        .catch(() => ({ success: true, data: null })),
-    ]).then(([plansRes, subRes]) => {
+    // Finding #4: resolve a refresh-aware token; only attach the Authorization
+    // header when a token exists so we never send `Bearer null` to /me.
+    (async () => {
+      const token = await getValidToken();
+      const [plansRes, subRes] = await Promise.all([
+        fetch("/api/subscription/plans")
+          .then((r) => r.json())
+          .catch(() => ({ success: false, data: [] })),
+        token
+          ? fetch("/api/subscription/me", {
+              headers: { Authorization: `Bearer ${token}` },
+            })
+              .then((r) => r.json())
+              .catch(() => ({ success: true, data: null }))
+          : Promise.resolve({ success: true, data: null }),
+      ]);
       if (plansRes.success && Array.isArray(plansRes.data) && plansRes.data.length > 0) {
         setPlans(plansRes.data);
       } else {
@@ -51,11 +59,14 @@ export default function BerlanggananDashboardPage() {
       if (subRes.success) {
         setCurrentSub(subRes.data);
       }
-    }).finally(() => setLoading(false));
+      setLoading(false);
+    })();
   }, []);
 
   async function subscribe(planType: string) {
-    const token = getToken();
+    // Finding #4: refresh-aware token; redirect to login if the session is gone.
+    const token = await getValidToken();
+    if (!token) { router.push("/masuk?redirect=/dashboard/berlangganan"); return; }
     setSubscribing(planType);
     setMsg("");
     const res = await fetch("/api/subscription", {
