@@ -5,6 +5,7 @@ import { verifyPassword } from "../../services/auth/hash.js";
 import { writeAudit } from "../../services/audit/log.js";
 import { validateBody } from "../../middleware/validateBody.js";
 import { AppError, successResponse } from "../../types/index.js";
+import { env } from "../../config/env.js";
 import { getIp, issueTokens } from "./shared.js";
 
 const router = Router();
@@ -35,6 +36,13 @@ router.post(
 
       if (!user || !isValid || user.deletedAt !== null || !user.isActive) {
         return next(new AppError(401, "Email atau kata sandi salah."));
+      }
+
+      // Email-verification gate (feature-flagged, default OFF). Enabling this
+      // blocks unverified accounts from logging in — turn it on only after
+      // existing users' verification status is backfilled, or it locks them out.
+      if (env.ENFORCE_EMAIL_VERIFICATION && !user.isVerified) {
+        return next(new AppError(403, "Email belum diverifikasi. Silakan cek email Anda untuk menyelesaikan verifikasi."));
       }
 
       const { accessToken } = await issueTokens(

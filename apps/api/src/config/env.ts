@@ -21,6 +21,9 @@ const envSchema = z.object({
   DOKU_CLIENT_ID: z.string().optional(),
   DOKU_SECRET_KEY: z.string().optional(),
   DOKU_IS_PRODUCTION: z.coerce.boolean().default(false),
+  // Optional explicit base URL; overrides the sandbox/production URL derived
+  // from DOKU_IS_PRODUCTION (reconciles docker-compose which sets DOKU_BASE_URL).
+  DOKU_BASE_URL: z.string().optional(),
   // Email (Resend)
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default("noreply@jagoakademi.com"),
@@ -33,6 +36,20 @@ const envSchema = z.object({
   SENTRY_DSN: z.string().optional(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).optional(),
   APP_VERSION: z.string().optional(),
+  // Feature flags
+  // Block login for unverified emails. Default OFF — enabling it locks out
+  // existing users whose isVerified=false, so flip it only after backfilling.
+  ENFORCE_EMAIL_VERIFICATION: z.coerce.boolean().default(false),
+  // Storage (Cloudflare R2) — validated here as the single source of truth for
+  // documented config; consumed by the storage layer once object storage lands.
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET_NAME: z.string().optional(),
+  R2_PUBLIC_URL: z.string().optional(),
+  // Video (Cloudflare Stream) — optional, same rationale as R2 above.
+  CLOUDFLARE_STREAM_ACCOUNT_ID: z.string().optional(),
+  CLOUDFLARE_STREAM_TOKEN: z.string().optional(),
 }).superRefine((val, ctx) => {
   // Fail closed (H9): the DOKU webhook verifier trusts all requests when the
   // secret is unset. That is only acceptable in dev/test — in production a

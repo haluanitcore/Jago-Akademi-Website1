@@ -18,6 +18,8 @@ const SANDBOX_URL = "https://api-sandbox.doku.com";
 const PRODUCTION_URL = "https://api.doku.com";
 
 function baseUrl() {
+  // Explicit override wins; otherwise derive from the production flag.
+  if (env.DOKU_BASE_URL) return env.DOKU_BASE_URL;
   return env.DOKU_IS_PRODUCTION ? PRODUCTION_URL : SANDBOX_URL;
 }
 
