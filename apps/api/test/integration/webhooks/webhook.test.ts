@@ -8,7 +8,8 @@ vi.mock("../../../src/db/prisma.js", () => ({
     order: { findUnique: vi.fn(), update: vi.fn() },
     courseEnrollment: { upsert: vi.fn() },
     eventRegistration: { upsert: vi.fn() },
-    event: { update: vi.fn() },
+    event: { update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn() },
+    refund: { create: vi.fn() },
     affiliate: { findFirst: vi.fn(), update: vi.fn() },
     affiliateCommission: { create: vi.fn() },
     coupon: { update: vi.fn() },
@@ -23,6 +24,7 @@ vi.mock("../../../src/services/payment/dokuService.js", () => ({
 vi.mock("../../../src/services/notification/emailService.js", () => ({
   sendPaymentSuccess: vi.fn().mockResolvedValue(undefined),
   sendOrderInvoice: vi.fn().mockResolvedValue(undefined),
+  sendEventFullRefund: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../../src/services/notification/whatsappService.js", () => ({
@@ -54,6 +56,10 @@ beforeEach(() => {
   vi.mocked(prisma.courseEnrollment.upsert).mockResolvedValue({} as never);
   vi.mocked(prisma.eventRegistration.upsert).mockResolvedValue({} as never);
   vi.mocked(prisma.event.update).mockResolvedValue({} as never);
+  // Batch8 D2: default event has capacity → reservation succeeds.
+  vi.mocked(prisma.event.findUnique).mockResolvedValue({ quota: 100, title: "Webinar" } as never);
+  vi.mocked(prisma.event.updateMany).mockResolvedValue({ count: 1 } as never);
+  vi.mocked(prisma.refund.create).mockResolvedValue({} as never);
   vi.mocked(prisma.affiliate.findFirst).mockResolvedValue(null as never);
   vi.mocked(prisma.affiliate.update).mockResolvedValue({} as never);
   vi.mocked(prisma.affiliateCommission.create).mockResolvedValue({} as never);
@@ -123,8 +129,37 @@ describe("POST /api/webhooks/doku", () => {
 
     expect(res.status).toBe(200);
     expect(prisma.eventRegistration.upsert).toHaveBeenCalled();
-    expect(prisma.event.update).toHaveBeenCalledWith(
+    // Batch8 D2: seat is reserved atomically via updateMany (quota-guarded).
+    expect(prisma.event.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ totalSold: { increment: 1 } }) }),
+    );
+    expect(prisma.refund.create).not.toHaveBeenCalled();
+  });
+
+  // Batch8 D2 regression (event overselling): when the event is full at
+  // fulfillment, no registration is created — instead a pending Refund is created
+  // and the order is flagged for refund.
+  it("auto-refunds instead of overselling when the event is full", async () => {
+    vi.mocked(prisma.order.findUnique).mockResolvedValue({
+      ...mockOrder,
+      items: [{ itemType: "event", itemId: "event-1", itemTitle: "Webinar" }],
+      user: { name: "T", email: "t@t.com", profile: null },
+    } as never);
+    // No seats left → atomic reservation matches 0 rows.
+    vi.mocked(prisma.event.updateMany).mockResolvedValue({ count: 0 } as never);
+
+    const res = await request(app)
+      .post("/api/webhooks/doku")
+      .set(webhookHeaders)
+      .send({ order: { invoice_number: "JA-ORDER1" }, transaction: { status: "SUCCESS" } });
+
+    expect(res.status).toBe(200);
+    expect(prisma.refund.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ reason: "event_full", status: "pending" }) }),
+    );
+    expect(prisma.eventRegistration.upsert).not.toHaveBeenCalled();
+    expect(prisma.order.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: "refund_pending" }) }),
     );
   });
 

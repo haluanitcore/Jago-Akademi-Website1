@@ -75,6 +75,18 @@ export async function updateLessonProgress(
     throw new AppError(404, "Enrollment tidak ditemukan.");
   }
 
+  // Batch8 (progress inflation → free certificates): verify the lesson actually
+  // belongs to this enrollment's course (lesson -> section -> courseId). Without
+  // this, a student could POST progress for lessons of ANY course and inflate the
+  // completion % of a short course they enrolled in, triggering a free certificate.
+  const lesson = await prisma.courseLesson.findUnique({
+    where: { id: lessonId },
+    select: { section: { select: { courseId: true } } },
+  });
+  if (!lesson || lesson.section.courseId !== enrollment.courseId) {
+    throw new AppError(404, "Lesson tidak ditemukan di kursus ini.");
+  }
+
   const isCompleted = watchedPct >= 90;
   const completedAt = isCompleted ? new Date() : null;
 
@@ -95,15 +107,23 @@ async function recalculateCourseProgress(enrollmentId: string) {
       course: {
         include: { sections: { include: { lessons: { select: { id: true } } } } },
       },
-      progress: { select: { isCompleted: true } },
+      progress: { select: { isCompleted: true, lessonId: true } },
     },
   });
   if (!enrollment) return;
 
-  const totalLessons = enrollment.course.sections.reduce((sum, s) => sum + s.lessons.length, 0);
+  // Belt-and-suspenders: only count progress rows whose lesson is part of THIS
+  // course. Even if a stray progress row for a foreign lesson exists, it can no
+  // longer inflate the completion percentage above the true course size.
+  const courseLessonIds = new Set(
+    enrollment.course.sections.flatMap((s) => s.lessons.map((l) => l.id)),
+  );
+  const totalLessons = courseLessonIds.size;
   if (totalLessons === 0) return;
 
-  const completedCount = enrollment.progress.filter((p) => p.isCompleted).length;
+  const completedCount = enrollment.progress.filter(
+    (p) => p.isCompleted && courseLessonIds.has(p.lessonId),
+  ).length;
   const progressPct = Math.round((completedCount / totalLessons) * 100);
   const isCompleted = progressPct >= 80;
 

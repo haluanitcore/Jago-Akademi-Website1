@@ -2,6 +2,7 @@ import { createWriteStream, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma.js";
 import { env } from "../../config/env.js";
 import { AppError } from "../../types/index.js";
@@ -178,9 +179,23 @@ export async function issueCertificate(
     stream.end(pdfBuffer);
   });
 
-  const certificate = await prisma.certificate.create({
-    data: { userId, courseId, code, type: "course", issuedAt, fileUrl },
-  });
-
-  return { code: certificate.code, fileUrl: certificate.fileUrl ?? "" };
+  // Batch8 D6 (duplicate certificates): a race between two concurrent issue calls
+  // can slip past the findFirst check above. The @@unique([userId,courseId,type])
+  // makes the DB the arbiter — on a P2002 collision we keep the existing (oldest)
+  // certificate instead of creating a duplicate.
+  try {
+    const certificate = await prisma.certificate.create({
+      data: { userId, courseId, code, type: "course", issuedAt, fileUrl },
+    });
+    return { code: certificate.code, fileUrl: certificate.fileUrl ?? "" };
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      const winner = await prisma.certificate.findFirst({
+        where: { userId, courseId, type: "course" },
+        orderBy: { issuedAt: "asc" },
+      });
+      if (winner) return { code: winner.code, fileUrl: winner.fileUrl ?? "" };
+    }
+    throw err;
+  }
 }

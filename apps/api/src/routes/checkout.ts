@@ -69,7 +69,14 @@ router.post("/", authenticate, async (req, res, next) => {
       itemSlug = event.slug;
 
       if (price === 0) {
-        // Free event — register immediately, skip payment
+        // Free event — register immediately, skip payment.
+        // Batch8 (free-event quota): reserve the slot ATOMICALLY so concurrent
+        // registrations cannot exceed the quota. quota=null means unlimited.
+        const reserved = await prisma.event.updateMany({
+          where: { id: itemId, OR: [{ quota: null }, { totalSold: { lt: event.quota ?? 0 } }] },
+          data: { totalSold: { increment: 1 } },
+        });
+        if (reserved.count === 0) throw new AppError(409, "Kuota event sudah penuh.");
         await prisma.eventRegistration.create({
           data: { eventId: itemId, userId, status: "confirmed" },
         });
@@ -151,14 +158,19 @@ router.post("/", authenticate, async (req, res, next) => {
           update: {},
         });
       } else if (itemType === "event") {
+        // Batch8: a 100%-off coupon fulfills a paid event inline here. Reserve
+        // the slot ATOMICALLY (same guard as the price===0 path / webhook) so a
+        // coupon-free event cannot oversell. quota=null means unlimited.
+        const ev = await prisma.event.findUnique({ where: { id: itemId }, select: { quota: true } });
+        const reserved = await prisma.event.updateMany({
+          where: { id: itemId, OR: [{ quota: null }, { totalSold: { lt: ev?.quota ?? 0 } }] },
+          data: { totalSold: { increment: 1 } },
+        });
+        if (reserved.count === 0) throw new AppError(409, "Kuota event sudah penuh.");
         await prisma.eventRegistration.upsert({
           where: { eventId_userId: { eventId: itemId, userId } },
           create: { eventId: itemId, userId, orderId: order.id, status: "confirmed" },
           update: { status: "confirmed", orderId: order.id },
-        });
-        await prisma.event.update({
-          where: { id: itemId },
-          data: { totalSold: { increment: 1 } },
         });
       }
 

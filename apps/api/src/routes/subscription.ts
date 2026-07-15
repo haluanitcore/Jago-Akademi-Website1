@@ -43,6 +43,14 @@ router.post("/", authenticate, validateBody(subscribeSchema), async (req: Reques
     });
     if (!order) throw new AppError(402, "Pembayaran belum terverifikasi.");
 
+    // Batch8 D7 (subscription order anti-reuse): a paid order may activate a
+    // subscription exactly once. The previous guard only blocked while the
+    // subscription was still active, so a cancelled/expired subscription could be
+    // re-activated from the SAME order to extend the plan indefinitely for free.
+    if (order.subscriptionConsumedAt !== null) {
+      throw new AppError(409, "Order ini sudah dipakai untuk langganan.");
+    }
+
     const subItem = order.items.find((item) => item.itemType === "subscription");
     if (!subItem) throw new AppError(400, "Order ini tidak berisi paket langganan.");
 
@@ -51,19 +59,19 @@ router.post("/", authenticate, validateBody(subscribeSchema), async (req: Reques
       throw new AppError(400, "Paket langganan tidak valid.");
     }
 
-    const existing = await prisma.subscription.findUnique({ where: { userId } });
-    if (existing?.orderId === orderId && existing.status === "active") {
-      throw new AppError(409, "Langganan dari order ini sudah diaktifkan.");
-    }
-
     const durationDays = planType === "annual" ? 365 : 30;
     const now = new Date();
     const expiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
-    const sub = await prisma.subscription.upsert({
-      where: { userId },
-      create: { userId, planType, expiresAt, orderId, status: "active" },
-      update: { planType, expiresAt, orderId, status: "active", startedAt: now },
+    // Mark the order consumed and activate the subscription atomically so the
+    // one-time guard above can never be bypassed by a concurrent replay.
+    const sub = await prisma.$transaction(async (tx) => {
+      await tx.order.update({ where: { id: order.id }, data: { subscriptionConsumedAt: now } });
+      return tx.subscription.upsert({
+        where: { userId },
+        create: { userId, planType, expiresAt, orderId, status: "active" },
+        update: { planType, expiresAt, orderId, status: "active", startedAt: now },
+      });
     });
 
     return res.status(201).json(successResponse(sub));

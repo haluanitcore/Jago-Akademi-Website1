@@ -15,7 +15,10 @@ export type EmailJob =
   | { type: "payment-success"; to: string; name: string; orderId: string; courseName: string; amount: number }
   | { type: "payment-pending"; to: string; name: string; orderId: string; amount: number; paymentUrl: string }
   | { type: "order-invoice"; to: string; name: string; orderId: string }
-  | { type: "wa-payment-success"; phone: string; name: string; courseName: string };
+  | { type: "wa-payment-success"; phone: string; name: string; courseName: string }
+  // Batch8 D2: event was full at fulfillment — the payment is auto-refunded and
+  // the buyer is notified instead of being oversold a seat.
+  | { type: "event-full-refund"; to: string; name: string; orderId: string; eventName: string };
 
 export type CertificateJob = { type: "issue"; userId: string; courseId: string };
 

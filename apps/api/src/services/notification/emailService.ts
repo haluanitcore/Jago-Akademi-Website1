@@ -60,6 +60,18 @@ export async function sendVerificationEmail(to: string, name: string, token: str
   );
 }
 
+export async function sendEventFullRefund(to: string, name: string, orderId: string, eventName: string) {
+  await send(
+    to,
+    `Kuota Event Penuh — Dana Dikembalikan | ${eventName}`,
+    `<p>Halo <b>${name}</b>,</p>
+     <p>Mohon maaf, kuota untuk event <b>${eventName}</b> ternyata sudah penuh saat pembayaran Anda dikonfirmasi.</p>
+     <p>Pembayaran Anda akan <b>dikembalikan sepenuhnya (refund)</b> dan sedang kami proses.</p>
+     <p>Order ID: <code>${orderId}</code></p>
+     <br><p>Salam,<br>Tim Jago Akademi</p>`
+  );
+}
+
 export async function sendOrderInvoice(to: string, name: string, orderId: string) {
   await send(
     to,

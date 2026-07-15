@@ -12,6 +12,7 @@ vi.mock("../../../src/db/prisma.js", () => ({
     },
     courseLessonProgress: { upsert: vi.fn() },
     course: { findUnique: vi.fn() },
+    courseLesson: { findUnique: vi.fn() },
   },
 }));
 
@@ -48,6 +49,10 @@ beforeEach(() => {
 describe("POST /api/progress", () => {
   it("returns 200 on valid progress update", async () => {
     vi.mocked(prisma.courseEnrollment.findUnique).mockResolvedValue(ENROLLMENT as never);
+    // Lesson belongs to the enrolled course (course-1) → allowed.
+    vi.mocked(prisma.courseLesson.findUnique).mockResolvedValue({
+      section: { courseId: "course-1" },
+    } as never);
     vi.mocked(prisma.courseLessonProgress.upsert).mockResolvedValue({
       id: "prog-1",
       enrollmentId: "enr-1",
@@ -87,5 +92,29 @@ describe("POST /api/progress", () => {
       .post("/api/progress")
       .send({ enrollmentId: "e", lessonId: "l", watchedPct: 50 });
     expect(res.status).toBe(401);
+  });
+
+  // Batch8 regression (progress inflation → free certificates): posting progress
+  // for a lesson that belongs to a DIFFERENT course must be rejected and must not
+  // upsert progress or complete the enrollment (which would issue a free cert).
+  it("rejects progress for a lesson that is not in the enrolled course (404)", async () => {
+    vi.mocked(prisma.courseEnrollment.findUnique).mockResolvedValue(ENROLLMENT as never);
+    // Lesson lives in course-2, but the enrollment is for course-1.
+    vi.mocked(prisma.courseLesson.findUnique).mockResolvedValue({
+      section: { courseId: "course-2" },
+    } as never);
+
+    const res = await request(app)
+      .post("/api/progress")
+      .set(AUTH)
+      .send({
+        enrollmentId: "00000000-0000-0000-0000-000000000001",
+        lessonId: "00000000-0000-0000-0000-000000000099",
+        watchedPct: 100,
+      });
+
+    expect(res.status).toBe(404);
+    expect(prisma.courseLessonProgress.upsert).not.toHaveBeenCalled();
+    expect(prisma.courseEnrollment.update).not.toHaveBeenCalled();
   });
 });

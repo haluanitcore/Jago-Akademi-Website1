@@ -293,6 +293,9 @@ model Order {
   paidAt         DateTime?
   expiredAt      DateTime?
   notes          String?   @db.Text
+  // Batch8 D7: set when this order has been consumed to activate a subscription.
+  // A one-time guard so a single paid order cannot be replayed to extend a plan.
+  subscriptionConsumedAt DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -359,6 +362,9 @@ model Certificate {
   user   User    @relation(fields: [userId], references: [id])
   course Course? @relation(fields: [courseId], references: [id])
 
+  // Batch8 D6: one certificate per (user, course, type). Prevents duplicate
+  // certificates being issued for the same completion (dedup keeps the oldest).
+  @@unique([userId, courseId, type])
   @@map("certificates")
 }
 

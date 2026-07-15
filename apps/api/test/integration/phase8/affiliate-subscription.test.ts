@@ -8,7 +8,7 @@ vi.mock("../../../src/db/prisma.js", () => ({
     affiliateCommission: { findMany: vi.fn(), count: vi.fn() },
     affiliateWithdrawal: { create: vi.fn(), findMany: vi.fn(), update: vi.fn() },
     subscription: { findUnique: vi.fn(), upsert: vi.fn(), update: vi.fn() },
-    order: { findFirst: vi.fn() },
+    order: { findFirst: vi.fn(), update: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
@@ -114,7 +114,14 @@ describe("GET /api/subscription/me", () => {
 });
 
 describe("POST /api/subscription", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Run the activation transaction callback against the mocked prisma.
+    mockPrisma.$transaction.mockImplementation((cb: unknown) =>
+      (cb as (tx: typeof mockPrisma) => Promise<unknown>)(mockPrisma),
+    );
+    mockPrisma.order.update.mockResolvedValue({});
+  });
 
   it("activates a subscription from a paid order (plan derived from order item)", async () => {
     const future = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -122,9 +129,9 @@ describe("POST /api/subscription", () => {
     // subscription item; the plan is derived from that item, not the body.
     mockPrisma.order.findFirst.mockResolvedValue({
       id: "order-1", userId: "user-1", status: "paid",
+      subscriptionConsumedAt: null,
       items: [{ itemType: "subscription", itemId: "monthly" }],
     });
-    mockPrisma.subscription.findUnique.mockResolvedValue(null);
     mockPrisma.subscription.upsert.mockResolvedValue({
       id: "sub-1", userId: "user-1", planType: "monthly",
       status: "active", startedAt: new Date(), expiresAt: future,
@@ -132,12 +139,29 @@ describe("POST /api/subscription", () => {
     const res = await request(app).post("/api/subscription").send({ orderId: "order-1" });
     expect(res.status).toBe(201);
     expect(res.body.data.planType).toBe("monthly");
+    // D7: the order is marked consumed so it cannot be replayed.
+    expect(mockPrisma.order.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ subscriptionConsumedAt: expect.any(Date) }) }),
+    );
   });
 
   it("rejects activation without a verified paid order (C1 paywall bypass)", async () => {
     mockPrisma.order.findFirst.mockResolvedValue(null);
     const res = await request(app).post("/api/subscription").send({ orderId: "nope" });
     expect(res.status).toBe(402);
+    expect(mockPrisma.subscription.upsert).not.toHaveBeenCalled();
+  });
+
+  // Batch8 D7 regression (order anti-reuse): an order already consumed for a
+  // subscription cannot be replayed — even after the subscription lapsed.
+  it("rejects reusing an order that was already consumed (409)", async () => {
+    mockPrisma.order.findFirst.mockResolvedValue({
+      id: "order-1", userId: "user-1", status: "paid",
+      subscriptionConsumedAt: new Date(),
+      items: [{ itemType: "subscription", itemId: "monthly" }],
+    });
+    const res = await request(app).post("/api/subscription").send({ orderId: "order-1" });
+    expect(res.status).toBe(409);
     expect(mockPrisma.subscription.upsert).not.toHaveBeenCalled();
   });
 });

@@ -164,7 +164,73 @@ router.patch("/admin/refunds/:refundId", async (req, res, next) => {
     });
 
     if (status === "approved") {
-      await prisma.order.update({ where: { id: refund.orderId }, data: { status: "refunded" } });
+      // Batch8 D1 (refund revokes access + reverses commission/coupon): approving a
+      // refund must undo everything the paid order granted, atomically.
+      const order = await prisma.order.findUnique({
+        where: { id: refund.orderId },
+        include: { items: true, commissions: true },
+      });
+
+      // Idempotency: only revoke once. If the order is already refunded, skip all
+      // side-effects (a repeated approve must not double-decrement balances).
+      if (order && order.status !== "refunded") {
+        await prisma.$transaction(async (tx) => {
+          // Revoke granted access per item. deleteMany is a no-op when the row is
+          // absent, so this stays safe even if access was never granted.
+          for (const item of order.items) {
+            if (item.itemType === "course") {
+              await tx.courseEnrollment.deleteMany({
+                where: { courseId: item.itemId, userId: order.userId },
+              });
+            } else if (item.itemType === "event") {
+              await tx.eventRegistration.deleteMany({
+                where: { eventId: item.itemId, userId: order.userId },
+              });
+            }
+            // ebook access is gated on the order being status:"paid" (see
+            // routes/ebooks.ts GET /:slug/file), so flipping to "refunded" below
+            // revokes ebook downloads without any extra deletion.
+          }
+
+          // Reverse any affiliate commission tied to this order.
+          for (const commission of order.commissions ?? []) {
+            if (commission.status === "reversed") continue;
+            // If already paid out/withdrawn, mark reversed but do NOT touch balances
+            // (the money already left) — never drive a balance negative.
+            const alreadyPaidOut = commission.status === "paid" || commission.status === "withdrawn";
+            await tx.affiliateCommission.update({
+              where: { id: commission.id },
+              data: { status: "reversed" },
+            });
+            if (!alreadyPaidOut) {
+              const affiliate = await tx.affiliate.findUnique({ where: { id: commission.affiliateId } });
+              if (affiliate) {
+                const amt = Number(commission.commissionAmt);
+                await tx.affiliate.update({
+                  where: { id: affiliate.id },
+                  data: {
+                    balance: Math.max(0, Number(affiliate.balance) - amt),
+                    totalEarnings: Math.max(0, Number(affiliate.totalEarnings) - amt),
+                  },
+                });
+              }
+            }
+          }
+
+          // Restore coupon usage (floor at 0 — never underflow).
+          if (order.couponId) {
+            const coupon = await tx.coupon.findUnique({ where: { id: order.couponId } });
+            if (coupon && coupon.usageCount > 0) {
+              await tx.coupon.update({
+                where: { id: order.couponId },
+                data: { usageCount: { decrement: 1 } },
+              });
+            }
+          }
+
+          await tx.order.update({ where: { id: order.id }, data: { status: "refunded" } });
+        });
+      }
     }
 
     return res.json(successResponse(updated));

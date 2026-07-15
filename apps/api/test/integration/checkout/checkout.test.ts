@@ -10,6 +10,14 @@ vi.mock("../../../src/db/prisma.js", () => ({
     courseEnrollment: {
       findUnique: vi.fn(),
     },
+    event: {
+      findUnique: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    eventRegistration: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+    },
     coupon: {
       findUnique: vi.fn(),
     },
@@ -147,5 +155,60 @@ describe("POST /api/checkout", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
+  });
+
+  // Batch8 (free-event quota): a free event at capacity must be rejected (409) and
+  // must NOT create a registration. The pre-check passes (totalSold read < quota)
+  // but the atomic reservation matches 0 rows (someone filled it first / race).
+  it("returns 409 when a free event is at capacity", async () => {
+    vi.mocked(prisma.event.findUnique).mockResolvedValue({
+      id: "event-1",
+      title: "Webinar Gratis",
+      slug: "webinar-gratis",
+      status: "published",
+      price: 0,
+      salePrice: null,
+      quota: 100,
+      totalSold: 99,
+    } as never);
+    vi.mocked(prisma.eventRegistration.findUnique).mockResolvedValue(null);
+    // Atomic reservation fails → event actually full.
+    vi.mocked(prisma.event.updateMany).mockResolvedValue({ count: 0 } as never);
+
+    const res = await request(app)
+      .post("/api/checkout")
+      .send({ itemType: "event", itemId: "event-1" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.message).toContain("penuh");
+    expect(prisma.eventRegistration.create).not.toHaveBeenCalled();
+  });
+
+  it("registers a free event when capacity is available", async () => {
+    vi.mocked(prisma.event.findUnique).mockResolvedValue({
+      id: "event-1",
+      title: "Webinar Gratis",
+      slug: "webinar-gratis",
+      status: "published",
+      price: 0,
+      salePrice: null,
+      quota: 100,
+      totalSold: 10,
+    } as never);
+    vi.mocked(prisma.eventRegistration.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.event.updateMany).mockResolvedValue({ count: 1 } as never);
+    vi.mocked(prisma.eventRegistration.create).mockResolvedValue({} as never);
+
+    const res = await request(app)
+      .post("/api/checkout")
+      .send({ itemType: "event", itemId: "event-1" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.free).toBe(true);
+    expect(prisma.event.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ totalSold: { increment: 1 } }) }),
+    );
+    expect(prisma.eventRegistration.create).toHaveBeenCalled();
   });
 });

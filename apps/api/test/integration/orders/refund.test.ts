@@ -15,6 +15,12 @@ vi.mock("../../../src/db/prisma.js", () => ({
       update: vi.fn(),
       count: vi.fn(),
     },
+    courseEnrollment: { deleteMany: vi.fn() },
+    eventRegistration: { deleteMany: vi.fn() },
+    affiliateCommission: { update: vi.fn() },
+    affiliate: { findUnique: vi.fn(), update: vi.fn() },
+    coupon: { findUnique: vi.fn(), update: vi.fn() },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -39,6 +45,8 @@ const mockPaidOrder = {
   finalAmount: "299000",
   createdAt: new Date(),
   items: [],
+  commissions: [],
+  couponId: null,
   coupon: null,
 };
 
@@ -60,6 +68,17 @@ beforeEach(() => {
   vi.mocked(prisma.order.findUnique).mockResolvedValue(mockPaidOrder as never);
   vi.mocked(prisma.refund.findUnique).mockResolvedValue(null);
   vi.mocked(prisma.refund.create).mockResolvedValue(mockRefund as never);
+  // Run the revocation transaction callback against the mocked prisma.
+  vi.mocked(prisma.$transaction).mockImplementation((cb: unknown) =>
+    (cb as (tx: typeof prisma) => Promise<unknown>)(prisma),
+  );
+  vi.mocked(prisma.courseEnrollment.deleteMany).mockResolvedValue({ count: 1 } as never);
+  vi.mocked(prisma.eventRegistration.deleteMany).mockResolvedValue({ count: 1 } as never);
+  vi.mocked(prisma.affiliateCommission.update).mockResolvedValue({} as never);
+  vi.mocked(prisma.affiliate.findUnique).mockResolvedValue({ id: "aff-1", balance: "29900", totalEarnings: "29900" } as never);
+  vi.mocked(prisma.affiliate.update).mockResolvedValue({} as never);
+  vi.mocked(prisma.coupon.findUnique).mockResolvedValue({ id: "coupon-1", usageCount: 3 } as never);
+  vi.mocked(prisma.coupon.update).mockResolvedValue({} as never);
 });
 
 describe("POST /api/orders/:orderId/refund", () => {
@@ -181,5 +200,66 @@ describe("PATCH /api/orders/admin/refunds/:refundId", () => {
       .send({ status: "rejected" });
 
     expect(res.status).toBe(400);
+  });
+
+  // Batch8 D1 regression (refund revokes access + reverses commission/coupon).
+  it("revokes access, reverses commission, and restores coupon on approval", async () => {
+    vi.mocked(prisma.order.findUnique).mockResolvedValue({
+      ...mockPaidOrder,
+      status: "paid",
+      couponId: "coupon-1",
+      items: [
+        { itemType: "course", itemId: "course-1" },
+        { itemType: "event", itemId: "event-1" },
+      ],
+      commissions: [
+        { id: "comm-1", affiliateId: "aff-1", commissionAmt: "29900", status: "pending" },
+      ],
+    } as never);
+
+    const res = await request(app)
+      .patch("/api/orders/admin/refunds/refund-1")
+      .send({ status: "approved" });
+
+    expect(res.status).toBe(200);
+    // Access revoked.
+    expect(prisma.courseEnrollment.deleteMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { courseId: "course-1", userId: "user-1" } }),
+    );
+    expect(prisma.eventRegistration.deleteMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { eventId: "event-1", userId: "user-1" } }),
+    );
+    // Commission reversed + affiliate balance decremented (not yet paid out).
+    expect(prisma.affiliateCommission.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "comm-1" }, data: { status: "reversed" } }),
+    );
+    expect(prisma.affiliate.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ balance: 0, totalEarnings: 0 }) }),
+    );
+    // Coupon usage restored.
+    expect(prisma.coupon.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { usageCount: { decrement: 1 } } }),
+    );
+    // Order finalized as refunded.
+    expect(prisma.order.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { status: "refunded" } }),
+    );
+  });
+
+  it("is idempotent: skips revocation when the order is already refunded", async () => {
+    vi.mocked(prisma.order.findUnique).mockResolvedValue({
+      ...mockPaidOrder,
+      status: "refunded",
+      items: [{ itemType: "course", itemId: "course-1" }],
+      commissions: [],
+    } as never);
+
+    const res = await request(app)
+      .patch("/api/orders/admin/refunds/refund-1")
+      .send({ status: "approved" });
+
+    expect(res.status).toBe(200);
+    expect(prisma.courseEnrollment.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.order.update).not.toHaveBeenCalled();
   });
 });

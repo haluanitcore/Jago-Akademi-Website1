@@ -36,8 +36,14 @@ export async function processWebhookPayment(job: WebhookJob): Promise<void> {
   if (!order) return;
 
   if (txStatus === "SUCCESS") {
-    // Idempotency guard — already fulfilled, nothing more to do.
-    if (order.status === "paid") return;
+    // Idempotency guard — already fulfilled, nothing more to do. "refund_pending"
+    // is a terminal fulfillment outcome too (event was full → auto-refund, Batch8
+    // D2); re-processing it would try to create a second unique Refund and loop.
+    if (order.status === "paid" || order.status === "refund_pending") return;
+
+    // Batch8 D2: tracks whether an event line item was full and got auto-refunded,
+    // so we send the buyer a refund notice instead of a payment-success email.
+    let eventFull = false;
 
     // M-webhook: flip the order to paid and run every fulfillment side-effect in
     // one atomic transaction. If any step fails the whole payment fulfillment
@@ -63,15 +69,38 @@ export async function processWebhookPayment(job: WebhookJob): Promise<void> {
             update: {},
           });
         } else if (item.itemType === "event") {
-          await tx.eventRegistration.upsert({
-            where: { eventId_userId: { eventId: item.itemId, userId: order.userId } },
-            create: { eventId: item.itemId, userId: order.userId, orderId: order.id, status: "confirmed" },
-            update: { status: "confirmed", orderId: order.id },
-          });
-          await tx.event.update({
+          // Batch8 D2 (event overselling / TOCTOU): reserve the seat ATOMICALLY at
+          // fulfillment. The updateMany only increments when totalSold is still
+          // below quota (quota=null → unlimited), so concurrent paid webhooks can
+          // never push totalSold past quota.
+          const ev = await tx.event.findUnique({
             where: { id: item.itemId },
+            select: { quota: true, title: true },
+          });
+          const reserved = await tx.event.updateMany({
+            where: { id: item.itemId, OR: [{ quota: null }, { totalSold: { lt: ev?.quota ?? 0 } }] },
             data: { totalSold: { increment: 1 } },
           });
+          if (reserved.count === 0) {
+            // Event full — auto-refund + notify (D2) instead of overselling.
+            await tx.refund.create({
+              data: {
+                orderId: order.id,
+                userId: order.userId,
+                reason: "event_full",
+                amount: order.finalAmount,
+                status: "pending",
+              },
+            });
+            await tx.order.update({ where: { id: order.id }, data: { status: "refund_pending" } });
+            eventFull = true;
+          } else {
+            await tx.eventRegistration.upsert({
+              where: { eventId_userId: { eventId: item.itemId, userId: order.userId } },
+              create: { eventId: item.itemId, userId: order.userId, orderId: order.id, status: "confirmed" },
+              update: { status: "confirmed", orderId: order.id },
+            });
+          }
         }
       }
 
@@ -117,6 +146,22 @@ export async function processWebhookPayment(job: WebhookJob): Promise<void> {
 
     // Notifications — best-effort so they never fail fulfillment.
     const courseName = order.items[0]?.itemTitle ?? "produk";
+
+    // Batch8 D2: if the event was full and we auto-refunded, tell the buyer about
+    // the refund rather than sending a (misleading) payment-success email.
+    if (eventFull) {
+      await safeNotify(() =>
+        processEmail({
+          type: "event-full-refund",
+          to: order.user.email,
+          name: order.user.name,
+          orderId: order.id,
+          eventName: courseName,
+        }),
+      );
+      return;
+    }
+
     await safeNotify(() =>
       processEmail({
         type: "payment-success",

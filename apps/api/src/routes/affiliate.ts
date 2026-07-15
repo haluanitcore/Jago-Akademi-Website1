@@ -51,8 +51,11 @@ router.get("/commissions", async (req: Request, res: Response, next: NextFunctio
     const affiliate = await prisma.affiliate.findUnique({ where: { userId } });
     if (!affiliate) throw new AppError(404, "Anda belum terdaftar sebagai affiliate.");
 
-    const { page = "1", limit = "20" } = req.query as Record<string, string>;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    // Batch8 (unbounded pagination): clamp limit to [1,50] and page to >=1 so a
+    // client cannot request an oversized page or produce a negative skip.
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const skip = (page - 1) * limit;
 
     const [commissions, total] = await Promise.all([
       prisma.affiliateCommission.findMany({
@@ -63,12 +66,12 @@ router.get("/commissions", async (req: Request, res: Response, next: NextFunctio
         },
         orderBy: { createdAt: "desc" },
         skip,
-        take: parseInt(limit),
+        take: limit,
       }),
       prisma.affiliateCommission.count({ where: { affiliateId: affiliate.id } }),
     ]);
 
-    return res.json(successResponse(commissions, { total, page: parseInt(page), limit: parseInt(limit) }));
+    return res.json(successResponse(commissions, { total, page, limit }));
   } catch (err) {
     next(err);
   }

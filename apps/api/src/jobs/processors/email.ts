@@ -2,6 +2,7 @@ import {
   sendPaymentSuccess,
   sendPaymentPending,
   sendOrderInvoice,
+  sendEventFullRefund,
 } from "../../services/notification/emailService.js";
 import { notifyPaymentSuccess } from "../../services/notification/whatsappService.js";
 import type { EmailJob } from "../types.js";
@@ -20,6 +21,9 @@ export async function processEmail(job: EmailJob): Promise<void> {
       return;
     case "wa-payment-success":
       await notifyPaymentSuccess(job.phone, job.name, job.courseName);
+      return;
+    case "event-full-refund":
+      await sendEventFullRefund(job.to, job.name, job.orderId, job.eventName);
       return;
   }
 }

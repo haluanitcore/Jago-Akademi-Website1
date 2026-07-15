@@ -3,15 +3,20 @@ import { z } from "zod";
 import { authenticate } from "../middleware/authenticate.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { prisma } from "../db/prisma.js";
-import { AppError, successResponse } from "../types/index.js";
+import { AppError, successResponse, errorResponse } from "../types/index.js";
 
 const router = Router();
 
 // GET /api/blog — public listing
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { category, tag, search, page = "1", limit = "12" } = req.query as Record<string, string>;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const { category, tag, search } = req.query as Record<string, string>;
+    // Batch8 (unbounded pagination): clamp limit to [1,50] and page to >=1 so a
+    // client cannot request an arbitrarily large page (DoS / memory blow-up) or a
+    // negative skip.
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 12));
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const skip = (page - 1) * limit;
 
     const where = {
       status: "published" as const,
@@ -35,12 +40,12 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
         },
         orderBy: { publishedAt: "desc" },
         skip,
-        take: parseInt(limit),
+        take: limit,
       }),
       prisma.blogPost.count({ where }),
     ]);
 
-    return res.json(successResponse(posts, { total, page: parseInt(page), limit: parseInt(limit) }));
+    return res.json(successResponse(posts, { total, page, limit }));
   } catch (err) {
     next(err);
   }
@@ -83,8 +88,11 @@ const postSchema = z.object({
 // GET /api/blog/admin/posts — admin list all posts
 router.get("/admin/posts", authenticate, requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { status, page = "1", limit = "20" } = req.query as Record<string, string>;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const { status } = req.query as Record<string, string>;
+    // Batch8 (unbounded pagination): clamp to a safe [1,50] page size.
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const skip = (page - 1) * limit;
     const where = { ...(status && { status }) };
 
     const [posts, total] = await Promise.all([
@@ -97,12 +105,12 @@ router.get("/admin/posts", authenticate, requireAdmin, async (req: Request, res:
         },
         orderBy: { createdAt: "desc" },
         skip,
-        take: parseInt(limit),
+        take: limit,
       }),
       prisma.blogPost.count({ where }),
     ]);
 
-    return res.json(successResponse(posts, { total, page: parseInt(page), limit: parseInt(limit) }));
+    return res.json(successResponse(posts, { total, page, limit }));
   } catch (err) {
     next(err);
   }
@@ -136,18 +144,31 @@ router.post("/admin/posts", authenticate, requireAdmin, validateBody(postSchema)
 router.patch("/admin/posts/:postId", authenticate, requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { postId } = req.params;
-    const body = req.body as Partial<z.infer<typeof postSchema>>;
+    // Batch8 (PATCH had no Zod): validate the partial body instead of spreading
+    // raw req.body straight into the update (which allowed unvalidated/injected
+    // fields and malformed slugs).
+    const parsed = postSchema.partial().safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(errorResponse("VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Validasi gagal."));
+    }
+    const data = parsed.data;
 
     const existing = await prisma.blogPost.findUnique({ where: { id: postId } });
     if (!existing) throw new AppError(404, "Artikel tidak ditemukan.");
 
-    const publishedAt = body.status === "published" && existing.status !== "published"
+    // Re-check slug uniqueness when it changes (excluding this post).
+    if (data.slug && data.slug !== existing.slug) {
+      const clash = await prisma.blogPost.findFirst({ where: { slug: data.slug, id: { not: postId } } });
+      if (clash) throw new AppError(409, "Slug sudah digunakan.");
+    }
+
+    const publishedAt = data.status === "published" && existing.status !== "published"
       ? new Date()
       : existing.publishedAt;
 
     const post = await prisma.blogPost.update({
       where: { id: postId },
-      data: { ...body, publishedAt },
+      data: { ...data, publishedAt },
       include: { author: { select: { id: true, name: true } } },
     });
     return res.json(successResponse(post));
