@@ -15,7 +15,7 @@ export const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: env.COOKIE_SECURE,
   sameSite: "lax" as const,
-  maxAge: 2 * 60 * 60 * 1000,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // must match REFRESH_TTL (7d) in services/auth/token.ts
   path: "/",
 };
 
