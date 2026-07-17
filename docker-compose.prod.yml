@@ -1,3 +1,11 @@
+# ⛔ DO NOT USE ON THE LIVE VPS (srv1693732 / jagoakademi.com). ⛔
+# That host uses docker-compose.vps.yml + a HOST-level nginx (systemd) proxying
+# to published ports 3010 (web) and 4010 (api). This file describes the OLD
+# containerized-nginx topology: it publishes NO host ports on web/api, so
+# running it there detaches the site from host nginx → 502 outage
+# (incident 17 Jul 2026, BL-43). Kept only as reference for a future
+# fully-containerized setup.
+#
 # Shared app environment for api + worker (TASK-022) — single source, no drift.
 x-app-env: &app-env
   NODE_ENV: production

@@ -96,6 +96,10 @@ services:
     image: jago-api-vps:local
     restart: always
     command: ["node", "dist/worker.js"]
+    # The api image bakes in a HEALTHCHECK against :4000, but the worker runs
+    # no HTTP server, so it would always report "unhealthy". Disable it here.
+    healthcheck:
+      disable: true
     depends_on:
       postgres:
         condition: service_healthy

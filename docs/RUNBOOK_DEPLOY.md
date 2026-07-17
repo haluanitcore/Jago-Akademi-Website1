@@ -10,6 +10,7 @@
 > - **Reverse proxy:** **nginx level-host** (systemd, di luar Docker) meng-handle TLS + proxy ke container. **Tidak ada Cloudflare / CDN** di depan domain → tidak ada cache CDN yang perlu di-purge; recreate container = langsung live.
 > - **Stack berjalan:** `web` (`:3010→3000`), `api` (`:4010→4000`), `postgres`, `meilisearch`. (redis/BullMQ & CD GitHub Actions belum di-deploy; repo belum punya secret CD.)
 > - **Deploy rutin manual (proven):** `cd /var/www/jago-akademi && git pull --ff-only origin main && docker compose -f docker-compose.vps.yml build --no-cache web && docker compose -f docker-compose.vps.yml up -d --force-recreate web`.
+> - **⛔ INSIDEN 17 Jul 2026 (BL-43) — jangan diulang:** menjalankan `docker compose -f docker-compose.prod.yml up` di host ini me-recreate `web`/`api` **tanpa published port** (file prod memakai topologi nginx-in-Docker) → host-nginx tak bisa mencapai `127.0.0.1:3010/4010` → **502 sitewide**, plus container nginx yatim crash-loop. **Pemulihan:** `docker compose -f docker-compose.vps.yml up -d --force-recreate api worker web`, lalu `docker rm -f jago-akademi-nginx-1` (container nginx Docker TIDAK dipakai di host ini). Selalu verifikasi pasca-up: `docker port jago-akademi-web-1` harus menampilkan `3010`.
 
 ## Arsitektur runtime
 
