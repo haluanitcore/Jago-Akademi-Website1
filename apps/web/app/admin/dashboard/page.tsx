@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getToken } from "@/lib/auth/token";
+import { getValidToken } from "@/lib/auth/token";
 
 type Stats = {
   totalUsers: number;
@@ -53,23 +53,30 @@ export default function AdminDashboardPage() {
   const greeting = now.getHours() < 12 ? "Selamat Pagi" : now.getHours() < 17 ? "Selamat Siang" : "Selamat Malam";
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) return;
-    const h = { Authorization: `Bearer ${token}` };
+    (async () => {
+      const token = await getValidToken();
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      const h = { Authorization: `Bearer ${token}` };
 
-    Promise.all([
-      fetch("/api/admin/stats", { headers: h }).then((r) => r.json()),
-      fetch("/api/admin/orders?limit=6&sort=createdAt:desc", { headers: h }).then((r) => r.json()),
-      fetch("/api/admin/courses?limit=5&sort=totalEnrolled:desc", { headers: h }).then((r) => r.json()),
-      fetch("/api/admin/leads?status=new&limit=1", { headers: h }).then((r) => r.json()),
-    ])
-      .then(([s, o, c, l]) => {
-        if (s.success) setStats(s.data);
-        if (o.success) setOrders(o.data ?? []);
-        if (c.success) setCourses(c.data ?? []);
-        if (l.success) setNewLeadsCount(l.meta?.total ?? 0);
-      })
-      .finally(() => setLoading(false));
+      Promise.all([
+        fetch("/api/admin/stats", { headers: h }).then((r) => r.json()),
+        fetch("/api/admin/orders?limit=6&sort=createdAt:desc", { headers: h }).then((r) => r.json()),
+        fetch("/api/admin/courses?limit=5&sort=totalEnrolled:desc", { headers: h }).then((r) => r.json()),
+        fetch("/api/admin/leads?status=new&limit=1", { headers: h }).then((r) => r.json()),
+      ])
+        .then(([s, o, c, l]) => {
+          if (s.success) setStats(s.data);
+          if (o.success) setOrders(Array.isArray(o.data) ? o.data : []);
+          // GET /api/admin/courses returns a paginated object ({ courses, total,
+          // page, limit }) since the trainer-approval change — not a bare array.
+          if (c.success) setCourses(c.data?.courses ?? (Array.isArray(c.data) ? c.data : []));
+          if (l.success) setNewLeadsCount(l.meta?.total ?? 0);
+        })
+        .finally(() => setLoading(false));
+    })();
   }, []);
 
   const KPI_CARDS = stats
