@@ -29,8 +29,10 @@ jobs:
       - name: Install dependencies (reproducible)
         run: npm ci
 
+      # `npm run --workspace api exec` treated "exec" as a script name and made
+      # every CI run fail since TASK-004; use a real workspace script instead.
       - name: Generate Prisma client
-        run: npm run --workspace api exec -- prisma generate
+        run: npm run db:generate --workspace api
 
       - name: Lint
         run: npm run lint
