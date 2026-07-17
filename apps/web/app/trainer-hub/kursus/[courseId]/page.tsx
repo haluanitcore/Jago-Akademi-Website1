@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getValidToken } from "@/lib/auth/token";
@@ -48,7 +48,7 @@ export default function CourseAnalyticsPage() {
   const [status, setStatus] = useState("draft");
   const [savingStatus, setSavingStatus] = useState(false);
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     const token = await getValidToken();
     if (!token) { router.replace("/masuk"); return; }
     try {
@@ -69,11 +69,11 @@ export default function CourseAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [courseId, router]);
 
   useEffect(() => {
     loadData();
-  }, [courseId, router]);
+  }, [loadData]);
 
   async function handleSaveLive() {
     const token = await getValidToken();

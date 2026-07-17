@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getToken } from "@/lib/auth/token";
+import { getValidToken } from "@/lib/auth/token";
 
 type EBook = {
   id: string;
@@ -47,8 +47,8 @@ export default function AdminEbookPage() {
 
   const [saving, setSaving] = useState(false);
 
-  function loadEbooks() {
-    const token = getToken();
+  async function loadEbooks() {
+    const token = await getValidToken();
     if (!token) return;
 
     const params = new URLSearchParams({
@@ -121,7 +121,7 @@ export default function AdminEbookPage() {
       return;
     }
 
-    const token = getToken();
+    const token = await getValidToken();
     if (!token) return;
 
     setSaving(true);
@@ -169,7 +169,7 @@ export default function AdminEbookPage() {
   async function handleDelete(id: string, title: string) {
     if (!confirm(`Apakah Anda yakin ingin menghapus E-Book "${title}"?`)) return;
 
-    const token = getToken();
+    const token = await getValidToken();
     if (!token) return;
 
     try {

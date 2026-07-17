@@ -211,7 +211,6 @@ export default function LessonPlayerPage() {
   const allLessons = course.sections.flatMap((s) => s.lessons);
   const currentIdx = allLessons.findIndex((l) => l.id === lessonId);
   const hasNext = currentIdx >= 0 && currentIdx < allLessons.length - 1;
-  const isFinalLesson = !hasNext;
   const courseCompleted = allLessons.length > 0 && completedIds.size === allLessons.length;
 
   return (

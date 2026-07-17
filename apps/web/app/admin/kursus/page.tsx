@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getToken } from "@/lib/auth/token";
+import { getValidToken } from "@/lib/auth/token";
 
 type Course = {
   id: string;
@@ -19,6 +19,33 @@ type Course = {
   trainer: { id: string; name: string; email: string };
   category: { name: string } | null;
   _count?: { sections: number };
+};
+
+// Shape returned by GET /api/admin/courses/:id (Prisma include: sections → lessons).
+type DetailLesson = {
+  id: string;
+  title: string;
+  type: string;
+  contentUrl: string | null;
+  duration: number;
+};
+
+type DetailSection = {
+  id: string;
+  title: string;
+  lessons?: DetailLesson[];
+};
+
+type CourseDetail = {
+  id: string;
+  title: string;
+  level: string | null;
+  price: string;
+  previewVideo: string | null;
+  adminFeedback: string | null;
+  trainer: { id: string; name: string; email: string };
+  category: { id: string; name: string } | null;
+  sections?: DetailSection[];
 };
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
@@ -48,7 +75,7 @@ export default function AdminKursusPage() {
 
   // Modal states
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
-  const [detailCourse, setDetailCourse] = useState<any>(null);
+  const [detailCourse, setDetailCourse] = useState<CourseDetail | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [feedbackText, setFeedbackText] = useState("");
   const [savingApproval, setSavingApproval] = useState(false);
@@ -58,7 +85,7 @@ export default function AdminKursusPage() {
     setModalLoading(true);
     setDetailCourse(null);
     setFeedbackText("");
-    const token = getToken();
+    const token = await getValidToken();
     if (!token) return;
     try {
       const r = await fetch(`/api/admin/courses/${courseId}`, {
@@ -83,7 +110,7 @@ export default function AdminKursusPage() {
   async function handleApproveDetail() {
     if (!selectedCourseId) return;
     setSavingApproval(true);
-    const token = getToken();
+    const token = await getValidToken();
     if (!token) return;
     try {
       const res = await fetch(`/api/admin/courses/${selectedCourseId}`, {
@@ -113,7 +140,7 @@ export default function AdminKursusPage() {
       return;
     }
     setSavingApproval(true);
-    const token = getToken();
+    const token = await getValidToken();
     if (!token) return;
     try {
       const res = await fetch(`/api/admin/courses/${selectedCourseId}`, {
@@ -136,8 +163,8 @@ export default function AdminKursusPage() {
     }
   }
 
-  function loadCourses() {
-    const token = getToken();
+  async function loadCourses() {
+    const token = await getValidToken();
     if (!token) return;
     const params = new URLSearchParams({
       page: String(page), limit: String(limit),
@@ -161,7 +188,7 @@ export default function AdminKursusPage() {
   function handleSearch(e: React.FormEvent) { e.preventDefault(); setPage(1); loadCourses(); }
 
   async function updateStatus(courseId: string, newStatus: string) {
-    const token = getToken();
+    const token = await getValidToken();
     if (!token) return;
     setActionLoading(courseId + newStatus);
     await fetch(`/api/admin/courses/${courseId}`, {
@@ -174,7 +201,7 @@ export default function AdminKursusPage() {
   }
 
   async function toggleFeatured(courseId: string, current: boolean) {
-    const token = getToken();
+    const token = await getValidToken();
     if (!token) return;
     setActionLoading(courseId + "feat");
     await fetch(`/api/admin/courses/${courseId}`, {
@@ -398,15 +425,15 @@ export default function AdminKursusPage() {
                     <p className="ak-no-curriculum">Belum ada materi kurikulum yang ditambahkan.</p>
                   ) : (
                     <div className="ak-sections-list">
-                      {detailCourse.sections.map((sec: any, idx: number) => (
+                      {detailCourse.sections.map((sec, idx) => (
                         <div key={sec.id} className="ak-section-item">
                           <div className="ak-section-hdr">
                             Bab {idx + 1}: {sec.title}
                           </div>
                           <ul className="ak-lessons-list">
-                            {sec.lessons?.map((les: any) => (
+                            {sec.lessons?.map((les) => (
                               <li key={les.id} className="ak-lesson-item">
-                                <span className="ak-les-type">{les.contentType === "video" ? "📹" : "📄"}</span>
+                                <span className="ak-les-type">{les.type === "video" ? "📹" : "📄"}</span>
                                 <span className="ak-les-title">{les.title}</span>
                                 <span className="ak-les-dur">{les.duration ? `${Math.round(les.duration / 60)} m` : ""}</span>
                               </li>

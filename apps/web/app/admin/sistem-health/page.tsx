@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getToken } from "@/lib/auth/token";
+import { getValidToken } from "@/lib/auth/token";
 
 /* ─────────────────────────── Types ────────────────────────────────────────── */
 type ChartPoint = { date: string; amount?: number; count?: number };
@@ -40,7 +40,9 @@ function LineChart({
 }) {
   if (!data.length) return <p className="sh-empty">Tidak ada data.</p>;
 
-  const values = data.map((d) => (d as Record<string, number>)[valueKey] ?? 0);
+  // valueKey is restricted to the numeric keys of ChartPoint, so d[valueKey]
+  // is number | undefined — no cast needed.
+  const values = data.map((d) => d[valueKey] ?? 0);
   const maxVal = Math.max(...values, 1);
   const w = 560;
   const h = height;
@@ -48,13 +50,21 @@ function LineChart({
   const chartW = w - pad.left - pad.right;
   const chartH = h - pad.top - pad.bottom;
 
-  const points = values.map((v, i) => ({
+  // Carry date + value on each point so dots never index back into data/values.
+  const points = data.map((d, i) => ({
     x: pad.left + (i / Math.max(data.length - 1, 1)) * chartW,
-    y: pad.top + chartH - (v / maxVal) * chartH,
+    y: pad.top + chartH - ((d[valueKey] ?? 0) / maxVal) * chartH,
+    value: d[valueKey] ?? 0,
+    date: d.date,
   }));
 
   const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-  const areaD = `${pathD} L ${points[points.length - 1].x} ${pad.top + chartH} L ${points[0].x} ${pad.top + chartH} Z`;
+  const firstPoint = points[0];
+  const lastPoint = points[points.length - 1];
+  // points is non-empty (data.length checked above), but guard for strict indexing.
+  const areaD = firstPoint && lastPoint
+    ? `${pathD} L ${lastPoint.x} ${pad.top + chartH} L ${firstPoint.x} ${pad.top + chartH} Z`
+    : pathD;
 
   // Y-axis ticks
   const yTicks = 5;
@@ -102,10 +112,10 @@ function LineChart({
       <path d={pathD} fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
 
       {/* Dots */}
-      {points.map((p, i) => (
-        <g key={i}>
+      {points.map((p) => (
+        <g key={p.date}>
           <circle cx={p.x} cy={p.y} r={4} fill="white" stroke={color} strokeWidth={2} />
-          <title>{`${data[i].date}: ${formatVal(values[i])}`}</title>
+          <title>{`${p.date}: ${formatVal(p.value)}`}</title>
         </g>
       ))}
     </svg>
@@ -126,7 +136,7 @@ function BarChart({
 }) {
   if (!data.length) return <p className="sh-empty">Tidak ada data.</p>;
 
-  const values = data.map((d) => (d as Record<string, number>)[valueKey] ?? 0);
+  const values = data.map((d) => d[valueKey] ?? 0);
   const maxVal = Math.max(...values, 1);
   const w = 560;
   const h = height;
@@ -151,7 +161,7 @@ function BarChart({
 
       {/* Bars */}
       {data.map((d, i) => {
-        const v = values[i];
+        const v = values[i] ?? 0;
         const barH = (v / maxVal) * chartH;
         const x = pad.left + i * (barW + gap) + gap / 2;
         const y = pad.top + chartH - barH;
@@ -287,7 +297,7 @@ export default function SystemHealthPage() {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   const fetchData = useCallback(async () => {
-    const token = getToken();
+    const token = await getValidToken();
     if (!token) return;
     setLoading(true);
     setError(null);

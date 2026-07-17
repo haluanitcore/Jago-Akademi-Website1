@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getToken } from "@/lib/auth/token";
+import { getValidToken } from "@/lib/auth/token";
 
 type TrainerPayout = {
   id: string;
@@ -69,13 +69,9 @@ export default function AdminPayoutPage() {
   const [modalNote, setModalNote] = useState("");
   const [modalSaving, setModalSaving] = useState(false);
 
-  function getToken_() {
-    return getToken();
-  }
-
   // ─── Load Stats ────────────────────────────────────────────────────────────
   async function loadStats() {
-    const token = getToken_();
+    const token = await getValidToken();
     if (!token) return;
     try {
       const r = await fetch("/api/admin/payouts/stats", { headers: { Authorization: `Bearer ${token}` } });
@@ -86,7 +82,7 @@ export default function AdminPayoutPage() {
 
   // ─── Load Trainer Payouts ──────────────────────────────────────────────────
   async function loadTrainer() {
-    const token = getToken_();
+    const token = await getValidToken();
     if (!token) return;
     setTrainerLoading(true);
     const params = new URLSearchParams({
@@ -106,7 +102,7 @@ export default function AdminPayoutPage() {
 
   // ─── Load Affiliate Withdrawals ────────────────────────────────────────────
   async function loadAffiliate() {
-    const token = getToken_();
+    const token = await getValidToken();
     if (!token) return;
     setAffLoading(true);
     const params = new URLSearchParams({
@@ -124,7 +120,7 @@ export default function AdminPayoutPage() {
     } finally { setAffLoading(false); }
   }
 
-  useEffect(() => { loadStats(); }, []); // eslint-disable-line
+  useEffect(() => { loadStats(); }, []);
   useEffect(() => { if (tab === "trainer") loadTrainer(); }, [trainerPage, statusFilter, tab]); // eslint-disable-line
   useEffect(() => { if (tab === "affiliate") loadAffiliate(); }, [affPage, statusFilter, tab]); // eslint-disable-line
 
@@ -155,7 +151,7 @@ export default function AdminPayoutPage() {
       return;
     }
     setModalSaving(true);
-    const token = getToken_();
+    const token = await getValidToken();
     if (!token) return;
     try {
       const endpoint = modalTab === "trainer"
