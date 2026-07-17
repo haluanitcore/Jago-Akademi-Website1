@@ -100,14 +100,22 @@ router.patch("/payouts/trainer/:id", validateBody(PayoutUpdateSchema), async (re
     const existing = await prisma.trainerPayout.findUnique({ where: { id } });
     if (!existing) throw new AppError(404, "Payout tidak ditemukan.");
 
-    const updated = await prisma.trainerPayout.update({
-      where: { id },
+    // C2: only a still-pending payout may be processed. The `status: "pending"`
+    // predicate makes the transition atomic, so two concurrent PATCHes cannot
+    // both mark the same payout approved/paid (double processing).
+    const guarded = await prisma.trainerPayout.updateMany({
+      where: { id, status: "pending" },
       data: {
         status,
         note: note ?? null,
         processedAt: new Date(),
         processedBy: req.user!.id,
       },
+    });
+    if (guarded.count === 0) throw new AppError(409, "Payout sudah diproses.");
+
+    const updated = await prisma.trainerPayout.findUnique({
+      where: { id },
       include: {
         trainer: { select: { id: true, name: true, email: true } },
       },
@@ -181,23 +189,45 @@ router.patch("/payouts/affiliate/:id", validateBody(PayoutUpdateSchema), async (
     const existing = await prisma.affiliateWithdrawal.findUnique({ where: { id } });
     if (!existing) throw new AppError(404, "Withdrawal tidak ditemukan.");
 
-    const updated = await prisma.affiliateWithdrawal.update({
-      where: { id },
-      data: {
-        status,
-        note: note ?? null,
-        processedAt: new Date(),
-        processedBy: req.user!.id,
-      },
-      include: {
-        affiliate: {
-          select: {
-            id: true,
-            code: true,
-            user: { select: { id: true, name: true, email: true } },
+    // C1+C2: the affiliate's balance was DEBITED when the withdrawal was
+    // requested (routes/affiliate.ts POST /withdrawals), so a rejection MUST
+    // credit it back or the money silently disappears. The status update and
+    // the refund run in one transaction, and the `status: "pending"` predicate
+    // guarantees a withdrawal is processed (and refunded) at most once even
+    // under concurrent PATCHes.
+    const updated = await prisma.$transaction(async (tx) => {
+      const guarded = await tx.affiliateWithdrawal.updateMany({
+        where: { id, status: "pending" },
+        data: {
+          status,
+          note: note ?? null,
+          processedAt: new Date(),
+          processedBy: req.user!.id,
+        },
+      });
+      if (guarded.count === 0) throw new AppError(409, "Withdrawal sudah diproses.");
+
+      if (status === "rejected") {
+        // Refund: mirror the invariant in routes/affiliate.ts (rejection
+        // returns the debited amount to affiliate.balance).
+        await tx.affiliate.update({
+          where: { id: existing.affiliateId },
+          data: { balance: { increment: Number(existing.amount) } },
+        });
+      }
+
+      return tx.affiliateWithdrawal.findUnique({
+        where: { id },
+        include: {
+          affiliate: {
+            select: {
+              id: true,
+              code: true,
+              user: { select: { id: true, name: true, email: true } },
+            },
           },
         },
-      },
+      });
     });
 
     res.json(successResponse(updated));
