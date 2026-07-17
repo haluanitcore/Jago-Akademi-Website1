@@ -117,7 +117,9 @@ describe("POST /api/subscription", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Run the activation transaction callback against the mocked prisma.
-    mockPrisma.$transaction.mockImplementation((cb: unknown) =>
+    // vi.mocked() keeps the Mock type callable under vitest 4's typings; the
+    // Record<...> cast on mockPrisma erases the call signature (TS2348).
+    vi.mocked(prisma.$transaction).mockImplementation((cb: unknown) =>
       (cb as (tx: typeof mockPrisma) => Promise<unknown>)(mockPrisma),
     );
     mockPrisma.order.update.mockResolvedValue({});
