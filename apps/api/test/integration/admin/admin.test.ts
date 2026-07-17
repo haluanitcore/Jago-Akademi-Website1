@@ -124,7 +124,7 @@ describe("PATCH /api/admin/users/:id", () => {
 });
 
 describe("GET /api/admin/courses", () => {
-  it("returns course list", async () => {
+  it("returns paginated course list", async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(VALID_ADMIN as never);
     vi.mocked(prisma.course.findMany).mockResolvedValue([
       { id: "c-1", title: "Test Course", status: "draft" },
@@ -133,7 +133,12 @@ describe("GET /api/admin/courses", () => {
 
     const res = await request(app).get("/api/admin/courses").set(ADMIN_AUTH);
     expect(res.status).toBe(200);
-    expect(res.body.data).toHaveLength(1);
+    // Endpoint returns a paginated object (new admin UI), not a bare array.
+    expect(res.body.data.courses).toHaveLength(1);
+    expect(res.body.data.courses[0].id).toBe("c-1");
+    expect(res.body.data.total).toBe(1);
+    expect(res.body.data.page).toBe(1);
+    expect(res.body.data.limit).toBe(20);
   });
 });
 

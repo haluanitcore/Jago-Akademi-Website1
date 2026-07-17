@@ -4,23 +4,35 @@ import { successResponse } from "../../types/index.js";
 
 const router = Router();
 
-// ─── Helper: generate last N months labels ────────────────────────────────────
-function getLastMonths(n: number): { label: string; start: Date; end: Date }[] {
-  const months: { label: string; start: Date; end: Date }[] = [];
+// ─── Helper: generate last N month labels ("YYYY-MM") ────────────────────────
+function getLastMonths(n: number): { label: string; start: Date }[] {
+  const months: { label: string; start: Date }[] = [];
   const now = new Date();
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
-    months.push({
-      label: `${yyyy}-${mm}`,
-      start: d,
-      end,
-    });
+    months.push({ label: `${yyyy}-${mm}`, start: d });
   }
   return months;
 }
+
+// Row shape returned by the monthly-bucket aggregation queries below.
+type MonthlyCountRow = { month: string; count: number };
+type MonthlyAmountRow = { month: string; amount: number };
+
+// Known order statuses in display order. Colors match the admin UI donut.
+// Any status not listed here (future additions) still shows up with a
+// fallback color so the chart always sums to the order total.
+const ORDER_STATUS_COLORS: Record<string, string> = {
+  paid: "#10B981",
+  pending: "#F59E0B",
+  failed: "#EF4444",
+  expired: "#6B7280",
+  refunded: "#8B5CF6",
+  cancelled: "#F97316",
+};
+const ORDER_STATUS_FALLBACK_COLOR = "#94A3B8";
 
 // GET /api/admin/system-health — comprehensive system health data
 router.get("/system-health", async (_req: Request, res: Response, next: NextFunction) => {
@@ -29,20 +41,16 @@ router.get("/system-health", async (_req: Request, res: Response, next: NextFunc
     const since = months[0]!.start;
 
     // ── Parallel queries ────────────────────────────────────────────────────
+    // Monthly buckets are aggregated in SQL via date_trunc (DB timezone)
+    // instead of loading 12 months of full rows into memory (perf fix).
     const [
-      // Revenue trend data
-      revenueOrders,
-      // User growth data
-      allUsers,
-      // Enrollment trend data
-      allEnrollments,
-      // Order distribution
-      ordersPaid,
-      ordersPending,
-      ordersFailed,
-      ordersExpired,
-      ordersRefunded,
-      ordersTotal,
+      // Monthly aggregations
+      revenueByMonth,
+      usersByMonth,
+      enrollmentsByMonth,
+      // Order distribution — one groupBy covers ALL statuses (incl. cancelled)
+      // so the donut always sums to the order total.
+      orderStatusGroups,
       // Top courses
       topCourses,
       // Database counts
@@ -61,28 +69,32 @@ router.get("/system-health", async (_req: Request, res: Response, next: NextFunc
       // Total revenue
       totalRevenueAgg,
     ] = await Promise.all([
-      // Revenue — get paid orders since 12 months ago
-      prisma.order.findMany({
-        where: { status: "paid", paidAt: { gte: since } },
-        select: { paidAt: true, finalAmount: true },
-      }),
-      // Users — created since 12 months ago
-      prisma.user.findMany({
-        where: { createdAt: { gte: since }, deletedAt: null },
-        select: { createdAt: true },
-      }),
-      // Enrollments — enrolled since 12 months ago
-      prisma.courseEnrollment.findMany({
-        where: { enrolledAt: { gte: since } },
-        select: { enrolledAt: true },
-      }),
-      // Order distribution
-      prisma.order.count({ where: { status: "paid" } }),
-      prisma.order.count({ where: { status: "pending" } }),
-      prisma.order.count({ where: { status: "failed" } }),
-      prisma.order.count({ where: { status: "expired" } }),
-      prisma.order.count({ where: { status: "refunded" } }),
-      prisma.order.count(),
+      // Revenue per month — paid orders since 12 months ago
+      prisma.$queryRaw<MonthlyAmountRow[]>`
+        SELECT to_char(date_trunc('month', "paidAt"), 'YYYY-MM') AS month,
+               COALESCE(SUM("finalAmount"), 0)::float AS amount
+        FROM "orders"
+        WHERE "status" = 'paid' AND "paidAt" >= ${since}
+        GROUP BY 1
+      `,
+      // New users per month — created since 12 months ago
+      prisma.$queryRaw<MonthlyCountRow[]>`
+        SELECT to_char(date_trunc('month', "createdAt"), 'YYYY-MM') AS month,
+               COUNT(*)::int AS count
+        FROM "users"
+        WHERE "createdAt" >= ${since} AND "deletedAt" IS NULL
+        GROUP BY 1
+      `,
+      // Enrollments per month — enrolled since 12 months ago
+      prisma.$queryRaw<MonthlyCountRow[]>`
+        SELECT to_char(date_trunc('month', "enrolledAt"), 'YYYY-MM') AS month,
+               COUNT(*)::int AS count
+        FROM "course_enrollments"
+        WHERE "enrolledAt" >= ${since}
+        GROUP BY 1
+      `,
+      // Order distribution across every status present in the table
+      prisma.order.groupBy({ by: ["status"], _count: { _all: true } }),
       // Top 5 courses by enrollment
       prisma.course.findMany({
         orderBy: { totalEnrolled: "desc" },
@@ -120,37 +132,41 @@ router.get("/system-health", async (_req: Request, res: Response, next: NextFunc
       }),
     ]);
 
-    // ── Revenue chart ─────────────────────────────────────────────────────
-    const revenueChart = months.map((m) => {
-      const amount = revenueOrders
-        .filter((o) => o.paidAt && o.paidAt >= m.start && o.paidAt <= m.end)
-        .reduce((sum, o) => sum + Number(o.finalAmount), 0);
-      return { date: m.label, amount: Math.round(amount) };
-    });
+    // ── Monthly charts — fill every month label so charts always have 12 points
+    const revenueMap = new Map(revenueByMonth.map((r) => [r.month, r.amount]));
+    const revenueChart = months.map((m) => ({
+      date: m.label,
+      amount: Math.round(revenueMap.get(m.label) ?? 0),
+    }));
 
-    // ── User growth chart ─────────────────────────────────────────────────
-    const userChart = months.map((m) => {
-      const count = allUsers.filter(
-        (u) => u.createdAt >= m.start && u.createdAt <= m.end
-      ).length;
-      return { date: m.label, count };
-    });
+    const userMap = new Map(usersByMonth.map((r) => [r.month, r.count]));
+    const userChart = months.map((m) => ({
+      date: m.label,
+      count: userMap.get(m.label) ?? 0,
+    }));
 
-    // ── Enrollment chart ──────────────────────────────────────────────────
-    const enrollmentChart = months.map((m) => {
-      const count = allEnrollments.filter(
-        (e) => e.enrolledAt >= m.start && e.enrolledAt <= m.end
-      ).length;
-      return { date: m.label, count };
-    });
+    const enrollmentMap = new Map(enrollmentsByMonth.map((r) => [r.month, r.count]));
+    const enrollmentChart = months.map((m) => ({
+      date: m.label,
+      count: enrollmentMap.get(m.label) ?? 0,
+    }));
 
     // ── Order distribution ────────────────────────────────────────────────
+    const statusCounts = new Map(orderStatusGroups.map((g) => [g.status, g._count._all]));
+    // Known statuses first (stable order, zero-filled), then any extras found.
     const orderDistribution = [
-      { status: "paid", count: ordersPaid, color: "#10B981" },
-      { status: "pending", count: ordersPending, color: "#F59E0B" },
-      { status: "failed", count: ordersFailed, color: "#EF4444" },
-      { status: "expired", count: ordersExpired, color: "#6B7280" },
-      { status: "refunded", count: ordersRefunded, color: "#8B5CF6" },
+      ...Object.entries(ORDER_STATUS_COLORS).map(([status, color]) => ({
+        status,
+        count: statusCounts.get(status) ?? 0,
+        color,
+      })),
+      ...orderStatusGroups
+        .filter((g) => !(g.status in ORDER_STATUS_COLORS))
+        .map((g) => ({
+          status: g.status,
+          count: g._count._all,
+          color: ORDER_STATUS_FALLBACK_COLOR,
+        })),
     ];
 
     // ── Top courses ───────────────────────────────────────────────────────
@@ -179,7 +195,7 @@ router.get("/system-health", async (_req: Request, res: Response, next: NextFunc
         },
         orders: {
           distribution: orderDistribution,
-          total: ordersTotal,
+          total: dbOrders,
         },
         topCourses: topCoursesData,
         dbOverview: {

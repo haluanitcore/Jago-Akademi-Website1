@@ -2,6 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import { z } from "zod";
 import { prisma } from "../../db/prisma.js";
 import { successResponse } from "../../types/index.js";
+import { csvCell, CSV_EXPORT_MAX_ROWS } from "../../lib/csv.js";
 
 const router = Router();
 
@@ -95,6 +96,8 @@ router.get("/orders", async (req: Request, res: Response, next: NextFunction) =>
 router.get(["/transactions/export", "/orders/export"], async (req: Request, res: Response, next: NextFunction) => {
   try {
     const orders = await prisma.order.findMany({
+      // Hard cap (see CSV_EXPORT_MAX_ROWS): keep the export bounded in memory.
+      take: CSV_EXPORT_MAX_ROWS,
       orderBy: { createdAt: "desc" },
       include: {
         user: { select: { name: true, email: true } },
@@ -103,15 +106,22 @@ router.get(["/transactions/export", "/orders/export"], async (req: Request, res:
     });
 
     const csvHeaders = "ID,User,Email,Items,Total Amount,Discount,Final Amount,Status,Created At\n";
+    // csvCell handles quote-escaping AND formula-injection (M2) for every
+    // string cell — user name/email and item titles are user-controlled input.
     const csvRows = orders.map((o) => {
-      const user = o.user.name;
-      const email = o.user.email;
       const items = o.items.map((i) => `[${i.itemType}] ${i.itemTitle}`).join("; ");
-      const safeUser = `"${user.replace(/"/g, '""')}"`;
-      const safeEmail = `"${email.replace(/"/g, '""')}"`;
-      const safeItems = `"${items.replace(/"/g, '""')}"`;
       const createdAt = o.createdAt.toISOString();
-      return `${o.id},${safeUser},${safeEmail},${safeItems},${o.totalAmount},${o.discountAmount},${o.finalAmount},${o.status},${createdAt}`;
+      return [
+        csvCell(o.id),
+        csvCell(o.user.name),
+        csvCell(o.user.email),
+        csvCell(items),
+        o.totalAmount,
+        o.discountAmount,
+        o.finalAmount,
+        csvCell(o.status),
+        createdAt,
+      ].join(",");
     }).join("\n");
 
     const csvContent = csvHeaders + csvRows;

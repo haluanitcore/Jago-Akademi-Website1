@@ -7,6 +7,7 @@ vi.mock("../../../src/db/prisma.js", () => ({
   prisma: {
     user: { findUnique: vi.fn() },
     eBook: { findMany: vi.fn(), count: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    orderItem: { count: vi.fn() },
   },
 }));
 
@@ -66,6 +67,27 @@ describe("POST /api/admin/ebooks", () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.slug).toBe("new-ebook");
   });
+
+  it("preserves salePrice 0 and pages 0 instead of coercing to null", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(VALID_ADMIN as never);
+    vi.mocked(prisma.eBook.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.eBook.create).mockResolvedValue({ id: "eb-2", slug: "free-ebook", salePrice: 0 } as never);
+
+    const res = await request(app)
+      .post("/api/admin/ebooks")
+      .set(ADMIN_AUTH)
+      .send({
+        slug: "free-ebook",
+        title: "Free Ebook",
+        price: 100000,
+        salePrice: 0,
+        fileUrl: "https://jago.id/free-ebook.pdf",
+      });
+
+    expect(res.status).toBe(201);
+    // Regression: `salePrice || null` coerced a legitimate 0 to null.
+    expect(vi.mocked(prisma.eBook.create).mock.calls[0]![0].data.salePrice).toBe(0);
+  });
 });
 
 describe("PATCH /api/admin/ebooks/:id", () => {
@@ -88,13 +110,26 @@ describe("PATCH /api/admin/ebooks/:id", () => {
 });
 
 describe("DELETE /api/admin/ebooks/:id", () => {
-  it("deletes an ebook", async () => {
+  it("deletes an ebook that was never purchased", async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(VALID_ADMIN as never);
     vi.mocked(prisma.eBook.findUnique).mockResolvedValue({ id: "eb-1" } as never);
+    vi.mocked(prisma.orderItem.count).mockResolvedValue(0);
     vi.mocked(prisma.eBook.delete).mockResolvedValue({ id: "eb-1" } as never);
 
     const res = await request(app).delete("/api/admin/ebooks/eb-1").set(ADMIN_AUTH);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+    expect(prisma.eBook.delete).toHaveBeenCalledWith({ where: { id: "eb-1" } });
+  });
+
+  it("refuses hard delete with 409 when the ebook has paid purchases (M1)", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(VALID_ADMIN as never);
+    vi.mocked(prisma.eBook.findUnique).mockResolvedValue({ id: "eb-1" } as never);
+    vi.mocked(prisma.orderItem.count).mockResolvedValue(3);
+
+    const res = await request(app).delete("/api/admin/ebooks/eb-1").set(ADMIN_AUTH);
+    expect(res.status).toBe(409);
+    expect(res.body.success).toBe(false);
+    expect(prisma.eBook.delete).not.toHaveBeenCalled();
   });
 });

@@ -90,8 +90,9 @@ router.post("/ebooks", validateBody(ebookSchema), async (req: Request, res: Resp
         coverUrl: data.coverUrl || null,
         author: data.author || null,
         category: data.category || null,
-        pages: data.pages || null,
-        salePrice: data.salePrice || null,
+        // Use ?? (not ||) so a legitimate 0 is preserved instead of coerced to null.
+        pages: data.pages ?? null,
+        salePrice: data.salePrice ?? null,
       },
     });
     res.status(201).json(successResponse(ebook));
@@ -130,6 +131,19 @@ router.delete("/ebooks/:id", async (req: Request, res: Response, next: NextFunct
     const { id } = req.params;
     const existing = await prisma.eBook.findUnique({ where: { id } });
     if (!existing) throw new AppError(404, "E-Book tidak ditemukan.");
+
+    // M1: never hard-delete a purchased e-book. Buyers resolve their library
+    // through OrderItem.itemId → eBook.id (routes/ebooks.ts GET /my), so
+    // deleting the row would silently strip paying customers of access.
+    const paidPurchases = await prisma.orderItem.count({
+      where: { itemType: "ebook", itemId: id, order: { status: "paid" } },
+    });
+    if (paidPurchases > 0) {
+      throw new AppError(
+        409,
+        "E-Book ini sudah dibeli pelanggan dan tidak dapat dihapus permanen. Ubah status menjadi 'draft' untuk mengarsipkannya."
+      );
+    }
 
     await prisma.eBook.delete({ where: { id } });
     res.json(successResponse({ message: "E-Book berhasil dihapus." }));

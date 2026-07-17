@@ -2,6 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import { z } from "zod";
 import { prisma } from "../../db/prisma.js";
 import { successResponse } from "../../types/index.js";
+import { csvCell, CSV_EXPORT_MAX_ROWS } from "../../lib/csv.js";
 
 const router = Router();
 
@@ -86,6 +87,8 @@ router.patch("/leads/:id", async (req: Request, res: Response, next: NextFunctio
 router.get("/leads/export", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const leads = await prisma.lead.findMany({
+      // Hard cap (see CSV_EXPORT_MAX_ROWS): keep the export bounded in memory.
+      take: CSV_EXPORT_MAX_ROWS,
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -101,14 +104,21 @@ router.get("/leads/export", async (req: Request, res: Response, next: NextFuncti
     });
 
     const csvHeaders = "ID,Nama,Email,Telepon,Perusahaan,Pesan,Sumber,Status,Dibuat Pada\n";
+    // csvCell handles quote-escaping AND formula-injection (M2) for every
+    // string cell — lead fields are end-user input, so all must be sanitized.
     const csvRows = leads.map((l) => {
-      const safeName = `"${l.name.replace(/"/g, '""')}"`;
-      const safeEmail = `"${l.email.replace(/"/g, '""')}"`;
-      const safePhone = `"${(l.phone ?? "").replace(/"/g, '""')}"`;
-      const safeCompany = `"${(l.company ?? "").replace(/"/g, '""')}"`;
-      const safeMessage = `"${(l.message ?? "").replace(/"/g, '""')}"`;
       const createdAt = l.createdAt.toISOString();
-      return `${l.id},${safeName},${safeEmail},${safePhone},${safeCompany},${safeMessage},${l.source},${l.status},${createdAt}`;
+      return [
+        csvCell(l.id),
+        csvCell(l.name),
+        csvCell(l.email),
+        csvCell(l.phone),
+        csvCell(l.company),
+        csvCell(l.message),
+        csvCell(l.source),
+        csvCell(l.status),
+        createdAt,
+      ].join(",");
     }).join("\n");
 
     const csvContent = csvHeaders + csvRows;

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { validateBody } from "../../middleware/validateBody.js";
 import { prisma } from "../../db/prisma.js";
 import { AppError, successResponse } from "../../types/index.js";
+import { csvCell, CSV_EXPORT_MAX_ROWS } from "../../lib/csv.js";
 
 const router = Router();
 
@@ -96,6 +97,8 @@ router.get("/users/export", async (req: Request, res: Response, next: NextFuncti
   try {
     const users = await prisma.user.findMany({
       where: { deletedAt: null },
+      // Hard cap (see CSV_EXPORT_MAX_ROWS): keep the export bounded in memory.
+      take: CSV_EXPORT_MAX_ROWS,
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -109,12 +112,20 @@ router.get("/users/export", async (req: Request, res: Response, next: NextFuncti
     });
 
     const csvHeaders = "ID,Nama,Email,Active,Verified,Role,Bergabung\n";
+    // csvCell handles quote-escaping AND formula-injection (M2) for every
+    // string cell — name/email are user-controlled input.
     const csvRows = users.map((u) => {
       const roles = u.roles.map((r) => r.role).join("; ");
       const joinedDate = u.createdAt.toISOString();
-      const safeName = `"${u.name.replace(/"/g, '""')}"`;
-      const safeEmail = `"${u.email.replace(/"/g, '""')}"`;
-      return `${u.id},${safeName},${safeEmail},${u.isActive},${u.isVerified},"${roles}",${joinedDate}`;
+      return [
+        csvCell(u.id),
+        csvCell(u.name),
+        csvCell(u.email),
+        u.isActive,
+        u.isVerified,
+        csvCell(roles),
+        joinedDate,
+      ].join(",");
     }).join("\n");
 
     const csvContent = csvHeaders + csvRows;
