@@ -4,6 +4,7 @@ import { authenticate } from "../middleware/authenticate.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { prisma } from "../db/prisma.js";
 import { AppError, successResponse } from "../types/index.js";
+import { parsePageParams, buildPaginationMeta } from "../lib/pagination.js";
 
 const router = Router();
 router.use(authenticate);
@@ -12,6 +13,13 @@ function requireTrainer(req: Request, _res: Response, next: NextFunction) {
   const roles = req.user?.roles ?? [];
   if (!roles.includes("trainer" as never) && !roles.includes("super_admin" as never)) {
     return next(new AppError(403, "Akses ditolak. Hanya trainer."));
+  }
+  next();
+}
+
+function requireSuperAdmin(req: Request, _res: Response, next: NextFunction) {
+  if (!req.user?.roles.includes("super_admin" as never)) {
+    return next(new AppError(403, "Akses ditolak."));
   }
   next();
 }
@@ -216,22 +224,33 @@ router.post("/payouts", requireTrainer, validateBody(payoutSchema), async (req: 
   }
 });
 
-// PATCH /api/trainer/payouts/:payoutId — admin approve/reject
-router.patch("/payouts/:payoutId", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const isAdmin = req.user?.roles.includes("super_admin" as never);
-    if (!isAdmin) throw new AppError(403, "Akses ditolak.");
+const payoutProcessSchema = z.object({
+  status: z.enum(["approved", "rejected", "paid"]),
+  note: z.string().max(1000).optional(),
+});
 
+// PATCH /api/trainer/payouts/:payoutId — admin approve/reject
+router.patch("/payouts/:payoutId", requireSuperAdmin, validateBody(payoutProcessSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
     const { payoutId } = req.params;
-    const { status, note } = req.body as { status: string; note?: string };
-    if (!["approved", "rejected", "paid"].includes(status)) {
-      throw new AppError(400, "Status tidak valid.");
+    const { status, note } = req.body as z.infer<typeof payoutProcessSchema>;
+
+    // Status transition guard: only a payout still awaiting processing may be
+    // approved/rejected/paid. updateMany with the status predicate makes the
+    // check-and-set atomic, so two concurrent admin clicks (or a retry) cannot
+    // process the same payout twice.
+    const result = await prisma.trainerPayout.updateMany({
+      where: { id: payoutId, status: "pending" },
+      data: { status, note: note ?? null, processedAt: new Date(), processedBy: req.user!.id },
+    });
+
+    if (result.count !== 1) {
+      const existing = await prisma.trainerPayout.findUnique({ where: { id: payoutId } });
+      if (!existing) throw new AppError(404, "Payout tidak ditemukan.");
+      throw new AppError(409, "Payout sudah diproses.");
     }
 
-    const payout = await prisma.trainerPayout.update({
-      where: { id: payoutId },
-      data: { status, note, processedAt: new Date(), processedBy: req.user!.id },
-    });
+    const payout = await prisma.trainerPayout.findUnique({ where: { id: payoutId } });
     return res.json(successResponse(payout));
   } catch (err) {
     next(err);
@@ -248,21 +267,40 @@ router.get("/reviews", requireTrainer, async (req: Request, res: Response, next:
     });
     const courseIds = courses.map((c) => c.id);
 
-    const reviews = await prisma.review.findMany({
-      where: { itemType: "course", itemId: { in: courseIds } },
-      orderBy: { createdAt: "desc" },
-      include: {
-        user: { select: { id: true, name: true, avatarUrl: true } },
-      },
-    });
-    return res.json(successResponse(reviews));
+    // Bounded pagination (same helper as other list endpoints) — an unbounded
+    // findMany here could return every review of every course at once.
+    const params = parsePageParams(req.query);
+    const where = { itemType: "course", itemId: { in: courseIds } };
+
+    const [reviews, total] = await Promise.all([
+      prisma.review.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        include: {
+          user: { select: { id: true, name: true, avatarUrl: true } },
+        },
+        skip: params.skip,
+        take: params.limit,
+      }),
+      prisma.review.count({ where }),
+    ]);
+    return res.json(successResponse(reviews, buildPaginationMeta(total, params)));
   } catch (err) {
     next(err);
   }
 });
 
 const liveSessionSchema = z.object({
-  liveZoomLink: z.string().nullable().optional(),
+  // Must be a real http(s) URL — a bare string would let a trainer store a
+  // javascript: (or other scheme) URI that executes when students click it.
+  liveZoomLink: z
+    .string()
+    .url()
+    .refine((v) => v.startsWith("https://") || v.startsWith("http://"), {
+      message: "liveZoomLink harus URL http(s).",
+    })
+    .nullable()
+    .optional(),
   liveSchedule: z.string().nullable().optional(),
 });
 
@@ -292,11 +330,36 @@ router.patch("/courses/:courseId/live", requireTrainer, validateBody(liveSession
   }
 });
 
+// C3: a trainer can never set "published"/"rejected" directly — publishing is an
+// admin decision (modules/admin/courses.ts). The only trainer-settable targets are
+// submit-for-review, take-down, and restore of a previously approved course.
 const statusUpdateSchema = z.object({
-  status: z.enum(["draft", "pending", "published", "archived", "rejected"]),
+  status: z.enum(["pending", "published", "archived"]),
 });
 
-// PATCH /api/trainer/courses/:courseId/status — toggle status (active, draft, archived, pending)
+/**
+ * C3 (self-publish bypass): server-side transition guard. A trainer may only:
+ *   draft     → pending    (submit for review)
+ *   rejected  → pending    (resubmit after admin feedback)
+ *   published → archived   (take down their own live course)
+ *   archived  → published  (restore, ONLY if the course was approved before —
+ *                           i.e. publishedAt was set by the admin approval flow)
+ * Everything else (notably draft/pending/rejected → published) is forbidden,
+ * otherwise a trainer could make an unreviewed course publicly visible.
+ */
+function isAllowedTrainerTransition(
+  current: string,
+  next: "pending" | "published" | "archived",
+  publishedAt: Date | null,
+): boolean {
+  if (next === "pending") return current === "draft" || current === "rejected";
+  if (next === "archived") return current === "published";
+  // next === "published": restore is only legal from archived AND only for a
+  // course that already went through admin approval (publishedAt set).
+  return current === "archived" && publishedAt !== null;
+}
+
+// PATCH /api/trainer/courses/:courseId/status — trainer status transitions
 router.patch("/courses/:courseId/status", requireTrainer, validateBody(statusUpdateSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const trainerId = req.user!.id;
@@ -308,18 +371,28 @@ router.patch("/courses/:courseId/status", requireTrainer, validateBody(statusUpd
     if (!course) throw new AppError(404, "Kursus tidak ditemukan.");
 
     const { status } = req.body as z.infer<typeof statusUpdateSchema>;
-    
+
+    if (!isAllowedTrainerTransition(course.status, status, course.publishedAt)) {
+      throw new AppError(403, `Transisi status ${course.status} → ${status} tidak diizinkan.`);
+    }
+
+    const data: { status: string; adminFeedback?: null } = { status };
     // Clear admin feedback if submitting for review again
-    const data: Record<string, any> = { status };
     if (status === "pending") {
       data.adminFeedback = null;
     }
 
-    const updated = await prisma.course.update({
-      where: { id: courseId },
+    // Guard against a concurrent admin decision: only apply the transition if
+    // the course is still in the status we validated against.
+    const result = await prisma.course.updateMany({
+      where: { id: courseId, trainerId, status: course.status },
       data,
     });
+    if (result.count !== 1) {
+      throw new AppError(409, "Status kursus berubah, muat ulang lalu coba lagi.");
+    }
 
+    const updated = await prisma.course.findFirst({ where: { id: courseId, trainerId } });
     return res.json(successResponse(updated));
   } catch (err) {
     next(err);
