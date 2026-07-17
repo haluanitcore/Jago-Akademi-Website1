@@ -115,6 +115,35 @@ describe("POST /api/webhooks/doku", () => {
     expect(prisma.courseEnrollment.upsert).not.toHaveBeenCalled();
   });
 
+  // Regression: a SUCCESS webhook for an order the user already cancelled must
+  // NOT grant fulfillment (coupon accounting is inconsistent) — it is flagged
+  // for manual review via logger.warn and exits gracefully (no retry loop).
+  it("does not fulfill a cancelled order and flags it for manual review", async () => {
+    const { logger } = await import("../../../src/lib/logger.js");
+    const warnSpy = vi.spyOn(logger, "warn");
+    vi.mocked(prisma.order.findUnique).mockResolvedValue({ ...mockOrder, status: "cancelled" } as never);
+
+    const res = await request(app)
+      .post("/api/webhooks/doku")
+      .set(webhookHeaders)
+      .send({
+        order: { invoice_number: "JA-ORDER1" },
+        transaction: { status: "SUCCESS" },
+        channel: { id: "VIRTUAL_ACCOUNT_BCA" },
+      });
+
+    expect(res.status).toBe(200);
+    // No fulfillment side-effects on a cancelled order.
+    expect(prisma.order.update).not.toHaveBeenCalled();
+    expect(prisma.courseEnrollment.upsert).not.toHaveBeenCalled();
+    expect(prisma.coupon.update).not.toHaveBeenCalled();
+    // A human is alerted: payment arrived for a cancelled order → manual refund.
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("cancelled"),
+      expect.objectContaining({ orderId: "order-1" }),
+    );
+  });
+
   it("grants event registration and increments sold for event items", async () => {
     vi.mocked(prisma.order.findUnique).mockResolvedValue({
       ...mockOrder,

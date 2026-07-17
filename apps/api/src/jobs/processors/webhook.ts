@@ -41,6 +41,19 @@ export async function processWebhookPayment(job: WebhookJob): Promise<void> {
     // D2); re-processing it would try to create a second unique Refund and loop.
     if (order.status === "paid" || order.status === "refund_pending") return;
 
+    // A cancelled order must never be flipped to paid: the user already released
+    // the coupon slot and abandoned the purchase, so granting fulfillment here
+    // would leave coupon/commission accounting inconsistent. The money DID move
+    // though, so flag it for a human instead of throwing (a throw would just
+    // retry-loop the job without fixing anything).
+    if (order.status === "cancelled") {
+      logger.warn("payment received for a cancelled order — needs manual review/refund", {
+        orderId: order.id,
+        invoiceNumber,
+      });
+      return;
+    }
+
     // Batch8 D2: tracks whether an event line item was full and got auto-refunded,
     // so we send the buyer a refund notice instead of a payment-success email.
     let eventFull = false;

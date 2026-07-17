@@ -10,7 +10,7 @@ vi.mock("../../../src/db/prisma.js", () => ({
     quizSubmission: { create: vi.fn() },
     courseLesson: { findUnique: vi.fn() },
     courseEnrollment: { findUnique: vi.fn(), update: vi.fn() },
-    courseLessonProgress: { upsert: vi.fn() },
+    courseLessonProgress: { upsert: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
   },
 }));
 
@@ -50,6 +50,7 @@ beforeEach(() => {
     course: { sections: [] },
     progress: [],
   } as never);
+  vi.mocked(prisma.courseLessonProgress.findUnique).mockResolvedValue(null);
 });
 
 describe("GET /api/quiz/:lessonId", () => {
@@ -117,5 +118,71 @@ describe("POST /api/quiz/:lessonId/submit", () => {
       .set(AUTH)
       .send({});
     expect(res.status).toBe(400);
+  });
+
+  // H4 regression (quiz retake erases progress): a failed retake must never
+  // downgrade a lesson that was already completed by a previous passing attempt.
+  it("failed retake keeps an already-completed lesson completed (H4)", async () => {
+    vi.mocked(prisma.quiz.findUnique).mockResolvedValue(QUIZ as never);
+    vi.mocked(prisma.quizSubmission.create).mockResolvedValue({ id: "sub-3" } as never);
+    vi.mocked(prisma.courseLessonProgress.findUnique).mockResolvedValue({
+      id: "prog-1",
+      enrollmentId: "enr-1",
+      lessonId: "lesson-1",
+      isCompleted: true,
+      watchedPct: 100,
+      completedAt: new Date("2026-01-01"),
+    } as never);
+
+    const res = await request(app)
+      .post("/api/quiz/lesson-1/submit")
+      .set(AUTH)
+      .send({ answers: { "q-1": 0, "q-2": 0 } }); // all wrong → fail
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.isPassed).toBe(false);
+    // The attempt is recorded, but progress is never downgraded.
+    expect(prisma.quizSubmission.create).toHaveBeenCalled();
+    expect(prisma.courseLessonProgress.upsert).not.toHaveBeenCalled();
+    expect(prisma.courseLessonProgress.create).not.toHaveBeenCalled();
+  });
+
+  it("passed retake keeps the original completedAt (H4)", async () => {
+    vi.mocked(prisma.quiz.findUnique).mockResolvedValue(QUIZ as never);
+    vi.mocked(prisma.quizSubmission.create).mockResolvedValue({ id: "sub-4" } as never);
+    vi.mocked(prisma.courseLessonProgress.findUnique).mockResolvedValue({
+      id: "prog-1",
+      isCompleted: true,
+      completedAt: new Date("2026-01-01"),
+    } as never);
+
+    const res = await request(app)
+      .post("/api/quiz/lesson-1/submit")
+      .set(AUTH)
+      .send({ answers: { "q-1": 1, "q-2": 1 } });
+
+    expect(res.status).toBe(200);
+    expect(prisma.courseLessonProgress.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: { isCompleted: true, watchedPct: 100 }, // no completedAt overwrite
+      }),
+    );
+  });
+
+  it("first failed attempt records a zero-progress row (H4)", async () => {
+    vi.mocked(prisma.quiz.findUnique).mockResolvedValue(QUIZ as never);
+    vi.mocked(prisma.quizSubmission.create).mockResolvedValue({ id: "sub-5" } as never);
+    vi.mocked(prisma.courseLessonProgress.findUnique).mockResolvedValue(null);
+
+    const res = await request(app)
+      .post("/api/quiz/lesson-1/submit")
+      .set(AUTH)
+      .send({ answers: { "q-1": 0, "q-2": 0 } });
+
+    expect(res.status).toBe(200);
+    expect(prisma.courseLessonProgress.create).toHaveBeenCalledWith({
+      data: { enrollmentId: "enr-1", lessonId: "lesson-1", isCompleted: false, watchedPct: 0 },
+    });
+    expect(prisma.courseLessonProgress.upsert).not.toHaveBeenCalled();
   });
 });

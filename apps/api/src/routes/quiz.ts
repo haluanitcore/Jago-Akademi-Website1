@@ -90,21 +90,38 @@ router.post(
           where: { courseId_userId: { courseId: lesson.section.courseId, userId: req.user!.id } },
         });
         if (enrollment) {
-          await prisma.courseLessonProgress.upsert({
+          // H4: progress is ratchet-only. A failed retake must never downgrade a
+          // lesson that was already completed (the old code reset isCompleted/
+          // watchedPct to false/0 unconditionally, erasing prior progress while
+          // the new attempt is still recorded in QuizSubmission above).
+          const existingProgress = await prisma.courseLessonProgress.findUnique({
             where: { enrollmentId_lessonId: { enrollmentId: enrollment.id, lessonId } },
-            update: {
-              isCompleted: isPassed,
-              watchedPct: isPassed ? 100 : 0,
-              ...(isPassed ? { completedAt: new Date() } : {}),
-            },
-            create: {
-              enrollmentId: enrollment.id,
-              lessonId,
-              isCompleted: isPassed,
-              watchedPct: isPassed ? 100 : 0,
-              ...(isPassed ? { completedAt: new Date() } : {}),
-            },
           });
+
+          if (isPassed) {
+            await prisma.courseLessonProgress.upsert({
+              where: { enrollmentId_lessonId: { enrollmentId: enrollment.id, lessonId } },
+              update: {
+                isCompleted: true,
+                watchedPct: 100,
+                // Keep the original completion timestamp on a passed retake.
+                ...(existingProgress?.isCompleted ? {} : { completedAt: new Date() }),
+              },
+              create: {
+                enrollmentId: enrollment.id,
+                lessonId,
+                isCompleted: true,
+                watchedPct: 100,
+                completedAt: new Date(),
+              },
+            });
+          } else if (!existingProgress) {
+            // First (failed) attempt: create the row so the attempt is visible,
+            // but leave any existing row untouched on failed retakes.
+            await prisma.courseLessonProgress.create({
+              data: { enrollmentId: enrollment.id, lessonId, isCompleted: false, watchedPct: 0 },
+            });
+          }
           await recalculateCourseProgress(enrollment.id);
         }
       }

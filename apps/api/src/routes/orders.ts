@@ -150,6 +150,21 @@ router.post("/:orderId/cancel", async (req, res, next) => {
     }
 
     await prisma.$transaction(async (tx) => {
+      // H5 (cancel/webhook race): the pending check above is only advisory — a
+      // DOKU webhook can mark the order paid between that read and this write.
+      // updateMany with the status predicate makes cancel atomic: it only wins
+      // if the order is STILL pending, so a paid order can never be flipped to
+      // cancelled, and two concurrent cancels can't double-decrement the coupon.
+      const cancelled = await tx.order.updateMany({
+        where: { id: orderId, userId, status: "pending" },
+        data: { status: "cancelled" },
+      });
+      if (cancelled.count !== 1) {
+        throw new AppError(409, "Pesanan sudah diproses dan tidak dapat dibatalkan.");
+      }
+
+      // Only after the cancel is confirmed do we release the coupon slot, inside
+      // the same transaction so a failure rolls both back together.
       if (order.couponId) {
         const coupon = await tx.coupon.findUnique({ where: { id: order.couponId } });
         if (coupon && coupon.usageCount > 0) {
@@ -159,11 +174,6 @@ router.post("/:orderId/cancel", async (req, res, next) => {
           });
         }
       }
-
-      await tx.order.update({
-        where: { id: orderId },
-        data: { status: "cancelled" },
-      });
     });
 
     return res.json(successResponse({ id: orderId, status: "cancelled" }));
