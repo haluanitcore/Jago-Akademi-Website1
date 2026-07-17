@@ -6,7 +6,7 @@ const isDev = env.NODE_ENV === "development";
 
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDev ? 10000 : 100,
+  max: isDev ? 10000 : 500,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, res) => {
@@ -14,9 +14,9 @@ export const generalLimiter = rateLimit({
   },
 });
 
-export const authLimiter = rateLimit({
+export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDev ? 1000 : 10,
+  max: isDev ? 1000 : 30,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, res) => {

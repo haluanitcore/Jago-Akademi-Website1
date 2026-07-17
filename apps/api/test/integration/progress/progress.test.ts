@@ -13,6 +13,7 @@ vi.mock("../../../src/db/prisma.js", () => ({
     courseLessonProgress: { upsert: vi.fn() },
     course: { findUnique: vi.fn() },
     courseLesson: { findUnique: vi.fn() },
+    quiz: { findMany: vi.fn() },
   },
 }));
 
@@ -44,6 +45,7 @@ const ENROLLMENT = {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(prisma.user.findUnique).mockResolvedValue(VALID_USER as never);
+  vi.mocked(prisma.quiz.findMany).mockResolvedValue([]);
 });
 
 describe("POST /api/progress", () => {

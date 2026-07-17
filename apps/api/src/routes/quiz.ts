@@ -4,6 +4,7 @@ import { authenticate } from "../middleware/authenticate.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { prisma } from "../db/prisma.js";
 import { AppError, successResponse } from "../types/index.js";
+import { recalculateCourseProgress } from "../services/enrollment/enrollmentService.js";
 
 const router = Router();
 
@@ -79,6 +80,34 @@ router.post(
           isPassed,
         },
       });
+
+      const lesson = await prisma.courseLesson.findUnique({
+        where: { id: lessonId },
+        select: { section: { select: { courseId: true } } },
+      });
+      if (lesson) {
+        const enrollment = await prisma.courseEnrollment.findUnique({
+          where: { courseId_userId: { courseId: lesson.section.courseId, userId: req.user!.id } },
+        });
+        if (enrollment) {
+          await prisma.courseLessonProgress.upsert({
+            where: { enrollmentId_lessonId: { enrollmentId: enrollment.id, lessonId } },
+            update: {
+              isCompleted: isPassed,
+              watchedPct: isPassed ? 100 : 0,
+              ...(isPassed ? { completedAt: new Date() } : {}),
+            },
+            create: {
+              enrollmentId: enrollment.id,
+              lessonId,
+              isCompleted: isPassed,
+              watchedPct: isPassed ? 100 : 0,
+              ...(isPassed ? { completedAt: new Date() } : {}),
+            },
+          });
+          await recalculateCourseProgress(enrollment.id);
+        }
+      }
 
       res.json(
         successResponse({

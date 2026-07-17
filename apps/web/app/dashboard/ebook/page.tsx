@@ -8,10 +8,10 @@ import { getToken } from "@/lib/auth/token";
 
 type EBook = {
   id: string;
+  slug: string;
   title: string;
   description: string | null;
   coverUrl: string | null;
-  driveUrl: string;
   purchasedAt: string;
 };
 
@@ -20,6 +20,28 @@ export default function EbookPage() {
   const [ebooks, setEbooks] = useState<EBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingSlug, setDownloadingSlug] = useState<string | null>(null);
+
+  async function handleDownload(slug: string) {
+    const token = getToken();
+    if (!token) return;
+    setDownloadingSlug(slug);
+    try {
+      const res = await fetch(`/api/ebooks/${slug}/file`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = await res.json();
+      if (body.success && body.data?.fileUrl) {
+        window.open(body.data.fileUrl, "_blank");
+      } else {
+        alert(body.error?.message ?? "Gagal mendapatkan tautan unduhan.");
+      }
+    } catch {
+      alert("Gagal mengunduh e-book.");
+    } finally {
+      setDownloadingSlug(null);
+    }
+  }
 
   useEffect(() => {
     const token = getToken();
@@ -112,22 +134,22 @@ export default function EbookPage() {
                 </p>
 
                 <div className="eb-card-actions">
-                  <a
-                    href={book.driveUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => handleDownload(book.slug)}
+                    disabled={downloadingSlug === book.slug}
                     className="eb-btn-download"
+                    style={{ border: "none", cursor: "pointer" }}
                   >
-                    ⬇️ Unduh PDF
-                  </a>
-                  <a
-                    href={book.driveUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    {downloadingSlug === book.slug ? "⏳ Memuat..." : "⬇️ Unduh PDF"}
+                  </button>
+                  <button
+                    onClick={() => handleDownload(book.slug)}
+                    disabled={downloadingSlug === book.slug}
                     className="eb-btn-view"
+                    style={{ cursor: "pointer" }}
                   >
-                    👁 Buka di Drive
-                  </a>
+                    👁 Buka File
+                  </button>
                 </div>
               </div>
             </div>

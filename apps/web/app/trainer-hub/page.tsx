@@ -63,6 +63,9 @@ export default function TrainerHubPage() {
             <Link href="/trainer-hub/profil" className="px-4 py-2 border border-[#E5E5EA] text-[#6E6E73] text-sm rounded-xl hover:bg-[#F5F5F7] transition-colors">
               Edit Profil
             </Link>
+            <Link href="/trainer-hub/ulasan" className="px-4 py-2 border border-[#E5E5EA] text-[#6E6E73] text-sm rounded-xl hover:bg-[#F5F5F7] transition-colors">
+              Ulasan Siswa
+            </Link>
             <Link href="/trainer-hub/payout" className="px-4 py-2 border border-[#0077A8] text-[#0077A8] text-sm rounded-xl hover:bg-[#E8F4F9] transition-colors">
               Tarik Saldo
             </Link>

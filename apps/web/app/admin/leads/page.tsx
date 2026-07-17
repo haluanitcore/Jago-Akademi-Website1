@@ -67,23 +67,7 @@ function fmtDate(d: string) {
   });
 }
 
-function exportCSV(leads: Lead[]) {
-  const header = ["Nama", "Email", "Telepon", "Perusahaan", "Sumber", "Status", "Tanggal", "Pesan"];
-  const rows = leads.map((l) => [
-    l.name, l.email, l.phone ?? "", l.company ?? "",
-    l.source, l.status,
-    new Date(l.createdAt).toLocaleString("id-ID"),
-    (l.message ?? "").replace(/\n/g, " "),
-  ]);
-  const csv = [header, ...rows]
-    .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
-    .join("\n");
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = `leads_${Date.now()}.csv`; a.click();
-  URL.revokeObjectURL(url);
-}
+// Secure CSV export using backend API (verifies transaction/role)
 
 // ─── Status select ────────────────────────────────────────────────────────────
 
@@ -133,7 +117,33 @@ export default function AdminLeadsPage() {
   const [source, setSource] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  async function handleExportCSV() {
+    const token = getToken();
+    if (!token) return;
+    setExporting(true);
+    try {
+      const res = await fetch("/api/admin/leads/export", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Gagal mengunduh CSV");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `leads-export-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert("Gagal mengekspor data leads.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const fetchLeads = useCallback((q: string, src: string, sts: string, pg: number) => {
     const token = getToken();
@@ -205,16 +215,18 @@ export default function AdminLeadsPage() {
         </div>
         <button
           id="leads-export-csv-btn"
-          onClick={() => exportCSV(leads)}
+          onClick={handleExportCSV}
+          disabled={exporting}
           style={{
             display: "flex", alignItems: "center", gap: 6,
             padding: "8px 16px", borderRadius: 10,
             background: "white", border: "1.5px solid #E5E5EA",
             fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#1D1D1F",
+            opacity: exporting ? 0.6 : 1,
           }}
         >
           <Download size={15} aria-hidden="true" />
-          Export CSV
+          {exporting ? "Mengekspor..." : "Export CSV"}
         </button>
       </div>
 

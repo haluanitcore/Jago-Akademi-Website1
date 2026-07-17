@@ -5,6 +5,7 @@ import { prisma } from "../../db/prisma.js";
 import { hashPassword } from "../../services/auth/hash.js";
 import { writeAudit } from "../../services/audit/log.js";
 import { validateBody } from "../../middleware/validateBody.js";
+import { loginLimiter } from "../../middleware/rateLimiter.js";
 import { AppError, successResponse } from "../../types/index.js";
 import { env } from "../../config/env.js";
 import { getIp, passwordSchema } from "./shared.js";
@@ -16,6 +17,7 @@ const forgotSchema = z.object({ email: z.string().email() });
 
 router.post(
   "/forgot-password",
+  loginLimiter,
   validateBody(forgotSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {

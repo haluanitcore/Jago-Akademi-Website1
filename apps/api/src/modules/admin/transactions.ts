@@ -91,5 +91,37 @@ router.get("/orders", async (req: Request, res: Response, next: NextFunction) =>
     next(err);
   }
 });
+// GET /api/admin/transactions/export or /orders/export — export all orders as CSV
+router.get(["/transactions/export", "/orders/export"], async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const orders = await prisma.order.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: { select: { name: true, email: true } },
+        items: { select: { itemType: true, itemTitle: true } },
+      },
+    });
+
+    const csvHeaders = "ID,User,Email,Items,Total Amount,Discount,Final Amount,Status,Created At\n";
+    const csvRows = orders.map((o) => {
+      const user = o.user.name;
+      const email = o.user.email;
+      const items = o.items.map((i) => `[${i.itemType}] ${i.itemTitle}`).join("; ");
+      const safeUser = `"${user.replace(/"/g, '""')}"`;
+      const safeEmail = `"${email.replace(/"/g, '""')}"`;
+      const safeItems = `"${items.replace(/"/g, '""')}"`;
+      const createdAt = o.createdAt.toISOString();
+      return `${o.id},${safeUser},${safeEmail},${safeItems},${o.totalAmount},${o.discountAmount},${o.finalAmount},${o.status},${createdAt}`;
+    }).join("\n");
+
+    const csvContent = csvHeaders + csvRows;
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", 'attachment; filename="transactions-export.csv"');
+    return res.send(csvContent);
+  } catch (err) {
+    next(err);
+  }
+});
 
 export default router;

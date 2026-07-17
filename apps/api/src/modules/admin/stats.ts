@@ -4,10 +4,20 @@ import { successResponse } from "../../types/index.js";
 
 const router = Router();
 
-// GET /api/admin/stats — system-wide dashboard stats
 router.get("/stats", async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const [totalUsers, totalCourses, totalEnrollments, totalRevenue, pendingCourses] = await Promise.all([
+    const [
+      totalUsers,
+      totalCourses,
+      totalEnrollments,
+      totalRevenueAgg,
+      pendingCourses,
+      activeSubscriptions,
+      totalRefundedOrders,
+      totalPaidOrders,
+      avgRatingAgg,
+      retailOrders,
+    ] = await Promise.all([
       prisma.user.count({ where: { deletedAt: null } }),
       prisma.course.count(),
       prisma.courseEnrollment.count(),
@@ -16,15 +26,39 @@ router.get("/stats", async (_req: Request, res: Response, next: NextFunction) =>
         where: { status: "paid" },
       }),
       prisma.course.count({ where: { status: "draft" } }),
+      prisma.subscription.count({ where: { status: "active" } }),
+      prisma.order.count({ where: { status: "refunded" } }),
+      prisma.order.count({ where: { status: { in: ["paid", "refunded"] } } }),
+      prisma.review.aggregate({
+        _avg: { rating: true },
+      }),
+      prisma.order.findMany({
+        where: {
+          status: "paid",
+          items: {
+            none: { itemType: "subscription" }
+          }
+        },
+        select: { finalAmount: true }
+      }),
     ]);
+
+    const totalRevenue = Number(totalRevenueAgg._sum.finalAmount ?? 0);
+    const refundRate = totalPaidOrders > 0 ? Number(((totalRefundedOrders / totalPaidOrders) * 100).toFixed(2)) : 0;
+    const avgRating = Number(avgRatingAgg._avg.rating ?? 0).toFixed(1);
+    const retailRevenue = retailOrders.reduce((sum, o) => sum + Number(o.finalAmount), 0);
 
     res.json(
       successResponse({
         totalUsers,
         totalCourses,
         totalEnrollments,
-        totalRevenue: Number(totalRevenue._sum.finalAmount ?? 0),
+        totalRevenue,
         pendingCourses,
+        activeSubscriptions,
+        refundRate,
+        avgRating: Number(avgRating),
+        retailRevenue,
       })
     );
   } catch (err) {

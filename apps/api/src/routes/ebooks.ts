@@ -30,16 +30,17 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-// GET /api/ebooks/my — list ebooks owned by authenticated user
 router.get("/my", authenticate, async (req, res, next) => {
   try {
-    // Find all ebook IDs from paid orders
     const orderItems = await prisma.orderItem.findMany({
       where: {
         itemType: "ebook",
         order: { userId: req.user!.id, status: "paid" },
       },
-      select: { itemId: true },
+      select: {
+        itemId: true,
+        order: { select: { paidAt: true } },
+      },
     });
 
     const ebookIds = orderItems.map((oi) => oi.itemId);
@@ -50,7 +51,15 @@ router.get("/my", authenticate, async (req, res, next) => {
       orderBy: { createdAt: "desc" },
     });
 
-    return res.json(successResponse(ebooks));
+    const mapped = ebooks.map((eb) => {
+      const item = orderItems.find((oi) => oi.itemId === eb.id);
+      return {
+        ...eb,
+        purchasedAt: item?.order.paidAt ?? eb.createdAt,
+      };
+    });
+
+    return res.json(successResponse(mapped));
   } catch (err) {
     next(err);
   }

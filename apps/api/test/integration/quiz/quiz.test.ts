@@ -6,8 +6,11 @@ import jwt from "jsonwebtoken";
 vi.mock("../../../src/db/prisma.js", () => ({
   prisma: {
     user: { findUnique: vi.fn() },
-    quiz: { findUnique: vi.fn() },
+    quiz: { findUnique: vi.fn(), findMany: vi.fn() },
     quizSubmission: { create: vi.fn() },
+    courseLesson: { findUnique: vi.fn() },
+    courseEnrollment: { findUnique: vi.fn(), update: vi.fn() },
+    courseLessonProgress: { upsert: vi.fn() },
   },
 }));
 
@@ -35,6 +38,18 @@ const QUIZ = {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(prisma.user.findUnique).mockResolvedValue(VALID_USER as never);
+  vi.mocked(prisma.quiz.findMany).mockResolvedValue([]);
+  vi.mocked(prisma.courseLesson.findUnique).mockResolvedValue({
+    section: { courseId: "course-1" },
+  } as never);
+  vi.mocked(prisma.courseEnrollment.findUnique).mockResolvedValue({
+    id: "enr-1",
+    userId: "user-1",
+    courseId: "course-1",
+    isCompleted: false,
+    course: { sections: [] },
+    progress: [],
+  } as never);
 });
 
 describe("GET /api/quiz/:lessonId", () => {

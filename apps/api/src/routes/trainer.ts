@@ -98,19 +98,52 @@ router.get("/courses/:courseId/analytics", requireTrainer, async (req: Request, 
 
     const completedCount = course.enrollments.filter((e) => e.completedAt != null).length;
 
+    // Calculate lesson watch stats and drop-off rate
+    const lessonStats = [];
+    const totalEnrolled = course.enrollments.length;
+    for (const sec of course.sections) {
+      for (const les of sec.lessons) {
+        const stats = await prisma.courseLessonProgress.aggregate({
+          _avg: { watchedPct: true },
+          where: { lessonId: les.id },
+        });
+        const completedLessonsCount = await prisma.courseLessonProgress.count({
+          where: { lessonId: les.id, isCompleted: true },
+        });
+
+        const dropOffRate = totalEnrolled > 0
+          ? Math.round(((totalEnrolled - completedLessonsCount) / totalEnrolled) * 100)
+          : 0;
+
+        lessonStats.push({
+          lessonId: les.id,
+          title: les.title,
+          sectionTitle: sec.title,
+          avgWatchPct: Number(stats._avg.watchedPct ?? 0),
+          completedCount: completedLessonsCount,
+          dropOffRate,
+        });
+      }
+    }
+
     return res.json(successResponse({
       courseId,
       title: course.title,
       totalLessons,
-      totalEnrollments: course.enrollments.length,
+      totalEnrollments: totalEnrolled,
       completedCount,
-      completionRate: course.enrollments.length > 0
-        ? Math.round((completedCount / course.enrollments.length) * 100)
+      completionRate: totalEnrolled > 0
+        ? Math.round((completedCount / totalEnrolled) * 100)
         : 0,
       grossRevenue: Number(revenueAgg._sum.totalPrice ?? 0),
       netRevenue: Number(revenueAgg._sum.totalPrice ?? 0) * 0.7,
       avgRating: Number(reviewAgg._avg.rating ?? 0),
       reviewCount: reviewAgg._count.id,
+      adminFeedback: course.adminFeedback,
+      liveZoomLink: course.liveZoomLink,
+      liveSchedule: course.liveSchedule ? course.liveSchedule.toISOString() : null,
+      status: course.status,
+      lessons: lessonStats,
     }));
   } catch (err) {
     next(err);
@@ -200,6 +233,94 @@ router.patch("/payouts/:payoutId", async (req: Request, res: Response, next: Nex
       data: { status, note, processedAt: new Date(), processedBy: req.user!.id },
     });
     return res.json(successResponse(payout));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/trainer/reviews — reviews of trainer's courses
+router.get("/reviews", requireTrainer, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const trainerId = req.user!.id;
+    const courses = await prisma.course.findMany({
+      where: { trainerId },
+      select: { id: true },
+    });
+    const courseIds = courses.map((c) => c.id);
+
+    const reviews = await prisma.review.findMany({
+      where: { itemType: "course", itemId: { in: courseIds } },
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: { select: { id: true, name: true, avatarUrl: true } },
+      },
+    });
+    return res.json(successResponse(reviews));
+  } catch (err) {
+    next(err);
+  }
+});
+
+const liveSessionSchema = z.object({
+  liveZoomLink: z.string().nullable().optional(),
+  liveSchedule: z.string().nullable().optional(),
+});
+
+// PATCH /api/trainer/courses/:courseId/live — set Zoom link and live schedule
+router.patch("/courses/:courseId/live", requireTrainer, validateBody(liveSessionSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const trainerId = req.user!.id;
+    const { courseId } = req.params;
+
+    const course = await prisma.course.findFirst({
+      where: { id: courseId, trainerId },
+    });
+    if (!course) throw new AppError(404, "Kursus tidak ditemukan.");
+
+    const { liveZoomLink, liveSchedule } = req.body as z.infer<typeof liveSessionSchema>;
+    const updated = await prisma.course.update({
+      where: { id: courseId },
+      data: {
+        liveZoomLink: liveZoomLink || null,
+        liveSchedule: liveSchedule ? new Date(liveSchedule) : null,
+      },
+    });
+
+    return res.json(successResponse(updated));
+  } catch (err) {
+    next(err);
+  }
+});
+
+const statusUpdateSchema = z.object({
+  status: z.enum(["draft", "pending", "published", "archived", "rejected"]),
+});
+
+// PATCH /api/trainer/courses/:courseId/status — toggle status (active, draft, archived, pending)
+router.patch("/courses/:courseId/status", requireTrainer, validateBody(statusUpdateSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const trainerId = req.user!.id;
+    const { courseId } = req.params;
+
+    const course = await prisma.course.findFirst({
+      where: { id: courseId, trainerId },
+    });
+    if (!course) throw new AppError(404, "Kursus tidak ditemukan.");
+
+    const { status } = req.body as z.infer<typeof statusUpdateSchema>;
+    
+    // Clear admin feedback if submitting for review again
+    const data: Record<string, any> = { status };
+    if (status === "pending") {
+      data.adminFeedback = null;
+    }
+
+    const updated = await prisma.course.update({
+      where: { id: courseId },
+      data,
+    });
+
+    return res.json(successResponse(updated));
   } catch (err) {
     next(err);
   }

@@ -10,7 +10,8 @@ const NAV_GROUPS = [
   {
     label: "Utama",
     items: [
-      { href: "/admin/dashboard", label: "Dashboard", icon: "📊", exact: true },
+      { href: "/admin/dashboard",     label: "Dashboard",  icon: "📊", exact: true },
+      { href: "/admin/sistem-health", label: "Kesehatan",  icon: "📈" },
     ],
   },
   {
@@ -20,6 +21,7 @@ const NAV_GROUPS = [
       { href: "/admin/blog",     label: "Blog",      icon: "✍️" },
       { href: "/admin/event",    label: "Event",     icon: "🎫" },
       { href: "/admin/review",   label: "Review",    icon: "⭐" },
+      { href: "/admin/ebook",    label: "E-Book",    icon: "📘" },
     ],
   },
   {
@@ -27,6 +29,7 @@ const NAV_GROUPS = [
     items: [
       { href: "/admin/pengguna",  label: "Pengguna",  icon: "👥" },
       { href: "/admin/transaksi", label: "Transaksi", icon: "💳" },
+      { href: "/admin/payout",    label: "Payout",    icon: "💰" },
       { href: "/admin/leads",     label: "Leads",     icon: "📋" },
       { href: "/admin/kupon",     label: "Kupon",     icon: "🏷️" },
       { href: "/admin/lms",       label: "LMS B2B",   icon: "🏢" },
@@ -152,7 +155,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
             )}
           </div>
-          <Link href="/dashboard" className={`al-back-btn ${collapsed ? "al-back-btn-sm" : ""}`} title="Kembali ke situs">
+          <Link href="/" className={`al-back-btn ${collapsed ? "al-back-btn-sm" : ""}`} title="Kembali ke situs">
             <span>↩</span>
             {!collapsed && <span>Situs Utama</span>}
           </Link>
@@ -217,6 +220,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           padding: 18px 14px;
           border-bottom: 1px solid rgba(255,255,255,0.08);
           min-height: 68px;
+          flex-shrink: 0;
         }
         .al-logo-wrap { display: flex; align-items: center; gap: 10px; overflow: hidden; }
         .al-logo-img { border-radius: 8px; flex-shrink: 0; }
@@ -233,7 +237,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
         .al-collapse-btn:hover { background: rgba(255,255,255,0.15); color: white; }
 
-        .al-nav { flex: 1; padding: 12px 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+        .al-nav { flex: 1; min-height: 0; padding: 12px 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+        .al-nav::-webkit-scrollbar { width: 4px; }
+        .al-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+        .al-nav::-webkit-scrollbar-track { background: transparent; }
         .al-nav-group { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
         .al-group-label {
           font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.25);
@@ -261,6 +268,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           padding: 12px 8px 16px;
           border-top: 1px solid rgba(255,255,255,0.08);
           display: flex; flex-direction: column; gap: 8px;
+          flex-shrink: 0;
         }
         .al-admin-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
         .al-admin-avatar {

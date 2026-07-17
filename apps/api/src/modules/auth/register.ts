@@ -7,6 +7,7 @@ import { sendVerificationEmail } from "../../services/notification/emailService.
 import { writeAudit } from "../../services/audit/log.js";
 import { logger } from "../../lib/logger.js";
 import { validateBody } from "../../middleware/validateBody.js";
+import { loginLimiter } from "../../middleware/rateLimiter.js";
 import { AppError, successResponse } from "../../types/index.js";
 import { env } from "../../config/env.js";
 import { getIp, passwordSchema } from "./shared.js";
@@ -23,6 +24,7 @@ const registerSchema = z.object({
 
 router.post(
   "/register",
+  loginLimiter,
   validateBody(registerSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {

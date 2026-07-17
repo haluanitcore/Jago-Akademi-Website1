@@ -9,7 +9,7 @@ const router = Router();
 const CourseListSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
-  status: z.enum(["draft", "published", "archived"]).optional(),
+  status: z.enum(["draft", "pending", "published", "rejected", "archived"]).optional(),
   search: z.string().optional(),
 });
 
@@ -19,12 +19,14 @@ router.get("/courses", async (req: Request, res: Response, next: NextFunction) =
     const { page, limit, status, search } = CourseListSchema.parse(req.query);
     const skip = (page - 1) * limit;
 
-    const where = {
-      ...(status ? { status } : {}),
-      ...(search
-        ? { title: { contains: search, mode: "insensitive" as const } }
-        : {}),
-    };
+    const where: Record<string, unknown> = {};
+    if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" as const } },
+        { trainer: { name: { contains: search, mode: "insensitive" as const } } },
+      ];
+    }
 
     const [courses, total] = await Promise.all([
       prisma.course.findMany({
@@ -37,27 +39,56 @@ router.get("/courses", async (req: Request, res: Response, next: NextFunction) =
           title: true,
           slug: true,
           status: true,
+          level: true,
           price: true,
+          salePrice: true,
           totalEnrolled: true,
+          avgRating: true,
+          isFeatured: true,
+          adminFeedback: true,
           publishedAt: true,
           createdAt: true,
-          trainer: { select: { id: true, name: true } },
+          trainer: { select: { id: true, name: true, email: true } },
           category: { select: { name: true } },
+          _count: { select: { sections: true } },
         },
       }),
       prisma.course.count({ where }),
     ]);
 
-    res.json(successResponse(courses, { total, page, limit }));
+    res.json(successResponse({ courses, total, page, limit }));
   } catch (err) {
     next(err);
   }
 });
 
-// PATCH /api/admin/courses/:id — generic course update (status, isFeatured)
+// GET /api/admin/courses/:id — get course detail for admin
+router.get("/courses/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const course = await prisma.course.findUnique({
+      where: { id: req.params.id },
+      include: {
+        trainer: { select: { id: true, name: true, email: true } },
+        category: { select: { id: true, name: true } },
+        sections: {
+          include: {
+            lessons: true,
+          },
+        },
+      },
+    });
+    if (!course) throw new AppError(404, "Kursus tidak ditemukan.");
+    res.json(successResponse(course));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/admin/courses/:id — generic course update (status, isFeatured, adminFeedback)
 const AdminCourseUpdateSchema = z.object({
-  status: z.enum(["draft", "published", "archived"]).optional(),
+  status: z.enum(["draft", "pending", "published", "rejected", "archived"]).optional(),
   isFeatured: z.boolean().optional(),
+  adminFeedback: z.string().nullable().optional(),
 });
 
 router.patch("/courses/:id", validateBody(AdminCourseUpdateSchema), async (req: Request, res: Response, next: NextFunction) => {
@@ -65,17 +96,31 @@ router.patch("/courses/:id", validateBody(AdminCourseUpdateSchema), async (req: 
     const course = await prisma.course.findUnique({ where: { id: req.params.id } });
     if (!course) return next(new AppError(404, "Kursus tidak ditemukan."));
 
-    const { status, isFeatured } = req.body as z.infer<typeof AdminCourseUpdateSchema>;
+    const { status, isFeatured, adminFeedback } = req.body as z.infer<typeof AdminCourseUpdateSchema>;
     const data: Record<string, unknown> = {};
-    if (status === "published") { data.status = "published"; data.publishedAt = new Date(); }
-    else if (status === "draft") { data.status = "draft"; data.publishedAt = null; }
-    else if (status === "archived") { data.status = "archived"; }
+    if (status === "published") {
+      data.status = "published";
+      data.publishedAt = new Date();
+      data.adminFeedback = null;
+    } else if (status === "draft") {
+      data.status = "draft";
+      data.publishedAt = null;
+      if (adminFeedback !== undefined) data.adminFeedback = adminFeedback;
+    } else if (status === "rejected") {
+      data.status = "rejected";
+      data.publishedAt = null;
+      if (adminFeedback !== undefined) data.adminFeedback = adminFeedback;
+    } else if (status === "pending") {
+      data.status = "pending";
+    } else if (status === "archived") {
+      data.status = "archived";
+    }
     if (typeof isFeatured === "boolean") data.isFeatured = isFeatured;
 
     const updated = await prisma.course.update({
       where: { id: req.params.id },
       data,
-      select: { id: true, title: true, status: true, isFeatured: true, publishedAt: true },
+      select: { id: true, title: true, status: true, isFeatured: true, publishedAt: true, adminFeedback: true },
     });
 
     res.json(successResponse(updated));

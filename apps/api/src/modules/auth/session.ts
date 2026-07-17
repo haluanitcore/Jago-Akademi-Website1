@@ -6,7 +6,7 @@ import {
   REFRESH_COOKIE,
 } from "../../services/auth/token.js";
 import { AppError, successResponse } from "../../types/index.js";
-import { issueTokens } from "./shared.js";
+import { issueTokens, COOKIE_OPTIONS } from "./shared.js";
 
 const router = Router();
 
@@ -23,7 +23,7 @@ router.post(
           data: { revokedAt: new Date() },
         });
       }
-      res.clearCookie(REFRESH_COOKIE, { path: "/" });
+      res.clearCookie(REFRESH_COOKIE, COOKIE_OPTIONS);
       res.json(successResponse({ message: "Berhasil keluar." }));
     } catch (err) {
       next(err);

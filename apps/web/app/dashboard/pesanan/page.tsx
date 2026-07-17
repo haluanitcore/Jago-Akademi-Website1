@@ -19,6 +19,7 @@ const STATUS_LABEL: Record<string, { label: string; className: string }> = {
   pending: { label: "Menunggu Pembayaran",  className: "badge-pending" },
   failed:  { label: "Gagal",               className: "badge-failed" },
   expired: { label: "Kedaluwarsa",          className: "badge-expired" },
+  cancelled: { label: "Dibatalkan",         className: "badge-expired" },
 };
 
 const TYPE_ICON: Record<string, string> = {
@@ -35,7 +36,34 @@ export default function PesananDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const limit = 10;
+
+  async function handleCancelOrder(orderId: string) {
+    const token = getToken();
+    if (!token) return;
+    if (!confirm("Apakah Anda yakin ingin membatalkan pesanan ini?")) return;
+
+    setCancellingId(orderId);
+    try {
+      const res = await fetch(`/api/orders/${orderId}/cancel`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = await res.json();
+      if (body.success) {
+        setOrders((prev) =>
+          prev.map((o) => (o.id === orderId ? { ...o, status: "cancelled" } : o))
+        );
+      } else {
+        alert(body.error?.message ?? "Gagal membatalkan pesanan.");
+      }
+    } catch {
+      alert("Gagal menghubungi server.");
+    } finally {
+      setCancellingId(null);
+    }
+  }
 
   useEffect(() => {
     const token = getToken();
@@ -108,10 +136,29 @@ export default function PesananDashboardPage() {
                       Rp {Number(order.finalAmount).toLocaleString("id-ID")}
                     </p>
                     <span className={`po-badge ${status.className}`}>{status.label}</span>
-                    <div className="po-card-actions">
+                    <div className="po-card-actions" style={{ alignItems: "center" }}>
                       <Link href={`/pesanan/${order.id}`} className="po-detail-link">
                         Lihat Detail →
                       </Link>
+                      {order.status === "pending" && (
+                        <button
+                          onClick={() => handleCancelOrder(order.id)}
+                          disabled={cancellingId === order.id}
+                          className="po-cancel-btn"
+                          style={{
+                            background: "none",
+                            border: "none",
+                            padding: 0,
+                            cursor: "pointer",
+                            fontSize: "12px",
+                            color: "#DC2626",
+                            fontWeight: 600,
+                            opacity: cancellingId === order.id ? 0.5 : 1,
+                          }}
+                        >
+                          {cancellingId === order.id ? "Batal..." : "Batalkan"}
+                        </button>
+                      )}
                       {order.status === "paid" && (
                         <a
                           href={`/api/orders/${order.id}/invoice`}

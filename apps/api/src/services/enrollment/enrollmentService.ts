@@ -100,7 +100,7 @@ export async function updateLessonProgress(
   return progress;
 }
 
-async function recalculateCourseProgress(enrollmentId: string) {
+export async function recalculateCourseProgress(enrollmentId: string) {
   const enrollment = await prisma.courseEnrollment.findUnique({
     where: { id: enrollmentId },
     include: {
@@ -112,21 +112,61 @@ async function recalculateCourseProgress(enrollmentId: string) {
   });
   if (!enrollment) return;
 
-  // Belt-and-suspenders: only count progress rows whose lesson is part of THIS
-  // course. Even if a stray progress row for a foreign lesson exists, it can no
-  // longer inflate the completion percentage above the true course size.
   const courseLessonIds = new Set(
     enrollment.course.sections.flatMap((s) => s.lessons.map((l) => l.id)),
   );
-  const totalLessons = courseLessonIds.size;
-  if (totalLessons === 0) return;
+  if (courseLessonIds.size === 0) return;
 
-  const completedCount = enrollment.progress.filter(
-    (p) => p.isCompleted && courseLessonIds.has(p.lessonId),
-  ).length;
-  const progressPct = Math.round((completedCount / totalLessons) * 100);
+  // Find which of these lessons are quizzes
+  const quizzes = await prisma.quiz.findMany({
+    where: { lessonId: { in: Array.from(courseLessonIds) } },
+    select: { lessonId: true },
+  });
+  const quizLessonIds = new Set(quizzes.map((q) => q.lessonId));
+
+  let totalVideos = 0;
+  let totalQuizzes = 0;
+  let completedVideos = 0;
+  let completedQuizzes = 0;
+
+  for (const lessonId of courseLessonIds) {
+    const isQuiz = quizLessonIds.has(lessonId);
+    const prog = enrollment.progress.find((p) => p.lessonId === lessonId);
+    const isCompleted = prog?.isCompleted ?? false;
+
+    if (isQuiz) {
+      totalQuizzes++;
+      if (isCompleted) {
+        completedQuizzes++;
+      }
+    } else {
+      totalVideos++;
+      if (isCompleted) {
+        completedVideos++;
+      }
+    }
+  }
+
+  let videoPct = 100;
+  let quizPct = 100;
+
+  if (totalVideos > 0) {
+    videoPct = (completedVideos / totalVideos) * 100;
+  }
+  if (totalQuizzes > 0) {
+    quizPct = (completedQuizzes / totalQuizzes) * 100;
+  }
+
+  let progressPct = 0;
+  if (totalVideos > 0 && totalQuizzes > 0) {
+    progressPct = Math.round((videoPct * 0.7) + (quizPct * 0.3));
+  } else if (totalVideos > 0) {
+    progressPct = Math.round(videoPct);
+  } else if (totalQuizzes > 0) {
+    progressPct = Math.round(quizPct);
+  }
+
   const isCompleted = progressPct >= 80;
-
   const justCompleted = isCompleted && !enrollment.isCompleted;
 
   await prisma.courseEnrollment.update({
@@ -139,7 +179,6 @@ async function recalculateCourseProgress(enrollmentId: string) {
   });
 
   if (justCompleted) {
-    // Non-blocking: queued in prod, inline in dev/test; idempotent per (user, course).
     await enqueueCertificate({ type: "issue", userId: enrollment.userId, courseId: enrollment.courseId });
   }
 }

@@ -157,6 +157,9 @@ model Course {
   publishedAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  adminFeedback String?
+  liveZoomLink  String?
+  liveSchedule  DateTime?
 
   category     CourseCategory?    @relation(fields: [categoryId], references: [id])
   trainer      User               @relation("TrainerCourses", fields: [trainerId], references: [id])
@@ -786,7 +789,9 @@ model AffiliateWithdrawal {
   accountNo   String
   accountName String
   status      String    @default("pending") // pending | approved | rejected | paid
+  note        String?
   processedAt DateTime?
+  processedBy String?
   requestedAt DateTime  @default(now())
 
   affiliate Affiliate @relation(fields: [affiliateId], references: [id])

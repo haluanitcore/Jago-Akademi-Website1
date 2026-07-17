@@ -7,6 +7,7 @@ const API_PATH = "";  // Empty = relative, Next.js proxy handles routing to back
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
   try {
     const res = await fetch(`${API_PATH}${path}`, {
+      credentials: "include",
       ...init,
       headers: { "Content-Type": "application/json", ...init?.headers },
     });

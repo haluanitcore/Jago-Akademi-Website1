@@ -28,7 +28,7 @@ router.get(
         return next(new AppError(400, "Parameter OAuth tidak valid."));
       }
 
-      res.clearCookie("oauth_state");
+      res.clearCookie("oauth_state", { httpOnly: true, secure: env.COOKIE_SECURE, sameSite: "lax" });
 
       const profile = await exchangeGoogleCode(code);
       const ip = getIp(req);

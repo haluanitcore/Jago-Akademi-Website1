@@ -74,8 +74,20 @@ export default function TrainerCoursesPage() {
                     <td className="px-4 py-4 text-center text-[#6E6E73]">{c.enrollments.toLocaleString("id-ID")}</td>
                     <td className="px-4 py-4 text-right text-[#1D1D1F]">Rp {c.price.toLocaleString("id-ID")}</td>
                     <td className="px-4 py-4 text-center">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${c.status === "published" ? "bg-green-100 text-green-700" : "bg-[#F5F5F7] text-[#6E6E73]"}`}>
-                        {c.status === "published" ? "Aktif" : "Draft"}
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                        c.status === "published" ? "bg-green-100 text-green-700" :
+                        c.status === "pending" ? "bg-yellow-100 text-yellow-700" :
+                        c.status === "rejected" ? "bg-rose-100 text-rose-700" :
+                        c.status === "archived" ? "bg-red-100 text-red-700" :
+                        "bg-gray-100 text-gray-700"
+                      }`}>
+                        {
+                          c.status === "published" ? "Aktif" :
+                          c.status === "pending" ? "Review" :
+                          c.status === "rejected" ? "Ditolak" :
+                          c.status === "archived" ? "Arsip" :
+                          "Draft"
+                        }
                       </span>
                     </td>
                     <td className="px-4 py-4 text-center">

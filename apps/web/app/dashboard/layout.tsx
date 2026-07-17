@@ -18,7 +18,13 @@ const NAV_ITEMS = [
   { href: "/dashboard/profil", label: "Profil Saya", icon: ProfileIcon },
 ];
 
-type UserInfo = { name: string; email: string; avatarUrl: string | null; roles?: {role: string}[] };
+type UserInfo = {
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  roles?: {role: string}[];
+  subscription?: { status: string; expiresAt: string } | null;
+};
 type LmsTenant = { id: string; name: string; slug: string };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -63,7 +69,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const roleNames: string[] = (body.data.roles ?? []).map(
         (r: { role: string } | string) => (typeof r === "string" ? r : r.role)
       );
-      setIsAdmin(roleNames.some((r) => ["admin", "super_admin"].includes(r)));
+      if (roleNames.some((r) => ["admin", "super_admin"].includes(r))) {
+        router.replace("/admin/dashboard");
+        return;
+      }
+      if (roleNames.includes("trainer")) {
+        router.replace("/trainer-hub");
+        return;
+      }
+      setIsAdmin(false);
 
       // Fetch LMS tenants for this user
       fetch("/api/lms/portal/me", { headers: { Authorization: `Bearer ${token}` } })
@@ -120,7 +134,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
           </div>
           <div className="sidebar-user-info">
-            <p className="sidebar-user-name">{user?.name ?? "Memuat..."}</p>
+            <p className="sidebar-user-name" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span>{user?.name ?? "Memuat..."}</span>
+              {user?.subscription?.status === "active" && (
+                <span className="pro-badge">PRO</span>
+              )}
+            </p>
             <p className="sidebar-user-email">{user?.email ?? ""}</p>
           </div>
         </div>
@@ -207,6 +226,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       <style jsx global>{`
+        /* ── Notion Pro Badge ── */
+        .pro-badge {
+          background: #EBE5FC;
+          color: #7C3AED;
+          font-size: 9px;
+          font-weight: 800;
+          padding: 1.5px 5px;
+          border-radius: 4px;
+          letter-spacing: 0.05em;
+          border: 1px solid rgba(124, 58, 237, 0.2);
+          display: inline-block;
+          line-height: 1;
+        }
+
         /* ── Root layout ── */
         .dashboard-root {
           display: flex;

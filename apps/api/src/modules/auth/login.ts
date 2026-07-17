@@ -4,6 +4,7 @@ import { prisma } from "../../db/prisma.js";
 import { verifyPassword } from "../../services/auth/hash.js";
 import { writeAudit } from "../../services/audit/log.js";
 import { validateBody } from "../../middleware/validateBody.js";
+import { loginLimiter } from "../../middleware/rateLimiter.js";
 import { AppError, successResponse } from "../../types/index.js";
 import { env } from "../../config/env.js";
 import { getIp, issueTokens } from "./shared.js";
@@ -18,6 +19,7 @@ const loginSchema = z.object({
 
 router.post(
   "/login",
+  loginLimiter,
   validateBody(loginSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {

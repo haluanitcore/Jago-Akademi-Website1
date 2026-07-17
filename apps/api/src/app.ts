@@ -6,7 +6,7 @@ import path from "node:path";
 
 import { env } from "./config/env.js";
 import { httpLogger } from "./middleware/httpLogger.js";
-import { generalLimiter, authLimiter } from "./middleware/rateLimiter.js";
+import { generalLimiter } from "./middleware/rateLimiter.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 import healthRouter from "./routes/health.js";
 import authRouter from "./routes/auth.js";
@@ -72,7 +72,7 @@ app.use(generalLimiter);
 app.use("/uploads", express.static(path.join(process.cwd(), env.UPLOAD_DIR)));
 
 app.use("/api", healthRouter);
-app.use("/api/auth", authLimiter, authRouter);
+app.use("/api/auth", authRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/certificates", certificatesRouter);
 app.use("/api/courses", coursesRouter);

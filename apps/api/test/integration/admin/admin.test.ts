@@ -8,7 +8,9 @@ vi.mock("../../../src/db/prisma.js", () => ({
     user: { findUnique: vi.fn(), count: vi.fn(), findMany: vi.fn(), update: vi.fn() },
     course: { count: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     courseEnrollment: { count: vi.fn() },
-    order: { aggregate: vi.fn() },
+    order: { aggregate: vi.fn(), count: vi.fn(), findMany: vi.fn() },
+    subscription: { count: vi.fn() },
+    review: { aggregate: vi.fn() },
   },
 }));
 
@@ -56,6 +58,10 @@ describe("GET /api/admin/stats", () => {
     vi.mocked(prisma.course.count).mockResolvedValue(10);
     vi.mocked(prisma.courseEnrollment.count).mockResolvedValue(200);
     vi.mocked(prisma.order.aggregate).mockResolvedValue({ _sum: { finalAmount: 5000000 } } as never);
+    vi.mocked(prisma.subscription.count).mockResolvedValue(15);
+    vi.mocked(prisma.order.count).mockResolvedValue(3);
+    vi.mocked(prisma.review.aggregate).mockResolvedValue({ _avg: { rating: 4.8 } } as never);
+    vi.mocked(prisma.order.findMany).mockResolvedValue([]);
 
     const res = await request(app).get("/api/admin/stats").set(ADMIN_AUTH);
     expect(res.status).toBe(200);
@@ -169,6 +175,26 @@ describe("PATCH /api/admin/courses/:id", () => {
     expect(res.body.data.status).toBe("draft");
   });
 
+  it("rejects a course and saves feedback", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(VALID_ADMIN as never);
+    vi.mocked(prisma.course.findUnique).mockResolvedValue({ id: "c-1", status: "pending" } as never);
+    vi.mocked(prisma.course.update).mockResolvedValue({
+      id: "c-1",
+      title: "Test",
+      status: "rejected",
+      adminFeedback: "please fix video resolution",
+    } as never);
+
+    const res = await request(app)
+      .patch("/api/admin/courses/c-1")
+      .set(ADMIN_AUTH)
+      .send({ status: "rejected", adminFeedback: "please fix video resolution" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe("rejected");
+    expect(res.body.data.adminFeedback).toBe("please fix video resolution");
+  });
+
   it("returns 400 with invalid status", async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(VALID_ADMIN as never);
 
@@ -178,5 +204,30 @@ describe("PATCH /api/admin/courses/:id", () => {
       .send({ status: "bogus" });
 
     expect(res.status).toBe(400);
+  });
+});
+
+describe("GET /api/admin/courses/:id", () => {
+  it("returns course detail with trainer and sections", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(VALID_ADMIN as never);
+    vi.mocked(prisma.course.findUnique).mockResolvedValue({
+      id: "c-1",
+      title: "Detailed Course",
+      trainer: { id: "t-1", name: "Trainer X" },
+      sections: [],
+    } as never);
+
+    const res = await request(app).get("/api/admin/courses/c-1").set(ADMIN_AUTH);
+    expect(res.status).toBe(200);
+    expect(res.body.data.title).toBe("Detailed Course");
+    expect(res.body.data.trainer.name).toBe("Trainer X");
+  });
+
+  it("returns 404 if course not found", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(VALID_ADMIN as never);
+    vi.mocked(prisma.course.findUnique).mockResolvedValue(null);
+
+    const res = await request(app).get("/api/admin/courses/c-missing").set(ADMIN_AUTH);
+    expect(res.status).toBe(404);
   });
 });

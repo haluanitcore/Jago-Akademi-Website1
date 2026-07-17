@@ -136,6 +136,42 @@ router.get("/:orderId/refund", async (req, res, next) => {
   }
 });
 
+// POST /api/orders/:orderId/cancel — cancel pending order
+router.post("/:orderId/cancel", async (req, res, next) => {
+  try {
+    const orderId = req.params.orderId as string;
+    const userId = req.user!.id;
+
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new AppError(404, "Order tidak ditemukan.");
+    if (order.userId !== userId) throw new AppError(403, "Akses ditolak.");
+    if (order.status !== "pending") {
+      throw new AppError(400, "Hanya pesanan pending yang dapat dibatalkan.");
+    }
+
+    await prisma.$transaction(async (tx) => {
+      if (order.couponId) {
+        const coupon = await tx.coupon.findUnique({ where: { id: order.couponId } });
+        if (coupon && coupon.usageCount > 0) {
+          await tx.coupon.update({
+            where: { id: order.couponId },
+            data: { usageCount: { decrement: 1 } },
+          });
+        }
+      }
+
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: "cancelled" },
+      });
+    });
+
+    return res.json(successResponse({ id: orderId, status: "cancelled" }));
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ─── Admin refund processing ──────────────────────────────────────────────────
 
 router.patch("/admin/refunds/:refundId", async (req, res, next) => {

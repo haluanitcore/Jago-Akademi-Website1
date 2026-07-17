@@ -10,6 +10,9 @@ import eventsRouter from "../modules/admin/events.js";
 import blogRouter from "../modules/admin/blog.js";
 import reviewsRouter from "../modules/admin/reviews.js";
 import couponsRouter from "../modules/admin/coupons.js";
+import ebooksRouter from "../modules/admin/ebooks.js";
+import payoutsRouter from "../modules/admin/payouts.js";
+import systemHealthRouter from "../modules/admin/system-health.js";
 
 /**
  * Admin routes. The former 668-line monolith is split into resource sub-routers
@@ -38,5 +41,8 @@ router.use(eventsRouter);
 router.use(blogRouter);
 router.use(reviewsRouter);
 router.use(couponsRouter);
+router.use(ebooksRouter);
+router.use(payoutsRouter);
+router.use(systemHealthRouter);
 
 export default router;

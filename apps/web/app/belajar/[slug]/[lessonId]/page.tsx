@@ -212,7 +212,7 @@ export default function LessonPlayerPage() {
   const currentIdx = allLessons.findIndex((l) => l.id === lessonId);
   const hasNext = currentIdx >= 0 && currentIdx < allLessons.length - 1;
   const isFinalLesson = !hasNext;
-  const courseCompleted = isFinalLesson && completedIds.has(lessonId);
+  const courseCompleted = allLessons.length > 0 && completedIds.size === allLessons.length;
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F5F5F7]">

@@ -3,8 +3,8 @@ import { createHash } from "crypto";
 import { env } from "../../config/env.js";
 import type { Role } from "../../types/index.js";
 
-export const ACCESS_TTL = "15m";
-export const REFRESH_TTL = "7d";
+export const ACCESS_TTL = "2h";
+export const REFRESH_TTL = "2h";
 export const REFRESH_COOKIE = "jg_refresh";
 
 export type AccessTokenPayload = {
@@ -41,6 +41,6 @@ export function hashToken(raw: string): string {
 
 export function refreshTokenExpiry(): Date {
   const d = new Date();
-  d.setDate(d.getDate() + 7);
+  d.setHours(d.getHours() + 2);
   return d;
 }

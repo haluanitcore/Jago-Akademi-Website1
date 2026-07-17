@@ -10,9 +10,10 @@ type Stats = {
   totalEnrollments: number;
   totalRevenue: number;
   pendingCourses: number;
-  totalEvents: number;
   activeSubscriptions: number;
-  totalAffiliates: number;
+  refundRate: number;
+  avgRating: number;
+  retailRevenue: number;
 };
 
 type RecentOrder = {
@@ -77,10 +78,10 @@ export default function AdminDashboardPage() {
         { label: "Kursus Aktif",       value: stats.totalCourses,        icon: "📖", color: "#7C3AED", bg: "#EDE9FE", change: "+3%" },
         { label: "Total Pendaftaran",  value: stats.totalEnrollments,    icon: "🎓", color: "#059669", bg: "#D1FAE5", change: "+8%" },
         { label: "Total Pendapatan",   value: null, revenue: stats.totalRevenue, icon: "💰", color: "#DC2626", bg: "#FEE2E2", change: "+22%" },
+        { label: "Omset Retail",       value: null, revenue: stats.retailRevenue, icon: "💸", color: "#059669", bg: "#D1FAE5", change: "+15%" },
         { label: "Langganan Aktif",    value: stats.activeSubscriptions, icon: "⭐", color: "#F59E0B", bg: "#FEF3C7", change: "+5%" },
-        { label: "Event Berlangsung",  value: stats.totalEvents,         icon: "🎫", color: "#CC0052", bg: "#FFE4EF", change: "0%" },
-        { label: "Afiliator",          value: stats.totalAffiliates,     icon: "🤝", color: "#0D9488", bg: "#CCFBF1", change: "+18%" },
-        { label: "Kursus Menunggu",    value: stats.pendingCourses,      icon: "⏳", color: "#6B7280", bg: "#F3F4F6", change: "" },
+        { label: "Tingkat Refund",     value: null, numValue: stats.refundRate, labelSuffix: "%", icon: "🔄", color: "#DC2626", bg: "#FEE2E2", change: "-1%" },
+        { label: "Rata-rata Rating",   value: null, numValue: stats.avgRating, labelSuffix: " / 5.0", icon: "🌟", color: "#F59E0B", bg: "#FEF3C7", change: "+0.1" },
       ]
     : [];
 
@@ -111,7 +112,7 @@ export default function AdminDashboardPage() {
 
       {/* KPI Cards */}
       <div className="adp-kpi-grid">
-        {KPI_CARDS.map(({ label, value, revenue, icon, color, bg, change }) => (
+        {KPI_CARDS.map(({ label, value, revenue, numValue, labelSuffix, icon, color, bg, change }) => (
           <div key={label} className="adp-kpi-card">
             <div className="adp-kpi-top">
               <div className="adp-kpi-icon" style={{ background: bg }}>
@@ -124,8 +125,10 @@ export default function AdminDashboardPage() {
               )}
             </div>
             <p className="adp-kpi-value" style={{ color }}>
-              {revenue !== undefined
+              {revenue !== undefined && revenue !== null
                 ? `Rp ${revenue.toLocaleString("id-ID")}`
+                : numValue !== undefined && numValue !== null
+                ? `${numValue}${labelSuffix ?? ""}`
                 : (value ?? 0).toLocaleString("id-ID")}
             </p>
             <p className="adp-kpi-label">{label}</p>

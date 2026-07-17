@@ -35,7 +35,33 @@ export default function AdminTransaksiPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState({ totalRevenue: 0, paidCount: 0, pendingCount: 0 });
+  const [exporting, setExporting] = useState(false);
   const limit = 15;
+
+  async function handleExportCSV() {
+    const token = getToken();
+    if (!token) return;
+    setExporting(true);
+    try {
+      const res = await fetch("/api/admin/transactions/export", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Gagal mengunduh CSV");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `transactions-export-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert("Gagal mengekspor data transaksi.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   function loadOrders() {
     const token = getToken();
@@ -78,6 +104,24 @@ export default function AdminTransaksiPage() {
           <h1 className="tr-title">Laporan Transaksi</h1>
           <p className="tr-sub">{total.toLocaleString("id-ID")} transaksi total</p>
         </div>
+        <button
+          onClick={handleExportCSV}
+          disabled={exporting}
+          className="tr-export-btn"
+          style={{
+            padding: "9px 16px",
+            borderRadius: "10px",
+            background: "#10B981",
+            color: "white",
+            border: "none",
+            fontSize: "13px",
+            fontWeight: 600,
+            cursor: "pointer",
+            opacity: exporting ? 0.6 : 1,
+          }}
+        >
+          {exporting ? "⏳ Mengekspor..." : "📥 Ekspor CSV"}
+        </button>
       </div>
 
       {/* Summary cards */}

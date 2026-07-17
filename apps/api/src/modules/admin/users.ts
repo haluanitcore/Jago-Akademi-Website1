@@ -91,5 +91,40 @@ router.patch("/users/:id", validateBody(AdminUserUpdateSchema), async (req: Requ
     next(err);
   }
 });
+// GET /api/admin/users/export — export all active users as CSV
+router.get("/users/export", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: { deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isActive: true,
+        isVerified: true,
+        createdAt: true,
+        roles: { select: { role: true } },
+      },
+    });
+
+    const csvHeaders = "ID,Nama,Email,Active,Verified,Role,Bergabung\n";
+    const csvRows = users.map((u) => {
+      const roles = u.roles.map((r) => r.role).join("; ");
+      const joinedDate = u.createdAt.toISOString();
+      const safeName = `"${u.name.replace(/"/g, '""')}"`;
+      const safeEmail = `"${u.email.replace(/"/g, '""')}"`;
+      return `${u.id},${safeName},${safeEmail},${u.isActive},${u.isVerified},"${roles}",${joinedDate}`;
+    }).join("\n");
+
+    const csvContent = csvHeaders + csvRows;
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", 'attachment; filename="users-export.csv"');
+    return res.send(csvContent);
+  } catch (err) {
+    next(err);
+  }
+});
 
 export default router;

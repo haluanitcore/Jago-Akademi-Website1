@@ -82,5 +82,43 @@ router.patch("/leads/:id", async (req: Request, res: Response, next: NextFunctio
     next(err);
   }
 });
+// GET /api/admin/leads/export — export all leads as CSV
+router.get("/leads/export", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const leads = await prisma.lead.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        company: true,
+        message: true,
+        source: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+
+    const csvHeaders = "ID,Nama,Email,Telepon,Perusahaan,Pesan,Sumber,Status,Dibuat Pada\n";
+    const csvRows = leads.map((l) => {
+      const safeName = `"${l.name.replace(/"/g, '""')}"`;
+      const safeEmail = `"${l.email.replace(/"/g, '""')}"`;
+      const safePhone = `"${(l.phone ?? "").replace(/"/g, '""')}"`;
+      const safeCompany = `"${(l.company ?? "").replace(/"/g, '""')}"`;
+      const safeMessage = `"${(l.message ?? "").replace(/"/g, '""')}"`;
+      const createdAt = l.createdAt.toISOString();
+      return `${l.id},${safeName},${safeEmail},${safePhone},${safeCompany},${safeMessage},${l.source},${l.status},${createdAt}`;
+    }).join("\n");
+
+    const csvContent = csvHeaders + csvRows;
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", 'attachment; filename="leads-export.csv"');
+    return res.send(csvContent);
+  } catch (err) {
+    next(err);
+  }
+});
 
 export default router;

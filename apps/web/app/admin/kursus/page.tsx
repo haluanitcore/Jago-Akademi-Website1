@@ -18,7 +18,7 @@ type Course = {
   createdAt: string;
   trainer: { id: string; name: string; email: string };
   category: { name: string } | null;
-  _count?: { lessons: number };
+  _count?: { sections: number };
 };
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
@@ -45,6 +45,96 @@ export default function AdminKursusPage() {
   const [total, setTotal] = useState(0);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const limit = 10;
+
+  // Modal states
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [detailCourse, setDetailCourse] = useState<any>(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [savingApproval, setSavingApproval] = useState(false);
+
+  async function openDetailModal(courseId: string) {
+    setSelectedCourseId(courseId);
+    setModalLoading(true);
+    setDetailCourse(null);
+    setFeedbackText("");
+    const token = getToken();
+    if (!token) return;
+    try {
+      const r = await fetch(`/api/admin/courses/${courseId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = await r.json();
+      if (body.success) {
+        setDetailCourse(body.data);
+        setFeedbackText(body.data.adminFeedback ?? "");
+      } else {
+        alert(body.error?.message ?? "Gagal memuat detail kursus.");
+        setSelectedCourseId(null);
+      }
+    } catch {
+      alert("Gagal memuat detail kursus.");
+      setSelectedCourseId(null);
+    } finally {
+      setModalLoading(false);
+    }
+  }
+
+  async function handleApproveDetail() {
+    if (!selectedCourseId) return;
+    setSavingApproval(true);
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/admin/courses/${selectedCourseId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "published" }),
+      });
+      const body = await res.json();
+      if (body.success) {
+        alert("Kursus berhasil disetujui & dipublikasikan.");
+        setSelectedCourseId(null);
+        loadCourses();
+      } else {
+        alert(body.error?.message ?? "Gagal menyetujui.");
+      }
+    } catch {
+      alert("Gagal menghubungi server.");
+    } finally {
+      setSavingApproval(false);
+    }
+  }
+
+  async function handleRejectDetail() {
+    if (!selectedCourseId) return;
+    if (!feedbackText.trim()) {
+      alert("Silakan masukkan alasan/umpan balik penolakan kelas.");
+      return;
+    }
+    setSavingApproval(true);
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/admin/courses/${selectedCourseId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "rejected", adminFeedback: feedbackText }),
+      });
+      const body = await res.json();
+      if (body.success) {
+        alert("Kursus ditolak & umpan balik berhasil dikirim ke trainer.");
+        setSelectedCourseId(null);
+        loadCourses();
+      } else {
+        alert(body.error?.message ?? "Gagal menolak.");
+      }
+    } catch {
+      alert("Gagal menghubungi server.");
+    } finally {
+      setSavingApproval(false);
+    }
+  }
 
   function loadCourses() {
     const token = getToken();
@@ -158,7 +248,7 @@ export default function AdminKursusPage() {
                             {c.title}
                             {c.isFeatured && <span className="ak-featured-badge">⭐ Unggulan</span>}
                           </p>
-                          <p className="ak-course-cat">{c.category?.name ?? "Umum"} · {c._count?.lessons ?? 0} pelajaran</p>
+                          <p className="ak-course-cat">{c.category?.name ?? "Umum"} · {c._count?.sections ?? 0} bab</p>
                         </div>
                       </div>
                     </td>
@@ -190,6 +280,13 @@ export default function AdminKursusPage() {
                     <td><span className="ak-rating">⭐ {parseFloat(c.avgRating).toFixed(1)}</span></td>
                     <td>
                       <div className="ak-actions">
+                        <button
+                          className="ak-btn ak-btn-detail"
+                          onClick={() => openDetailModal(c.id)}
+                          disabled={actionLoading !== null}
+                        >
+                          👁️ Detail & Review
+                        </button>
                         {c.status === "pending" && (
                           <>
                             <button
@@ -199,7 +296,7 @@ export default function AdminKursusPage() {
                             >✓ Approve</button>
                             <button
                               className="ak-btn ak-btn-reject"
-                              onClick={() => updateStatus(c.id, "rejected")}
+                              onClick={() => openDetailModal(c.id)}
                               disabled={actionLoading !== null}
                             >✕ Tolak</button>
                           </>
@@ -242,6 +339,122 @@ export default function AdminKursusPage() {
           <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="ak-page-btn">← Prev</button>
           <span className="ak-page-info">Halaman {page} dari {totalPages}</span>
           <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="ak-page-btn">Next →</button>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {selectedCourseId && (
+        <div className="ak-modal-overlay" onClick={() => setSelectedCourseId(null)}>
+          <div className="ak-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="ak-modal-header">
+              <h2 className="ak-modal-title">Review & Approval Kursus</h2>
+              <button className="ak-modal-close" onClick={() => setSelectedCourseId(null)}>✕</button>
+            </div>
+            
+            {modalLoading ? (
+              <div className="ak-modal-loading"><span className="ak-spinner" /></div>
+            ) : !detailCourse ? (
+              <div className="ak-modal-empty">Gagal memuat detail kursus.</div>
+            ) : (
+              <div className="ak-modal-body">
+                {/* Course Metadata */}
+                <div className="ak-detail-grid">
+                  <div className="ak-detail-card">
+                    <span className="ak-detail-label">Judul Kursus</span>
+                    <span className="ak-detail-val">{detailCourse.title}</span>
+                  </div>
+                  <div className="ak-detail-card">
+                    <span className="ak-detail-label">Trainer</span>
+                    <span className="ak-detail-val">{detailCourse.trainer.name} ({detailCourse.trainer.email})</span>
+                  </div>
+                  <div className="ak-detail-card">
+                    <span className="ak-detail-label">Kategori / Level</span>
+                    <span className="ak-detail-val">{detailCourse.category?.name ?? "Umum"} · {LEVEL_LABEL[detailCourse.level ?? ""] ?? "—"}</span>
+                  </div>
+                  <div className="ak-detail-card">
+                    <span className="ak-detail-label">Harga Kelas</span>
+                    <span className="ak-detail-val">
+                      {Number(detailCourse.price) === 0 ? "Gratis" : `Rp ${Number(detailCourse.price).toLocaleString("id-ID")}`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Course Video Preview */}
+                {detailCourse.previewVideo && (
+                  <div className="ak-preview-section">
+                    <h3 className="ak-section-title">Video Pengantar / Preview</h3>
+                    <div className="ak-video-wrap">
+                      <a href={detailCourse.previewVideo} target="_blank" rel="noopener noreferrer" className="ak-video-link">
+                        📺 Putar Video Preview ({detailCourse.previewVideo})
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* Course Structure */}
+                <div className="ak-structure-section">
+                  <h3 className="ak-section-title">Struktur Kurikulum ({detailCourse.sections?.length ?? 0} Bab)</h3>
+                  {(!detailCourse.sections || detailCourse.sections.length === 0) ? (
+                    <p className="ak-no-curriculum">Belum ada materi kurikulum yang ditambahkan.</p>
+                  ) : (
+                    <div className="ak-sections-list">
+                      {detailCourse.sections.map((sec: any, idx: number) => (
+                        <div key={sec.id} className="ak-section-item">
+                          <div className="ak-section-hdr">
+                            Bab {idx + 1}: {sec.title}
+                          </div>
+                          <ul className="ak-lessons-list">
+                            {sec.lessons?.map((les: any) => (
+                              <li key={les.id} className="ak-lesson-item">
+                                <span className="ak-les-type">{les.contentType === "video" ? "📹" : "📄"}</span>
+                                <span className="ak-les-title">{les.title}</span>
+                                <span className="ak-les-dur">{les.duration ? `${Math.round(les.duration / 60)} m` : ""}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Feedback Input Form */}
+                <div className="ak-feedback-section">
+                  <h3 className="ak-section-title">Catatan & Umpan Balik Admin (Wajib jika menolak)</h3>
+                  <textarea
+                    className="ak-feedback-input"
+                    rows={4}
+                    placeholder="Tulis umpan balik kelas di sini... (contoh: Silakan lengkapi video pada Bab 2, resolusi audio kurang jernih, dll.)"
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                  />
+                </div>
+
+                {/* Footer Actions */}
+                <div className="ak-modal-footer">
+                  <button className="ak-btn ak-btn-cancel" onClick={() => setSelectedCourseId(null)} disabled={savingApproval}>
+                    Batal
+                  </button>
+                  <div className="ak-modal-actions">
+                    <button
+                      className="ak-btn ak-btn-modal-reject"
+                      onClick={handleRejectDetail}
+                      disabled={savingApproval}
+                    >
+                      {savingApproval ? "Memproses..." : "✕ Tolak & Kirim Feedback"}
+                    </button>
+                    <button
+                      className="ak-btn ak-btn-modal-approve"
+                      onClick={handleApproveDetail}
+                      disabled={savingApproval}
+                    >
+                      {savingApproval ? "Memproses..." : "✓ Setujui & Publikasikan"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -295,6 +508,57 @@ export default function AdminKursusPage() {
         .ak-btn-archive:hover:not(:disabled) { background: #6B7280; color: white; }
         .ak-btn-feat { background: #FEF3C7; color: #D97706; font-size: 14px; padding: 4px 8px; }
         .ak-btn-unfeat { background: #F3F4F6; color: #9CA3AF; font-size: 14px; padding: 4px 8px; }
+
+        .ak-btn-detail { background: #E5F3FF; color: #0077A8; }
+        .ak-btn-detail:hover:not(:disabled) { background: #0077A8; color: white; }
+
+        .ak-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        .ak-modal { background: white; border-radius: 20px; width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.15); animation: scaleUp 0.2s ease-out; text-align: left; }
+        @keyframes scaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        .ak-modal-header { padding: 18px 24px; border-bottom: 1px solid #F0F0F5; display: flex; justify-content: space-between; align-items: center; }
+        .ak-modal-title { font-size: 16px; font-weight: 700; color: #1D1D1F; }
+        .ak-modal-close { background: none; border: none; font-size: 18px; color: #6E6E73; cursor: pointer; padding: 4px; }
+        .ak-modal-close:hover { color: #1D1D1F; }
+
+        .ak-modal-body { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+        .ak-modal-loading { display: flex; justify-content: center; padding: 60px 0; }
+        .ak-modal-empty { text-align: center; color: #9CA3AF; padding: 40px 0; }
+
+        .ak-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .ak-detail-card { background: #F9FAFB; border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; border: 1px solid #F0F0F5; text-align: left; }
+        .ak-detail-label { font-size: 10px; font-weight: 700; color: #8E8E93; text-transform: uppercase; }
+        .ak-detail-val { font-size: 13px; font-weight: 600; color: #1D1D1F; }
+
+        .ak-section-title { font-size: 12px; font-weight: 700; color: #1D1D1F; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.03em; text-align: left; }
+        .ak-preview-section { background: #F0F9FF; border: 1px solid #BEE3F8; border-radius: 12px; padding: 14px; text-align: left; }
+        .ak-video-link { display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; color: #0077A8; text-decoration: none; }
+        .ak-video-link:hover { text-decoration: underline; }
+
+        .ak-structure-section { display: flex; flex-direction: column; text-align: left; }
+        .ak-no-curriculum { font-size: 13px; color: #8E8E93; font-style: italic; }
+        .ak-sections-list { display: flex; flex-direction: column; gap: 10px; max-height: 240px; overflow-y: auto; padding-right: 4px; }
+        .ak-section-item { background: #F9FAFB; border-radius: 12px; border: 1px solid #E5E5EA; overflow: hidden; }
+        .ak-section-hdr { background: #F2F2F7; padding: 8px 14px; font-size: 12px; font-weight: 700; color: #1D1D1F; border-bottom: 1px solid #E5E5EA; text-align: left; }
+        .ak-lessons-list { list-style: none; padding: 0; margin: 0; }
+        .ak-lesson-item { padding: 8px 14px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: #3A3A3C; border-bottom: 1px solid #E5E5EA; text-align: left; }
+        .ak-lesson-item:last-child { border-bottom: none; }
+        .ak-les-type { font-size: 14px; }
+        .ak-les-title { flex: 1; text-align: left; }
+        .ak-les-dur { color: #8E8E93; font-size: 11px; }
+
+        .ak-feedback-section { display: flex; flex-direction: column; text-align: left; }
+        .ak-feedback-input { width: 100%; border: 1.5px solid #E5E5EA; border-radius: 12px; padding: 12px; font-size: 13px; outline: none; transition: border-color 0.18s; font-family: inherit; }
+        .ak-feedback-input:focus { border-color: #0077A8; box-shadow: 0 0 0 3px rgba(0,119,168,0.1); }
+
+        .ak-modal-footer { border-top: 1px solid #F0F0F5; padding-top: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .ak-btn-cancel { background: #F2F2F7; color: #1D1D1F; }
+        .ak-btn-cancel:hover { background: #E5E5EA; }
+        .ak-modal-actions { display: flex; gap: 8px; }
+        .ak-btn-modal-reject { background: #FEE2E2; color: #DC2626; }
+        .ak-btn-modal-reject:hover { background: #DC2626; color: white; }
+        .ak-btn-modal-approve { background: #0077A8; color: white; }
+        .ak-btn-modal-approve:hover { background: #005f87; }
 
         .ak-loading { display: flex; justify-content: center; padding: 48px; }
         .ak-spinner { width: 32px; height: 32px; border-radius: 50%; border: 3px solid #0077A8; border-top-color: transparent; animation: spin 0.8s linear infinite; }

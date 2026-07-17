@@ -22,6 +22,7 @@ router.get(
           createdAt: true,
           roles: { select: { role: true } },
           profile: { select: { phone: true, bio: true } },
+          subscription: { select: { status: true, expiresAt: true } },
         },
       });
       if (!user) return next(new AppError(404, "Pengguna tidak ditemukan."));
