@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import BlogArticleClient from "./BlogArticleClient";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -16,7 +17,9 @@ type BlogPostMeta = {
   coverUrl: string | null;
 };
 
-async function getPost(slug: string): Promise<BlogPostMeta | null> {
+// `null` = post definitively missing (real 404); `undefined` = API unreachable
+// (network error/timeout) so we must NOT 404 content that may actually exist.
+async function getPost(slug: string): Promise<BlogPostMeta | null | undefined> {
   try {
     const res = await fetch(`${API}/api/blog/${slug}`, {
       next: { revalidate: 300 },
@@ -25,7 +28,7 @@ async function getPost(slug: string): Promise<BlogPostMeta | null> {
     const body = await res.json();
     return body.success ? (body.data as BlogPostMeta) : null;
   } catch {
-    return null;
+    return undefined;
   }
 }
 
@@ -52,7 +55,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default function BlogDetailPage() {
+export default async function BlogDetailPage({ params }: Props) {
+  // BL-46: return a real 404 instead of an empty 200 page when the slug does
+  // not exist. Next.js deduplicates this fetch with the generateMetadata one.
+  const { slug } = await params;
+  const post = await getPost(slug);
+  if (post === null) notFound();
+
   // The client island reads the slug via useParams and fetches its own data,
   // preserving all existing interactive behavior unchanged.
   return <BlogArticleClient />;
