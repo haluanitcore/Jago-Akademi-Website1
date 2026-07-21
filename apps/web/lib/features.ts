@@ -24,6 +24,13 @@ export const features = {
   learningPath: on(process.env.NEXT_PUBLIC_FEATURE_LEARNING_PATH),
   community: on(process.env.NEXT_PUBLIC_FEATURE_COMMUNITY),
   gamification: on(process.env.NEXT_PUBLIC_FEATURE_GAMIFICATION),
+
+  // Alumni stories page (/alumni) — approved alumni testimonials. OFF until
+  // the testimonials endpoint ships with real, consented stories (BL-28).
+  alumni: on(process.env.NEXT_PUBLIC_FEATURE_ALUMNI),
+  // Member portfolio showcase (/portofolio-member) — published member
+  // portfolios. OFF until the portfolios endpoint ships.
+  portfolio: on(process.env.NEXT_PUBLIC_FEATURE_PORTFOLIO),
 } as const;
 
 export type FeatureKey = keyof typeof features;

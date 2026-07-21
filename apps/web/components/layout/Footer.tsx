@@ -20,6 +20,10 @@ const footerLinks = {
     { label: "Program Afiliasi", href: "/afiliasi" },
     { label: "Paket LMS",        href: "/clients" },
     { label: "Kolaborasi",       href: "/kolaborasi" },
+    // Community links — each only surfaces once its feature ships (build-time flags).
+    ...(features.community ? [{ label: "Komunitas", href: "/komunitas" }] : []),
+    ...(features.alumni ? [{ label: "Cerita Alumni", href: "/alumni" }] : []),
+    ...(features.portfolio ? [{ label: "Portofolio Member", href: "/portofolio-member" }] : []),
   ],
   Perusahaan: [
     { label: "Tentang Kami",  href: "/about" },

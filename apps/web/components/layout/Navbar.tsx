@@ -8,6 +8,20 @@ import { Menu, X, ChevronDown, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { features } from "@/lib/features";
 
+// Community-group items — each link only surfaces once its feature ships
+// (flags are build-time). Empty array = the whole dropdown is omitted.
+const komunitasChildren = [
+  ...(features.community
+    ? [{ label: "Komunitas", href: "/komunitas", desc: "Bergabung dengan komunitas belajar" }]
+    : []),
+  ...(features.alumni
+    ? [{ label: "Alumni", href: "/alumni", desc: "Cerita nyata dari alumni kami" }]
+    : []),
+  ...(features.portfolio
+    ? [{ label: "Portofolio Member", href: "/portofolio-member", desc: "Karya nyata member komunitas" }]
+    : []),
+];
+
 const navLinks = [
   { label: "E-Course", href: "/e-course" },
   { label: "Event", href: "/event" },
@@ -26,6 +40,10 @@ const navLinks = [
       { label: "Marketplace Materi", href: "/marketplace",     desc: "Rekaman & modul event" },
     ],
   },
+  // The Komunitas dropdown only renders when at least one community feature is on.
+  ...(komunitasChildren.length > 0
+    ? [{ label: "Komunitas", href: "#", children: komunitasChildren }]
+    : []),
   { label: "Blog", href: "/blog" },
   { label: "Tentang", href: "/about" },
 ];
