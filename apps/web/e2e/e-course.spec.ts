@@ -10,8 +10,9 @@ test.describe("E-Course public pages", () => {
     await page.goto("/e-course");
     await page.waitForLoadState("networkidle");
     // Should have some content — cards, categories, or empty state
-    const body = page.locator("main, body");
-    await expect(body).toBeVisible();
+    // (single locator: "main, body" matches both and violates strict mode)
+    const main = page.locator("main#main-content");
+    await expect(main).toBeVisible();
   });
 
   test("e-course category page loads", async ({ page }) => {

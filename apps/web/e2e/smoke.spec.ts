@@ -23,7 +23,7 @@ test.describe("Smoke tests — public pages", () => {
   });
 
   test("contact page loads with form", async ({ page }) => {
-    await page.goto("/kontak");
+    await page.goto("/contact");
     await expect(page.locator("form")).toBeVisible();
   });
 

@@ -36,19 +36,19 @@ test.describe("Blog pages", () => {
 
 test.describe("Public info pages", () => {
   test("about page loads", async ({ page }) => {
-    await page.goto("/tentang");
+    await page.goto("/about");
     await page.waitForLoadState("networkidle");
     await expect(page.locator("h1, h2").first()).toBeVisible();
   });
 
   test("contact page has form", async ({ page }) => {
-    await page.goto("/kontak");
+    await page.goto("/contact");
     await page.waitForLoadState("networkidle");
     await expect(page.locator("form, input, textarea").first()).toBeVisible();
   });
 
   test("ebook listing page loads", async ({ page }) => {
-    await page.goto("/e-book");
+    await page.goto("/ebook");
     await page.waitForLoadState("networkidle");
     await expect(page.locator("body")).toBeVisible();
   });

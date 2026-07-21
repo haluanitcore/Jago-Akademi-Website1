@@ -24,23 +24,35 @@ test.describe("Homepage — Phase 1 smoke", () => {
   });
 
   test("tombol CTA utama hero berfungsi", async ({ page }) => {
-    const ctaBtn = page.locator("a", { hasText: "Mulai Belajar Gratis" });
+    const ctaBtn = page.getByRole("link", { name: "Mulai Belajar", exact: true });
     await expect(ctaBtn).toBeVisible();
-    await expect(ctaBtn).toHaveAttribute("href", "/kursus");
+    await expect(ctaBtn).toHaveAttribute("href", "/daftar");
   });
 
-  test("section 6 unit bisnis tampil", async ({ page }) => {
-    const section = page.locator("section").filter({ hasText: "6 Unit Bisnis" });
+  test("section unit bisnis (CategoryGrid) tampil", async ({ page }) => {
+    const section = page.locator("section").filter({ hasText: "Satu platform, enam cara belajar" });
     await expect(section).toBeVisible();
 
-    // Minimal 4 product cards visible
-    const cards = page.locator("a.card-dark");
+    // All 6 business-unit tiles visible
+    const cards = section.locator("a.card");
     await expect(cards).toHaveCount(6);
   });
 
-  test("testimonial section tampil", async ({ page }) => {
+  test("testimonial section tampil hanya jika ada testimoni approved", async ({ page, request }) => {
+    // TestimonialsSection is a server component that renders ONLY when the API
+    // returns approved testimonials; with an empty local DB it is omitted by
+    // design (BL-24 — no fabricated fillers). Assert the page is consistent
+    // with the live API state instead of unconditionally requiring the section.
+    const res = await request.get("http://127.0.0.1:4000/api/testimonials?limit=6");
+    const body = (await res.json()) as { success: boolean; data?: unknown[] };
+    const hasTestimonials = body.success === true && (body.data?.length ?? 0) > 0;
+
     const section = page.locator("section").filter({ hasText: "Testimoni" });
-    await expect(section).toBeVisible();
+    if (hasTestimonials) {
+      await expect(section).toBeVisible();
+    } else {
+      await expect(section).toHaveCount(0);
+    }
   });
 
   test("footer tampil dengan link navigasi", async ({ page }) => {
