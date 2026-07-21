@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
+import { waLink } from "@/lib/config";
 
 const footerLinks = {
   Belajar: [
@@ -73,7 +74,7 @@ export function Footer() {
 
             {/* WhatsApp CTA */}
             <a
-              href="https://wa.me/6281234567890"
+              href={waLink()}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm font-medium text-[#1D1D1F] hover:text-[#0077A8] transition-colors group"

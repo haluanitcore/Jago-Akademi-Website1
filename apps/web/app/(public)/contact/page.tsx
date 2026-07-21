@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import ContactForm from "./ContactForm";
+import { WA_NUMBER_DISPLAY, waLink } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "Hubungi Kami",
@@ -25,8 +26,8 @@ const CONTACTS = [
       </svg>
     ),
     label: "WhatsApp",
-    value: "+62 812-3456-7890",
-    href: "https://wa.me/6281234567890",
+    value: WA_NUMBER_DISPLAY,
+    href: waLink(),
   },
   {
     icon: (
