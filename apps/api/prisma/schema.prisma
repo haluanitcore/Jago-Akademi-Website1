@@ -49,6 +49,7 @@ model User {
   trainerPayouts     TrainerPayout[]
   blogPosts          BlogPost[]            @relation("BlogPostAuthor")
   subscription       Subscription?
+  memberPortfolios   MemberPortfolio[]
 
   @@index([email])
   @@index([deletedAt])
@@ -858,9 +859,38 @@ model Testimonial {
   // Optional link to the submitting user (consent/audit).
   userId    String?
   featured  Boolean  @default(false)
+  // general | alumni (BL-48) — alumni testimonials power the alumni showcase.
+  category  String   @default("general")
+  // Career outcome, e.g. "Kini bekerja sebagai Digital Marketer di X".
+  outcome   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([status, featured])
+  @@index([category, status])
   @@map("testimonials")
+}
+
+// ─── Phase B: Alumni & Community — member portfolios (BL-48) ──────────────────
+
+model MemberPortfolio {
+  id       String  @id @default(uuid())
+  name     String
+  role     String // e.g. "UI/UX Designer"
+  headline String?
+  photoUrl String?
+  // Array of {title, url?, imageUrl?, description?} — shape enforced by Zod at
+  // the admin boundary; kept as Json to avoid a join table for a display list.
+  portfolioItems Json    @default("[]")
+  featured       Boolean @default(false)
+  status         String  @default("draft") // draft | published
+  // Optional link to the member's account; portfolio survives user deletion.
+  userId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, featured])
+  @@map("member_portfolios")
 }

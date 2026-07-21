@@ -74,6 +74,19 @@ describe("POST /api/leads (TASK-040 lead capture)", () => {
     );
   });
 
+  // Phase B (BL-48): community landing page posts source "community".
+  it("accepts source 'community' (201)", async () => {
+    const res = await request(app)
+      .post("/api/leads")
+      .send({ name: "Andi Wijaya", email: "andi@example.com", source: "community" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(p.lead.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ source: "community" }) }),
+    );
+  });
+
   it("rejects an unknown source (400)", async () => {
     const res = await request(app)
       .post("/api/leads")

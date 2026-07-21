@@ -11,6 +11,7 @@ import blogRouter from "../modules/admin/blog.js";
 import reviewsRouter from "../modules/admin/reviews.js";
 import couponsRouter from "../modules/admin/coupons.js";
 import ebooksRouter from "../modules/admin/ebooks.js";
+import portfoliosRouter from "../modules/admin/portfolios.js";
 import payoutsRouter from "../modules/admin/payouts.js";
 import systemHealthRouter from "../modules/admin/system-health.js";
 
@@ -42,6 +43,7 @@ router.use(blogRouter);
 router.use(reviewsRouter);
 router.use(couponsRouter);
 router.use(ebooksRouter);
+router.use(portfoliosRouter);
 router.use(payoutsRouter);
 router.use(systemHealthRouter);
 

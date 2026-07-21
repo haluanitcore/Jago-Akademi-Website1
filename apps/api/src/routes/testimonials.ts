@@ -15,14 +15,20 @@ function requireAdmin(req: Request): void {
 }
 
 // GET /api/testimonials — PUBLIC. Only approved testimonials, newest/featured first.
+// Optional `?category=alumni` narrows to alumni stories (BL-48); no param keeps
+// the original behavior (all approved, any category).
+const listQuerySchema = z.object({
+  category: z.enum(["general", "alumni"]).optional(),
+});
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const { category } = listQuerySchema.parse({ category: req.query.category });
     const limit = Math.min(Number(req.query.limit ?? 12) || 12, 50);
     const items = await prisma.testimonial.findMany({
-      where: { status: "approved" },
+      where: { status: "approved", ...(category ? { category } : {}) },
       orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
       take: limit,
-      select: { id: true, name: true, role: true, company: true, quote: true, rating: true, photoUrl: true, featured: true },
+      select: { id: true, name: true, role: true, company: true, quote: true, rating: true, photoUrl: true, featured: true, category: true, outcome: true },
     });
     res.json(successResponse(items));
   } catch (err) {
@@ -74,10 +80,14 @@ router.get("/admin", authenticate, async (req: Request, res: Response, next: Nex
   }
 });
 
-// PATCH /api/testimonials/:id/moderate — ADMIN. Approve/reject + optional feature flag.
+// PATCH /api/testimonials/:id/moderate — ADMIN. Approve/reject + optional feature
+// flag. Only moderation may mark a testimonial `alumni` and attach a career
+// outcome (users cannot self-mark on submission, BL-48).
 const moderateSchema = z.object({
   status: z.enum(["approved", "rejected", "pending"]),
   featured: z.boolean().optional(),
+  category: z.enum(["general", "alumni"]).optional(),
+  outcome: z.string().max(300).nullable().optional(),
 });
 router.patch(
   "/:id/moderate",
@@ -87,11 +97,16 @@ router.patch(
     try {
       requireAdmin(req);
       const { id } = req.params;
-      const { status, featured } = req.body as z.infer<typeof moderateSchema>;
+      const { status, featured, category, outcome } = req.body as z.infer<typeof moderateSchema>;
       const updated = await prisma.testimonial.update({
         where: { id },
-        data: { status, ...(featured !== undefined ? { featured } : {}) },
-        select: { id: true, status: true, featured: true },
+        data: {
+          status,
+          ...(featured !== undefined ? { featured } : {}),
+          ...(category !== undefined ? { category } : {}),
+          ...(outcome !== undefined ? { outcome } : {}),
+        },
+        select: { id: true, status: true, featured: true, category: true, outcome: true },
       });
       await writeAudit({
         actorId: req.user!.id,

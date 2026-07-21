@@ -41,6 +41,27 @@ describe("Testimonial engine (TASK-095)", () => {
     );
   });
 
+  // Phase B (BL-48): alumni category + career outcome on public listing.
+  it("GET /?category=alumni filters to approved alumni testimonials only", async () => {
+    p.testimonial.findMany.mockResolvedValue([
+      { id: "t3", name: "C", role: "Alumni", quote: "Job!", category: "alumni", outcome: "Kini bekerja sebagai Digital Marketer di X" },
+    ]);
+    const res = await request(app).get("/api/testimonials?category=alumni");
+    expect(res.status).toBe(200);
+    expect(p.testimonial.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { status: "approved", category: "alumni" } }),
+    );
+    expect(res.body.data[0].outcome).toBe("Kini bekerja sebagai Digital Marketer di X");
+    expect(res.body.data[0].category).toBe("alumni");
+  });
+
+  it("GET / rejects an invalid category (400)", async () => {
+    const res = await request(app).get("/api/testimonials?category=hacker");
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(p.testimonial.findMany).not.toHaveBeenCalled();
+  });
+
   it("POST / creates a PENDING testimonial for the authenticated user", async () => {
     p.testimonial.create.mockResolvedValue({ id: "t2" });
     const res = await request(app)
@@ -72,6 +93,41 @@ describe("Testimonial engine (TASK-095)", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe("approved");
     expect(p.testimonial.update).toHaveBeenCalled();
+  });
+
+  // Phase B (BL-48): moderation may promote a testimonial to alumni + outcome.
+  it("PATCH /:id/moderate sets category and outcome as admin", async () => {
+    currentRoles = ["super_admin"];
+    p.testimonial.update.mockResolvedValue({
+      id: "t1",
+      status: "approved",
+      featured: false,
+      category: "alumni",
+      outcome: "Kini bekerja sebagai Data Analyst di Y",
+    });
+    const res = await request(app)
+      .patch("/api/testimonials/t1/moderate")
+      .send({ status: "approved", category: "alumni", outcome: "Kini bekerja sebagai Data Analyst di Y" });
+    expect(res.status).toBe(200);
+    expect(p.testimonial.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "approved",
+          category: "alumni",
+          outcome: "Kini bekerja sebagai Data Analyst di Y",
+        }),
+      }),
+    );
+    expect(res.body.data.category).toBe("alumni");
+  });
+
+  it("PATCH /:id/moderate rejects an invalid category (400)", async () => {
+    currentRoles = ["super_admin"];
+    const res = await request(app)
+      .patch("/api/testimonials/t1/moderate")
+      .send({ status: "approved", category: "vip" });
+    expect(res.status).toBe(400);
+    expect(p.testimonial.update).not.toHaveBeenCalled();
   });
 
   it("PATCH /:id/moderate forbidden for non-admin (403)", async () => {
