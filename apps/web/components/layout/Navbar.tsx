@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu, X, ChevronDown, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { features } from "@/lib/features";
 
 const navLinks = [
   { label: "E-Course", href: "/e-course" },
@@ -16,6 +17,10 @@ const navLinks = [
     children: [
       { label: "E-Book",             href: "/ebook",           desc: "Buku digital berkualitas" },
       { label: "Kelas Gratis",       href: "/kelas-gratis",    desc: "Mulai belajar tanpa biaya" },
+      // Only surfaced once the private-class catalog ships (flag is build-time).
+      ...(features.privateClass
+        ? [{ label: "Private Class", href: "/kelas-privat", desc: "Mentoring intensif bareng mentor" }]
+        : []),
       { label: "Trainer Program",    href: "/trainer-program", desc: "Jadilah trainer profesional" },
       { label: "Paket LMS",          href: "/clients",         desc: "LMS untuk institusi & perusahaan" },
       { label: "Marketplace Materi", href: "/marketplace",     desc: "Rekaman & modul event" },

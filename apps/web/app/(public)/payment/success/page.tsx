@@ -4,6 +4,33 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { getValidToken } from "@/lib/auth/token";
+import { WA_NUMBER } from "@/lib/config";
+
+// ─── Private Class order data (present only for paid private-class items) ─────
+// Older API responses may omit `privateClass` entirely — everything is optional.
+type PrivateClassInfo = {
+  waGroupLink?: string | null;
+  onboardingContact?: string | null;
+  liveSchedule?: string | null;
+};
+
+type OrderItemLike = {
+  id?: string;
+  itemTitle?: string | null;
+  privateClass?: PrivateClassInfo | null;
+};
+
+/**
+ * Normalize a free-form admin contact ("+62 812-3456", "0812 3456", …) into
+ * the digits-only form wa.me expects; returns null when unusable so callers
+ * can fall back to the business WA number.
+ */
+function toWaDigits(contact: string | null | undefined): string | null {
+  if (!contact) return null;
+  const digits = contact.replace(/\D/g, "");
+  if (digits.length < 8) return null;
+  return digits.startsWith("0") ? `62${digits.slice(1)}` : digits;
+}
 
 // ─── Animated check-mark SVG (CSS stroke-dasharray trick) ─────────────────────
 function AnimatedCheckmark() {
@@ -116,6 +143,9 @@ function SuccessContent() {
   const [verified, setVerified] = useState<"checking" | "paid" | "unpaid" | "error">(
     isMock ? "paid" : "checking",
   );
+  // Paid order items carrying private-class onboarding data (WA group, admin
+  // contact). Empty for regular purchases and for older API responses.
+  const [pcItems, setPcItems] = useState<OrderItemLike[]>([]);
 
   useEffect(() => {
     // Small delay so CSS animations trigger after mount
@@ -142,7 +172,17 @@ function SuccessContent() {
           headers: { Authorization: `Bearer ${token}` },
         });
         const body = await res.json();
-        setVerified(body.success && body.data?.status === "paid" ? "paid" : "unpaid");
+        const isPaid = body.success && body.data?.status === "paid";
+        if (isPaid && Array.isArray(body.data?.items)) {
+          // Defensive: `privateClass` only exists on paid private-class items
+          // served by the new API — absence simply means no onboarding card.
+          setPcItems(
+            (body.data.items as OrderItemLike[]).filter(
+              (it) => it && typeof it === "object" && it.privateClass,
+            ),
+          );
+        }
+        setVerified(isPaid ? "paid" : "unpaid");
       } catch {
         setVerified("error");
       }
@@ -198,6 +238,16 @@ function SuccessContent() {
     );
   }
 
+  // Private Class onboarding data (first private-class item on the order).
+  const pc = pcItems[0]?.privateClass ?? null;
+  const pcAdminHref = `https://wa.me/${toWaDigits(pc?.onboardingContact) ?? WA_NUMBER}?text=${encodeURIComponent(
+    `Halo Admin, saya baru saja menyelesaikan pembayaran Private Class${
+      orderId ? ` (Order ${orderId.slice(0, 8).toUpperCase()})` : ""
+    }. Mohon konfirmasi & info langkah selanjutnya. Terima kasih!`,
+  )}`;
+  const pcGroupLink =
+    pc?.waGroupLink && pc.waGroupLink.startsWith("http") ? pc.waGroupLink : null;
+
   return (
     <div
       className="flex min-h-screen flex-col items-center justify-center px-4 py-16"
@@ -246,6 +296,64 @@ function SuccessContent() {
             </p>
           )}
         </div>
+
+        {/* Private Class onboarding card (only for paid private-class items) */}
+        {pc && (
+          <div
+            className="mb-6 rounded-2xl p-5"
+            style={{
+              background: "var(--surface-card)",
+              border: "1px solid rgba(0,212,255,0.25)",
+              boxShadow: "var(--shadow-e1)",
+            }}
+          >
+            <p
+              className="mb-1 text-xs font-semibold uppercase tracking-widest"
+              style={{ color: "var(--brand-cyan-strong)" }}
+            >
+              Private Class
+            </p>
+            <h2
+              className="mb-4 text-lg font-extrabold"
+              style={{ color: "var(--text-primary)", fontFamily: "var(--font-display)" }}
+            >
+              Selamat datang di Private Class!
+            </h2>
+            <ul className="space-y-3">
+              <NextStep icon="1" text="Admin akan menghubungi Anda untuk konfirmasi data & pembayaran" delay="0.5s" />
+              <NextStep icon="2" text="Join grup mentoring" delay="0.6s" />
+              <NextStep icon="3" text="Perkenalan dengan mentor" delay="0.7s" />
+              <NextStep icon="4" text="Info jadwal & teknis program" delay="0.8s" />
+            </ul>
+            {pc.liveSchedule && (
+              <p className="mt-4 text-xs" style={{ color: "var(--text-muted)" }}>
+                📅 Jadwal: <span style={{ color: "var(--text-secondary)" }}>{pc.liveSchedule}</span>
+              </p>
+            )}
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <a
+                id="success-pc-chat-admin-btn"
+                href={pcAdminHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary flex-1 justify-center"
+              >
+                Chat Admin Sekarang
+              </a>
+              {pcGroupLink && (
+                <a
+                  id="success-pc-join-group-btn"
+                  href={pcGroupLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-outline flex-1 justify-center"
+                >
+                  Join Grup Mentoring
+                </a>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Next steps card */}
         <div

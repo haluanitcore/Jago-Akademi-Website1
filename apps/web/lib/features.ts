@@ -15,6 +15,10 @@ export const features = {
   collaboration: on(process.env.NEXT_PUBLIC_FEATURE_COLLABORATION),
   affiliate: on(process.env.NEXT_PUBLIC_FEATURE_AFFILIATE),
 
+  // Private Class package page (/kelas-privat) — courses with format
+  // "private_class". OFF until the backend catalog endpoint ships.
+  privateClass: on(process.env.NEXT_PUBLIC_FEATURE_PRIVATE_CLASS),
+
   // EPIC 7 features — post-Soft-Launch (TASK-090/092/093...)
   allAccess: on(process.env.NEXT_PUBLIC_FEATURE_ALL_ACCESS),
   learningPath: on(process.env.NEXT_PUBLIC_FEATURE_LEARNING_PATH),

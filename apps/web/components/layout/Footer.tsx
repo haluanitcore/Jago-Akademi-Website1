@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 import { waLink } from "@/lib/config";
+import { features } from "@/lib/features";
 
 const footerLinks = {
   Belajar: [
@@ -13,6 +14,8 @@ const footerLinks = {
     { label: "Blog",              href: "/blog" },
   ],
   Program: [
+    // Only surfaced once the private-class catalog ships (flag is build-time).
+    ...(features.privateClass ? [{ label: "Private Class", href: "/kelas-privat" }] : []),
     { label: "Trainer Program",  href: "/trainer-program" },
     { label: "Program Afiliasi", href: "/afiliasi" },
     { label: "Paket LMS",        href: "/clients" },
