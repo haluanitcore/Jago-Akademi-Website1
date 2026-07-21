@@ -51,6 +51,29 @@ describe("POST /api/leads (TASK-040 lead capture)", () => {
     expect(p.lead.create).not.toHaveBeenCalled();
   });
 
+  // Regression BL-44: public contact form posts source "contact" + message.
+  it("accepts source 'contact' with a message (201)", async () => {
+    const res = await request(app)
+      .post("/api/leads")
+      .send({
+        name: "Siti Aminah",
+        email: "siti@example.com",
+        source: "contact",
+        message: "[Topik: Pertanyaan umum] Halo, saya ingin bertanya.",
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(p.lead.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          source: "contact",
+          message: "[Topik: Pertanyaan umum] Halo, saya ingin bertanya.",
+        }),
+      }),
+    );
+  });
+
   it("rejects an unknown source (400)", async () => {
     const res = await request(app)
       .post("/api/leads")

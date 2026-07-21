@@ -33,7 +33,7 @@ export default function ContactForm() {
           name,
           email,
           source: "contact",
-          notes: `[Topik: ${topic}] ${message}`.trim(),
+          message: `[Topik: ${topic}] ${message}`.trim(),
         }),
       });
       const body = await res.json();

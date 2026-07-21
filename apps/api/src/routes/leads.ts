@@ -12,7 +12,7 @@ const leadSchema = z.object({
   phone: z.string().max(40).optional(),
   company: z.string().max(160).optional(),
   message: z.string().max(2000).optional(),
-  source: z.enum(["affiliate", "lms", "trainer", "free-class", "waitlist", "early-access-page", "other"]).default("other"),
+  source: z.enum(["affiliate", "lms", "trainer", "free-class", "waitlist", "early-access-page", "contact", "other"]).default("other"),
 });
 
 // POST /api/leads — public lead capture from marketing landing pages (TASK-040).
