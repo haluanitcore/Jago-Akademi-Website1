@@ -37,6 +37,11 @@ for (const route of ROUTES) {
           fullPage: true,
           animations: "disabled",
           threshold: 0.1,
+          // Full-page shots of long marketing pages jitter a few hundred px
+          // across runs (font raster, lazy image decode) even with animations
+          // off; a small ratio tolerance keeps the diff meaningful without
+          // flaking. 2% of a ~1440x8000 page ≈ real layout changes still fail.
+          maxDiffPixelRatio: 0.02,
         }
       );
     });
