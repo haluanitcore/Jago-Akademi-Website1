@@ -27,6 +27,21 @@ export default defineConfig({
       url: "http://localhost:3004",
       reuseExistingServer: true,
       timeout: 120_000,
+      // Beta-feature pages (/kelas-privat, /komunitas, /alumni,
+      // /portofolio-member) are gated by build-time NEXT_PUBLIC_FEATURE_* flags
+      // (default OFF — their layouts call notFound()). Turning them ON here
+      // affects ONLY the dev server Playwright spawns for E2E: `next dev`
+      // inlines NEXT_PUBLIC_* at request-compile time from this process env, so
+      // normal `next dev`/`next build` runs keep the OFF defaults.
+      // NOTE: reuseExistingServer is true — if you already have a dev server
+      // running on :3004 without these flags, beta-feature specs will see 404s;
+      // stop it and let Playwright start its own.
+      env: {
+        NEXT_PUBLIC_FEATURE_PRIVATE_CLASS: "true",
+        NEXT_PUBLIC_FEATURE_COMMUNITY: "true",
+        NEXT_PUBLIC_FEATURE_ALUMNI: "true",
+        NEXT_PUBLIC_FEATURE_PORTFOLIO: "true",
+      },
     },
     {
       command: "npx tsx ../api/src/index.ts",
