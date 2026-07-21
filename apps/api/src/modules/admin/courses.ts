@@ -46,6 +46,8 @@ router.get("/courses", async (req: Request, res: Response, next: NextFunction) =
           avgRating: true,
           isFeatured: true,
           adminFeedback: true,
+          // BL-47: admin list needs to distinguish private classes at a glance.
+          format: true,
           publishedAt: true,
           createdAt: true,
           trainer: { select: { id: true, name: true, email: true } },
@@ -84,11 +86,27 @@ router.get("/courses/:id", async (req: Request, res: Response, next: NextFunctio
   }
 });
 
-// PATCH /api/admin/courses/:id — generic course update (status, isFeatured, adminFeedback)
+// PATCH /api/admin/courses/:id — generic course update (status, isFeatured,
+// adminFeedback, private-class fields)
 const AdminCourseUpdateSchema = z.object({
   status: z.enum(["draft", "pending", "published", "rejected", "archived"]).optional(),
   isFeatured: z.boolean().optional(),
   adminFeedback: z.string().nullable().optional(),
+  // BL-47 private-class fields. waGroupLink must be an https invite link and
+  // onboardingContact a bare WA number (digits only, e.g. 6285283423737) so the
+  // frontend can build a wa.me link without re-normalizing.
+  format: z.enum(["regular", "private_class"]).optional(),
+  waGroupLink: z
+    .string()
+    .url()
+    .startsWith("https://", "waGroupLink harus URL https.")
+    .nullable()
+    .optional(),
+  onboardingContact: z
+    .string()
+    .regex(/^\d{8,15}$/, "onboardingContact harus 8-15 digit angka.")
+    .nullable()
+    .optional(),
 });
 
 router.patch("/courses/:id", validateBody(AdminCourseUpdateSchema), async (req: Request, res: Response, next: NextFunction) => {
@@ -96,7 +114,9 @@ router.patch("/courses/:id", validateBody(AdminCourseUpdateSchema), async (req: 
     const course = await prisma.course.findUnique({ where: { id: req.params.id } });
     if (!course) return next(new AppError(404, "Kursus tidak ditemukan."));
 
-    const { status, isFeatured, adminFeedback } = req.body as z.infer<typeof AdminCourseUpdateSchema>;
+    const { status, isFeatured, adminFeedback, format, waGroupLink, onboardingContact } = req.body as z.infer<
+      typeof AdminCourseUpdateSchema
+    >;
     const data: Record<string, unknown> = {};
     if (status === "published") {
       data.status = "published";
@@ -116,11 +136,25 @@ router.patch("/courses/:id", validateBody(AdminCourseUpdateSchema), async (req: 
       data.status = "archived";
     }
     if (typeof isFeatured === "boolean") data.isFeatured = isFeatured;
+    // BL-47: undefined means "leave untouched"; explicit null clears the field.
+    if (format !== undefined) data.format = format;
+    if (waGroupLink !== undefined) data.waGroupLink = waGroupLink;
+    if (onboardingContact !== undefined) data.onboardingContact = onboardingContact;
 
     const updated = await prisma.course.update({
       where: { id: req.params.id },
       data,
-      select: { id: true, title: true, status: true, isFeatured: true, publishedAt: true, adminFeedback: true },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        isFeatured: true,
+        publishedAt: true,
+        adminFeedback: true,
+        format: true,
+        waGroupLink: true,
+        onboardingContact: true,
+      },
     });
 
     res.json(successResponse(updated));

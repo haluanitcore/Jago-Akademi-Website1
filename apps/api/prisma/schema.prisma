@@ -160,6 +160,12 @@ model Course {
   adminFeedback String?
   liveZoomLink  String?
   liveSchedule  DateTime?
+  // regular | private_class (BL-47)
+  format            String  @default("regular")
+  // WhatsApp group invite for private-class onboarding — shown only after purchase.
+  waGroupLink       String?
+  // Admin WA number for onboarding (digits only, e.g. 6285283423737).
+  onboardingContact String?
 
   category     CourseCategory?    @relation(fields: [categoryId], references: [id])
   trainer      User               @relation("TrainerCourses", fields: [trainerId], references: [id])
@@ -171,6 +177,8 @@ model Course {
   @@index([trainerId])
   @@index([categoryId])
   @@index([status])
+  // Catalog split: regular catalog vs private-class listing (BL-47).
+  @@index([format, status])
   @@map("courses")
 }
 

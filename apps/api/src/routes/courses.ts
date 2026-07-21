@@ -16,9 +16,19 @@ import { AppError, successResponse } from "../types/index.js";
 
 const router = Router();
 
+// BL-47: format is an enum boundary — an invalid value must 400, not silently
+// fall through to the catalog default.
+const listQuerySchema = z.object({
+  format: z.enum(["regular", "private_class"]).optional(),
+});
+
 // GET /api/courses
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const parsedQuery = listQuerySchema.safeParse(req.query);
+    if (!parsedQuery.success) {
+      return next(new AppError(400, "Parameter format harus 'regular' atau 'private_class'.", "VALIDATION_ERROR"));
+    }
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
     const result = await listCourses({
@@ -26,6 +36,7 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       level: req.query.level as string | undefined,
       q: req.query.q as string | undefined,
       featured: req.query.featured === "true" ? true : req.query.featured === "false" ? false : undefined,
+      format: parsedQuery.data.format,
       page,
       limit,
     });

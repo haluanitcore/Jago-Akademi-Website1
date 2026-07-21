@@ -8,6 +8,7 @@ export type CourseListFilter = {
   q?: string;
   featured?: boolean;
   status?: string;
+  format?: "regular" | "private_class";
   page?: number;
   limit?: number;
 };
@@ -35,23 +36,32 @@ const COURSE_SELECT = {
 } as const;
 
 export async function listCourses(filter: CourseListFilter = {}) {
-  const { categorySlug, level, q, featured, status = "published", page = 1, limit = 20 } = filter;
+  const { categorySlug, level, q, featured, status = "published", format, page = 1, limit = 20 } = filter;
   const skip = (page - 1) * limit;
+
+  // BL-47: private classes must never pollute the general catalog. Without an
+  // explicit format the list serves regular courses only; callers opt in to
+  // private classes with format=private_class.
+  const formatWhere = format ?? { not: "private_class" };
 
   if (q) {
     const hits = await searchCourses(q, { limit, offset: skip, filter: `status = "${status}"` });
     if (hits.length > 0) {
       const slugs = hits.map((h) => h.slug);
+      // Format is not part of the search index, so the format constraint is
+      // re-applied on the Prisma fetch (search hits outside the requested
+      // format are dropped here).
       const courses = await prisma.course.findMany({
-        where: { slug: { in: slugs }, status },
+        where: { slug: { in: slugs }, status, format: formatWhere },
         select: COURSE_SELECT,
       });
       const ordered = slugs.map((s) => courses.find((c) => c.slug === s)).filter(Boolean);
-      return { data: ordered, total: hits.length, page, limit };
+      return { data: ordered, total: ordered.length, page, limit };
     }
     // Fallback to Prisma ILIKE search
     const where = {
       status,
+      format: formatWhere,
       OR: [
         { title: { contains: q, mode: "insensitive" as const } },
         { shortDesc: { contains: q, mode: "insensitive" as const } },
@@ -64,7 +74,7 @@ export async function listCourses(filter: CourseListFilter = {}) {
     return { data, total, page, limit };
   }
 
-  const where: Record<string, unknown> = { status };
+  const where: Record<string, unknown> = { status, format: formatWhere };
   if (categorySlug) {
     where.category = { slug: categorySlug };
   }
@@ -89,6 +99,10 @@ export async function getCourseBySlug(slug: string) {
       metaTitle: true,
       metaDesc: true,
       language: true,
+      // BL-47: checkout must know the course format. waGroupLink and
+      // onboardingContact stay OUT of every public select — they are only
+      // revealed on the owner-scoped order detail after payment.
+      format: true,
       sections: {
         orderBy: { sortOrder: "asc" },
         select: {

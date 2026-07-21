@@ -9,6 +9,10 @@ vi.mock("../../../src/db/prisma.js", () => ({
       findUnique: vi.fn(),
       count: vi.fn(),
     },
+    // BL-47: order detail looks up private-class courses for paid orders.
+    course: {
+      findMany: vi.fn(),
+    },
   },
 }));
 
@@ -34,7 +38,7 @@ const mockOrders = [
     discountAmount: 0,
     finalAmount: 299000,
     createdAt: new Date(),
-    items: [{ id: "item-1", itemTitle: "Kursus Digital Marketing", itemType: "course" }],
+    items: [{ id: "item-1", itemId: "course-1", itemTitle: "Kursus Digital Marketing", itemType: "course" }],
     coupon: null,
   },
   {
@@ -45,7 +49,7 @@ const mockOrders = [
     discountAmount: 0,
     finalAmount: 150000,
     createdAt: new Date(),
-    items: [{ id: "item-2", itemTitle: "E-Book Marketing", itemType: "ebook" }],
+    items: [{ id: "item-2", itemId: "ebook-1", itemTitle: "E-Book Marketing", itemType: "ebook" }],
     coupon: null,
   },
 ];
@@ -55,6 +59,8 @@ beforeEach(() => {
   vi.mocked(prisma.order.findMany).mockResolvedValue(mockOrders as never);
   vi.mocked(prisma.order.count).mockResolvedValue(2);
   vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrders[0] as never);
+  // Default: no private-class course matches (regular courses only).
+  vi.mocked(prisma.course.findMany).mockResolvedValue([] as never);
 });
 
 describe("GET /api/orders", () => {

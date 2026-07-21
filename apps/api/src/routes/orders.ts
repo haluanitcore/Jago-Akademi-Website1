@@ -48,7 +48,36 @@ router.get("/:orderId", async (req, res, next) => {
       throw new AppError(403, "Akses ditolak.");
     }
 
-    return res.json(successResponse(order));
+    // BL-47 (private-class onboarding): waGroupLink/onboardingContact are never
+    // exposed on public course endpoints — a PAID order is the gate. Only then
+    // does the item carry the onboarding block; otherwise privateClass stays
+    // null so the response shape is additive and backward-compatible.
+    const privateClassByCourseId = new Map<
+      string,
+      { waGroupLink: string | null; onboardingContact: string | null; liveSchedule: Date | null }
+    >();
+    if (order.status === "paid") {
+      const courseIds = order.items.filter((item) => item.itemType === "course").map((item) => item.itemId);
+      if (courseIds.length > 0) {
+        const privateCourses = await prisma.course.findMany({
+          where: { id: { in: courseIds }, format: "private_class" },
+          select: { id: true, waGroupLink: true, onboardingContact: true, liveSchedule: true },
+        });
+        for (const course of privateCourses) {
+          privateClassByCourseId.set(course.id, {
+            waGroupLink: course.waGroupLink,
+            onboardingContact: course.onboardingContact,
+            liveSchedule: course.liveSchedule,
+          });
+        }
+      }
+    }
+    const items = order.items.map((item) => ({
+      ...item,
+      privateClass: item.itemType === "course" ? (privateClassByCourseId.get(item.itemId) ?? null) : null,
+    }));
+
+    return res.json(successResponse({ ...order, items }));
   } catch (err) {
     next(err);
   }
