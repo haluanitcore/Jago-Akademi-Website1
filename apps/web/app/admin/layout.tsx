@@ -22,6 +22,7 @@ const NAV_GROUPS = [
       { href: "/admin/event",    label: "Event",     icon: "🎫" },
       { href: "/admin/review",   label: "Review",    icon: "⭐" },
       { href: "/admin/ebook",    label: "E-Book",    icon: "📘" },
+      { href: "/admin/portofolio", label: "Portofolio Member", icon: "🖼️" },
     ],
   },
   {
