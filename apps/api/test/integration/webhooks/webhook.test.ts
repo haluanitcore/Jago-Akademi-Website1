@@ -6,6 +6,7 @@ vi.mock("../../../src/db/prisma.js", () => ({
   prisma: {
     paymentTransaction: { findFirst: vi.fn(), update: vi.fn() },
     order: { findUnique: vi.fn(), update: vi.fn() },
+    course: { findMany: vi.fn() },
     courseEnrollment: { upsert: vi.fn() },
     eventRegistration: { upsert: vi.fn() },
     event: { update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn() },
@@ -25,10 +26,12 @@ vi.mock("../../../src/services/notification/emailService.js", () => ({
   sendPaymentSuccess: vi.fn().mockResolvedValue(undefined),
   sendOrderInvoice: vi.fn().mockResolvedValue(undefined),
   sendEventFullRefund: vi.fn().mockResolvedValue(undefined),
+  sendPrivateClassWelcome: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../../src/services/notification/whatsappService.js", () => ({
   notifyPaymentSuccess: vi.fn().mockResolvedValue(undefined),
+  notifyPrivateClassWelcome: vi.fn().mockResolvedValue(undefined),
 }));
 
 const { prisma } = await import("../../../src/db/prisma.js");
@@ -52,6 +55,8 @@ beforeEach(() => {
   vi.mocked(prisma.paymentTransaction.findFirst).mockResolvedValue(mockTransaction as never);
   vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as never);
   vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+  // Private Class onboarding: default order has no private_class course.
+  vi.mocked(prisma.course.findMany).mockResolvedValue([] as never);
   vi.mocked(prisma.paymentTransaction.update).mockResolvedValue({} as never);
   vi.mocked(prisma.courseEnrollment.upsert).mockResolvedValue({} as never);
   vi.mocked(prisma.eventRegistration.upsert).mockResolvedValue({} as never);
@@ -214,6 +219,123 @@ describe("POST /api/webhooks/doku", () => {
     expect(prisma.affiliate.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ totalConversions: { increment: 1 } }) }),
     );
+  });
+
+  // ── Private Class post-purchase onboarding ──────────────────────────────────
+
+  it("sends private-class welcome email + WA for a paid private_class course", async () => {
+    const { sendPrivateClassWelcome } = await import("../../../src/services/notification/emailService.js");
+    const { notifyPrivateClassWelcome } = await import("../../../src/services/notification/whatsappService.js");
+    vi.mocked(prisma.order.findUnique).mockResolvedValue({
+      ...mockOrder,
+      items: [{ itemType: "course", itemId: "course-pc", itemTitle: "Private Class Digital Marketing" }],
+      user: { name: "Test User", email: "test@test.com", profile: { phone: "628123456789" } },
+    } as never);
+    vi.mocked(prisma.course.findMany).mockResolvedValue([
+      {
+        title: "Private Class Digital Marketing",
+        waGroupLink: "https://chat.whatsapp.com/ABC123",
+        onboardingContact: "6281111111111",
+        liveSchedule: new Date("2026-08-01T19:00:00+07:00"),
+      },
+    ] as never);
+
+    const res = await request(app)
+      .post("/api/webhooks/doku")
+      .set(webhookHeaders)
+      .send({ order: { invoice_number: "JA-ORDER1" }, transaction: { status: "SUCCESS" } });
+
+    expect(res.status).toBe(200);
+    // Course fields are fetched once, filtered to private_class only (no N+1).
+    expect(prisma.course.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.course.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: { in: ["course-pc"] }, format: "private_class" }),
+      }),
+    );
+    expect(sendPrivateClassWelcome).toHaveBeenCalledWith(
+      "test@test.com",
+      expect.objectContaining({
+        courseTitle: "Private Class Digital Marketing",
+        waGroupLink: "https://chat.whatsapp.com/ABC123",
+        onboardingContact: "6281111111111",
+        orderId: "order-1",
+      }),
+    );
+    expect(notifyPrivateClassWelcome).toHaveBeenCalledWith(
+      "628123456789",
+      "Test User",
+      "Private Class Digital Marketing",
+      "https://chat.whatsapp.com/ABC123",
+    );
+  });
+
+  it("skips the WA welcome (email only) when the buyer has no phone", async () => {
+    const { sendPrivateClassWelcome } = await import("../../../src/services/notification/emailService.js");
+    const { notifyPrivateClassWelcome } = await import("../../../src/services/notification/whatsappService.js");
+    // Default mockOrder has profile: null.
+    vi.mocked(prisma.course.findMany).mockResolvedValue([
+      { title: "Kursus Test", waGroupLink: null, onboardingContact: null, liveSchedule: null },
+    ] as never);
+
+    const res = await request(app)
+      .post("/api/webhooks/doku")
+      .set(webhookHeaders)
+      .send({ order: { invoice_number: "JA-ORDER1" }, transaction: { status: "SUCCESS" } });
+
+    expect(res.status).toBe(200);
+    expect(sendPrivateClassWelcome).toHaveBeenCalled();
+    expect(notifyPrivateClassWelcome).not.toHaveBeenCalled();
+  });
+
+  it("does NOT send private-class onboarding for a regular course", async () => {
+    const { sendPaymentSuccess, sendPrivateClassWelcome } = await import(
+      "../../../src/services/notification/emailService.js"
+    );
+    const { notifyPrivateClassWelcome } = await import("../../../src/services/notification/whatsappService.js");
+    // findMany filters on format=private_class → a regular course matches nothing.
+    vi.mocked(prisma.course.findMany).mockResolvedValue([] as never);
+
+    const res = await request(app)
+      .post("/api/webhooks/doku")
+      .set(webhookHeaders)
+      .send({ order: { invoice_number: "JA-ORDER1" }, transaction: { status: "SUCCESS" } });
+
+    expect(res.status).toBe(200);
+    // Regular behavior unchanged: payment-success sent, onboarding untouched.
+    expect(sendPaymentSuccess).toHaveBeenCalled();
+    expect(sendPrivateClassWelcome).not.toHaveBeenCalled();
+    expect(notifyPrivateClassWelcome).not.toHaveBeenCalled();
+  });
+
+  it("still fulfills and returns 200 when private-class email/WA notifications throw", async () => {
+    const { sendPrivateClassWelcome } = await import("../../../src/services/notification/emailService.js");
+    const { notifyPrivateClassWelcome } = await import("../../../src/services/notification/whatsappService.js");
+    vi.mocked(prisma.order.findUnique).mockResolvedValue({
+      ...mockOrder,
+      user: { name: "Test User", email: "test@test.com", profile: { phone: "628123456789" } },
+    } as never);
+    vi.mocked(prisma.course.findMany).mockResolvedValue([
+      { title: "Kursus Test", waGroupLink: null, onboardingContact: null, liveSchedule: null },
+    ] as never);
+    vi.mocked(sendPrivateClassWelcome).mockRejectedValueOnce(new Error("resend down"));
+    vi.mocked(notifyPrivateClassWelcome).mockRejectedValueOnce(new Error("fonnte down"));
+
+    const res = await request(app)
+      .post("/api/webhooks/doku")
+      .set(webhookHeaders)
+      .send({ order: { invoice_number: "JA-ORDER1" }, transaction: { status: "SUCCESS" } });
+
+    // Notification failures are best-effort: webhook still 200 (no DOKU retry
+    // loop) and fulfillment side-effects are intact.
+    expect(res.status).toBe(200);
+    expect(res.body.received).toBe(true);
+    expect(prisma.order.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: "paid" }) }),
+    );
+    expect(prisma.courseEnrollment.upsert).toHaveBeenCalled();
+    expect(sendPrivateClassWelcome).toHaveBeenCalled();
+    expect(notifyPrivateClassWelcome).toHaveBeenCalled();
   });
 
   it("handles FAILED payment", async () => {

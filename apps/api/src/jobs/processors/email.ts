@@ -3,12 +3,30 @@ import {
   sendPaymentPending,
   sendOrderInvoice,
   sendEventFullRefund,
+  sendPrivateClassWelcome,
 } from "../../services/notification/emailService.js";
 import { notifyPaymentSuccess } from "../../services/notification/whatsappService.js";
 import type { EmailJob } from "../types.js";
 
+/**
+ * Private Class post-purchase onboarding welcome. Declared here (next to its
+ * switch case) rather than in jobs/types.ts because it is only dispatched
+ * inline from the webhook processor — the queued EmailJob union in types.ts is
+ * left untouched so the queue payload contract does not widen.
+ */
+export type PrivateClassWelcomeJob = {
+  type: "private-class-welcome";
+  to: string;
+  name: string;
+  orderId: string;
+  courseTitle: string;
+  waGroupLink?: string | null;
+  onboardingContact?: string | null;
+  liveSchedule?: Date | null;
+};
+
 /** Send a transactional notification (email or WhatsApp). Leaf processor. */
-export async function processEmail(job: EmailJob): Promise<void> {
+export async function processEmail(job: EmailJob | PrivateClassWelcomeJob): Promise<void> {
   switch (job.type) {
     case "payment-success":
       await sendPaymentSuccess(job.to, job.name, job.orderId, job.courseName, job.amount);
@@ -24,6 +42,16 @@ export async function processEmail(job: EmailJob): Promise<void> {
       return;
     case "event-full-refund":
       await sendEventFullRefund(job.to, job.name, job.orderId, job.eventName);
+      return;
+    case "private-class-welcome":
+      await sendPrivateClassWelcome(job.to, {
+        name: job.name,
+        courseTitle: job.courseTitle,
+        waGroupLink: job.waGroupLink,
+        onboardingContact: job.onboardingContact,
+        liveSchedule: job.liveSchedule,
+        orderId: job.orderId,
+      });
       return;
   }
 }

@@ -25,3 +25,15 @@ export async function notifyPaymentSuccess(phone: string, name: string, courseNa
   const msg = `Halo ${name}! 🎉\n\nPembayaran kursus *${courseName}* telah berhasil dikonfirmasi.\n\nSilakan login dan mulai belajar di: ${env.WEB_URL}/belajar\n\nSalam,\nJago Akademi`;
   await sendWhatsApp(phone, msg);
 }
+
+/** Private Class post-purchase onboarding (degrade-safe, same as notifyPaymentSuccess). */
+export async function notifyPrivateClassWelcome(
+  phone: string,
+  name: string,
+  courseTitle: string,
+  waGroupLink?: string | null,
+) {
+  const groupLine = waGroupLink ? `\n\nJoin grup mentoring Anda di sini: ${waGroupLink}` : "";
+  const msg = `Halo ${name}! 🎉\n\nSelamat bergabung di Private Class *${courseTitle}*.${groupLine}\n\nAdmin kami akan menghubungi Anda untuk konfirmasi data dan proses onboarding.\n\nSalam,\nJago Akademi`;
+  await sendWhatsApp(phone, msg);
+}

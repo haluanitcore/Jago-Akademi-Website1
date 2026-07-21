@@ -1,6 +1,7 @@
 import { prisma } from "../../db/prisma.js";
 import { logger } from "../../lib/logger.js";
 import { processEmail } from "./email.js";
+import { notifyPrivateClassWelcome } from "../../services/notification/whatsappService.js";
 import type { WebhookJob } from "../types.js";
 
 /** Best-effort notification: a failed email/WA must not fail payment fulfillment. */
@@ -193,6 +194,42 @@ export async function processWebhookPayment(job: WebhookJob): Promise<void> {
       await safeNotify(() =>
         processEmail({ type: "wa-payment-success", phone, name: order.user.name, courseName }),
       );
+    }
+
+    // Private Class onboarding: every paid private_class course item gets a
+    // welcome email (+ WA when a phone is known). One findMany covers all course
+    // items of the order (no per-item queries), and the whole block sits inside
+    // safeNotify — the fulfillment transaction is already committed, so a lookup
+    // or send failure must never fail (and thus retry) the webhook. Regular
+    // courses are filtered out by the `format` predicate and keep the existing
+    // notifications above unchanged.
+    const courseItemIds = order.items.filter((i) => i.itemType === "course").map((i) => i.itemId);
+    if (courseItemIds.length > 0) {
+      await safeNotify(async () => {
+        const privateClassCourses = await prisma.course.findMany({
+          where: { id: { in: courseItemIds }, format: "private_class" },
+          select: { title: true, waGroupLink: true, onboardingContact: true, liveSchedule: true },
+        });
+        for (const course of privateClassCourses) {
+          await safeNotify(() =>
+            processEmail({
+              type: "private-class-welcome",
+              to: order.user.email,
+              name: order.user.name,
+              orderId: order.id,
+              courseTitle: course.title,
+              waGroupLink: course.waGroupLink,
+              onboardingContact: course.onboardingContact,
+              liveSchedule: course.liveSchedule,
+            }),
+          );
+          if (phone) {
+            await safeNotify(() =>
+              notifyPrivateClassWelcome(phone, order.user.name, course.title, course.waGroupLink),
+            );
+          }
+        }
+      });
     }
   } else if (txStatus === "FAILED" || txStatus === "EXPIRED") {
     // M-webhook: never overwrite an already-paid order. A late FAILED/EXPIRED

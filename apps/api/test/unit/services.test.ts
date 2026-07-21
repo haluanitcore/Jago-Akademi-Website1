@@ -57,6 +57,36 @@ describe("emailService", () => {
       sendOrderInvoice("user@test.com", "User Satu", "order-123456")
     ).resolves.toBeUndefined();
   });
+
+  it("sendPrivateClassWelcome sends onboarding email with group link and schedule", async () => {
+    const { sendPrivateClassWelcome } = await import("../../src/services/notification/emailService.js");
+    await expect(
+      sendPrivateClassWelcome("user@test.com", {
+        name: "User Satu",
+        courseTitle: "Private Class Digital Marketing",
+        waGroupLink: "https://chat.whatsapp.com/ABC123",
+        onboardingContact: "6281111111111",
+        liveSchedule: new Date("2026-08-01T19:00:00+07:00"),
+        orderId: "order-123",
+      })
+    ).resolves.toBeUndefined();
+  });
+
+  it("sendPrivateClassWelcome falls back gracefully when link/contact/schedule are null", async () => {
+    const { sendPrivateClassWelcome } = await import("../../src/services/notification/emailService.js");
+    // null waGroupLink/onboardingContact/liveSchedule → template uses the
+    // default admin contact and "will be announced" copy instead of crashing.
+    await expect(
+      sendPrivateClassWelcome("user@test.com", {
+        name: "User Satu",
+        courseTitle: "Private Class Copywriting",
+        waGroupLink: null,
+        onboardingContact: null,
+        liveSchedule: null,
+        orderId: "order-456",
+      })
+    ).resolves.toBeUndefined();
+  });
 });
 
 // ─── Invoice PDF Service ───────────────────────────────────────────────────────

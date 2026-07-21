@@ -72,6 +72,60 @@ export async function sendEventFullRefund(to: string, name: string, orderId: str
   );
 }
 
+/**
+ * Post-purchase onboarding email for Private Class courses. Sent from webhook
+ * fulfillment alongside the payment-success email. Degrade-safe like all other
+ * templates (no-op when RESEND_API_KEY is unset).
+ */
+export async function sendPrivateClassWelcome(
+  to: string,
+  params: {
+    name: string;
+    courseTitle: string;
+    waGroupLink?: string | null;
+    onboardingContact?: string | null;
+    liveSchedule?: Date | null;
+    orderId: string;
+  },
+) {
+  const { name, courseTitle, waGroupLink, onboardingContact, liveSchedule, orderId } = params;
+  // Fallback: official admin number when the course has no dedicated contact.
+  const adminWa = onboardingContact || "6285283423737";
+  // Re-wrap in `new Date` because the value may arrive as an ISO string after a
+  // JSON round-trip through the BullMQ queue.
+  const scheduleText = liveSchedule
+    ? `${new Date(liveSchedule).toLocaleString("id-ID", {
+        dateStyle: "full",
+        timeStyle: "short",
+        timeZone: "Asia/Jakarta",
+      })} WIB`
+    : null;
+
+  await send(
+    to,
+    `Selamat Bergabung di Private Class — ${courseTitle}`,
+    `<p>Halo <b>${name}</b>,</p>
+     <p>Selamat! Anda resmi bergabung di Private Class <b>${courseTitle}</b>. Berikut langkah onboarding Anda:</p>
+     <ol>
+       <li><b>Konfirmasi data &amp; pembayaran</b> — admin kami akan memverifikasi data dan pembayaran Anda.</li>
+       <li><b>Join grup mentoring</b> — ${
+         waGroupLink
+           ? `<a href="${waGroupLink}">Klik di sini untuk bergabung ke grup WhatsApp</a>.`
+           : "tautan grup akan dikirimkan oleh admin kami."
+       }</li>
+       <li><b>Perkenalan mentor</b> — Anda akan diperkenalkan dengan mentor di dalam grup.</li>
+       <li><b>Jadwal &amp; teknis</b> — ${
+         scheduleText
+           ? `sesi live pertama: <b>${scheduleText}</b>.`
+           : "jadwal sesi akan diinformasikan di dalam grup."
+       }</li>
+     </ol>
+     <p>Butuh bantuan? Hubungi admin kami di <a href="https://wa.me/${adminWa}">wa.me/${adminWa}</a></p>
+     <p>Order ID: <code>${orderId}</code></p>
+     <br><p>Salam,<br>Tim Jago Akademi</p>`
+  );
+}
+
 export async function sendOrderInvoice(to: string, name: string, orderId: string) {
   await send(
     to,
