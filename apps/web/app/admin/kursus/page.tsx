@@ -14,6 +14,7 @@ type Course = {
   totalEnrolled: number;
   avgRating: string;
   isFeatured: boolean;
+  format?: "regular" | "private_class";
   publishedAt: string | null;
   createdAt: string;
   trainer: { id: string; name: string; email: string };
@@ -43,6 +44,9 @@ type CourseDetail = {
   price: string;
   previewVideo: string | null;
   adminFeedback: string | null;
+  format?: "regular" | "private_class";
+  waGroupLink?: string | null;
+  onboardingContact?: string | null;
   trainer: { id: string; name: string; email: string };
   category: { id: string; name: string } | null;
   sections?: DetailSection[];
@@ -80,6 +84,12 @@ export default function AdminKursusPage() {
   const [feedbackText, setFeedbackText] = useState("");
   const [savingApproval, setSavingApproval] = useState(false);
 
+  // Private Class settings (format / WA group / onboarding contact)
+  const [pcFormat, setPcFormat] = useState<"regular" | "private_class">("regular");
+  const [pcWaLink, setPcWaLink] = useState("");
+  const [pcContact, setPcContact] = useState("");
+  const [savingPrivate, setSavingPrivate] = useState(false);
+
   async function openDetailModal(courseId: string) {
     setSelectedCourseId(courseId);
     setModalLoading(true);
@@ -95,6 +105,9 @@ export default function AdminKursusPage() {
       if (body.success) {
         setDetailCourse(body.data);
         setFeedbackText(body.data.adminFeedback ?? "");
+        setPcFormat(body.data.format === "private_class" ? "private_class" : "regular");
+        setPcWaLink(body.data.waGroupLink ?? "");
+        setPcContact(body.data.onboardingContact ?? "");
       } else {
         alert(body.error?.message ?? "Gagal memuat detail kursus.");
         setSelectedCourseId(null);
@@ -160,6 +173,49 @@ export default function AdminKursusPage() {
       alert("Gagal menghubungi server.");
     } finally {
       setSavingApproval(false);
+    }
+  }
+
+  async function handleSavePrivateClass() {
+    if (!selectedCourseId) return;
+    const waLink = pcWaLink.trim();
+    const contact = pcContact.trim();
+    // Mirror server-side Zod rules before sending.
+    if (waLink && !waLink.startsWith("https://")) {
+      alert("Link grup WhatsApp harus diawali https://");
+      return;
+    }
+    if (contact && !/^\d{8,15}$/.test(contact)) {
+      alert("Kontak onboarding harus berupa angka saja (8-15 digit), contoh: 6285283423737");
+      return;
+    }
+    setSavingPrivate(true);
+    const token = await getValidToken();
+    if (!token) {
+      setSavingPrivate(false);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/courses/${selectedCourseId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          format: pcFormat,
+          waGroupLink: waLink || null,
+          onboardingContact: contact || null,
+        }),
+      });
+      const body = await res.json();
+      if (body.success) {
+        alert("Pengaturan Private Class berhasil disimpan.");
+        loadCourses();
+      } else {
+        alert(body.error?.message ?? "Gagal menyimpan pengaturan Private Class.");
+      }
+    } catch {
+      alert("Gagal menghubungi server.");
+    } finally {
+      setSavingPrivate(false);
     }
   }
 
@@ -274,6 +330,7 @@ export default function AdminKursusPage() {
                           <p className="ak-course-title">
                             {c.title}
                             {c.isFeatured && <span className="ak-featured-badge">⭐ Unggulan</span>}
+                            {c.format === "private_class" && <span className="ak-private-badge">🔒 Private Class</span>}
                           </p>
                           <p className="ak-course-cat">{c.category?.name ?? "Umum"} · {c._count?.sections ?? 0} bab</p>
                         </div>
@@ -445,6 +502,52 @@ export default function AdminKursusPage() {
                   )}
                 </div>
 
+                {/* Private Class Settings */}
+                <div className="ak-private-section">
+                  <h3 className="ak-section-title">Pengaturan Private Class</h3>
+                  <div className="ak-private-fields">
+                    <label className="ak-private-field">
+                      <span className="ak-private-label">Format Kursus</span>
+                      <select
+                        className="ak-private-input"
+                        value={pcFormat}
+                        onChange={(e) => setPcFormat(e.target.value === "private_class" ? "private_class" : "regular")}
+                      >
+                        <option value="regular">Reguler</option>
+                        <option value="private_class">Private Class</option>
+                      </select>
+                    </label>
+                    <label className="ak-private-field">
+                      <span className="ak-private-label">Link Grup WhatsApp</span>
+                      <input
+                        className="ak-private-input"
+                        type="text"
+                        placeholder="https://chat.whatsapp.com/..."
+                        value={pcWaLink}
+                        onChange={(e) => setPcWaLink(e.target.value)}
+                      />
+                    </label>
+                    <label className="ak-private-field">
+                      <span className="ak-private-label">Kontak Onboarding (nomor WA, angka saja)</span>
+                      <input
+                        className="ak-private-input"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="6285283423737"
+                        value={pcContact}
+                        onChange={(e) => setPcContact(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <button
+                    className="ak-btn ak-btn-save-private"
+                    onClick={handleSavePrivateClass}
+                    disabled={savingPrivate || savingApproval}
+                  >
+                    {savingPrivate ? "Menyimpan..." : "💾 Simpan Pengaturan"}
+                  </button>
+                </div>
+
                 {/* Feedback Input Form */}
                 <div className="ak-feedback-section">
                   <h3 className="ak-section-title">Catatan & Umpan Balik Admin (Wajib jika menolak)</h3>
@@ -513,6 +616,7 @@ export default function AdminKursusPage() {
         .ak-course-cell { display: flex; align-items: flex-start; gap: 10px; }
         .ak-course-title { font-size: 13px; font-weight: 600; color: #1D1D1F; max-width: 200px; line-height: 1.3; }
         .ak-featured-badge { font-size: 9px; background: #FEF3C7; color: #D97706; padding: 2px 6px; border-radius: 999px; margin-left: 4px; font-weight: 700; }
+        .ak-private-badge { font-size: 9px; background: #EDE9FE; color: #7C3AED; padding: 2px 6px; border-radius: 999px; margin-left: 4px; font-weight: 700; white-space: nowrap; }
         .ak-course-cat { font-size: 11px; color: #9CA3AF; margin-top: 2px; }
         .ak-trainer-name { font-size: 13px; font-weight: 500; }
         .ak-trainer-email { font-size: 11px; color: #9CA3AF; }
@@ -573,6 +677,15 @@ export default function AdminKursusPage() {
         .ak-les-type { font-size: 14px; }
         .ak-les-title { flex: 1; text-align: left; }
         .ak-les-dur { color: #8E8E93; font-size: 11px; }
+
+        .ak-private-section { background: #FAF5FF; border: 1px solid #E9D5FF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; text-align: left; }
+        .ak-private-fields { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+        .ak-private-field { display: flex; flex-direction: column; gap: 4px; }
+        .ak-private-label { font-size: 10px; font-weight: 700; color: #8E8E93; text-transform: uppercase; }
+        .ak-private-input { width: 100%; border: 1.5px solid #E5E5EA; border-radius: 10px; padding: 9px 12px; font-size: 13px; outline: none; transition: border-color 0.18s; font-family: inherit; background: white; }
+        .ak-private-input:focus { border-color: #7C3AED; box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+        .ak-btn-save-private { background: #7C3AED; color: white; align-self: flex-start; padding: 8px 14px; }
+        .ak-btn-save-private:hover:not(:disabled) { background: #6D28D9; }
 
         .ak-feedback-section { display: flex; flex-direction: column; text-align: left; }
         .ak-feedback-input { width: 100%; border: 1.5px solid #E5E5EA; border-radius: 12px; padding: 12px; font-size: 13px; outline: none; transition: border-color 0.18s; font-family: inherit; }
