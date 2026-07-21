@@ -10,7 +10,7 @@ type Props = {
   title: React.ReactNode;
   lede: string;
   benefits: Benefit[];
-  formSource: "affiliate" | "lms" | "trainer" | "free-class" | "other";
+  formSource: "affiliate" | "lms" | "trainer" | "free-class" | "community" | "other";
   formTitle: string;
   formLede: string;
   withCompany?: boolean;

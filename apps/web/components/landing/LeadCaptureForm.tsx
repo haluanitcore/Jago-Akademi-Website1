@@ -6,7 +6,7 @@ import { track, AnalyticsEvent } from "@/lib/analytics";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
-type Source = "affiliate" | "lms" | "trainer" | "free-class" | "other";
+type Source = "affiliate" | "lms" | "trainer" | "free-class" | "community" | "other";
 
 type Props = {
   source: Source;
