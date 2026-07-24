@@ -240,6 +240,209 @@ Responsif + dark mode.
 
 ---
 
-## C. Setelah Semua Template Jadi
+## B-II. PROMPT GELOMBANG 2 — Pengalaman Member
 
-Lanjut ke Gelombang 2–4 (dashboard member, admin/trainer, LMS) dengan pola prompt yang sama. Lalu implementasi mengikuti **kontrak presentation-only** di `REDESIGN_BRIEF.md` §5: buat layer token (§A) di kode dulu, bangun kit komponen, reskin per template di branch terpisah, jaga 458 test API + 120 E2E tetap hijau.
+### B.10 — SHELL S3: Dashboard member
+
+```
+Pakai design system Jago Akademi. Desain kerangka DASHBOARD MEMBER:
+- Sidebar kiri (collapsible): logo, item Beranda, Kursus Saya, Pesanan, E-Book,
+  Sertifikat, Tiket Event, Langganan, Afiliasi, Profil — tiap item ikon + label,
+  state aktif memakai aksen cyan.
+- Topbar: judul halaman, search, ikon notifikasi, avatar + dropdown (Profil,
+  Keluar).
+- Area konten latar #F5F5F7.
+- Mobile: sidebar jadi drawer via hamburger.
+Responsif + dark mode.
+```
+
+### B.11 — T12: Dashboard member — Beranda
+
+```
+Pakai design system Jago Akademi + shell dashboard member. Desain BERANDA
+dashboard:
+- Sapaan personal ("Selamat Pagi, [Nama]") + tanggal.
+- Baris kartu KPI: Kursus Diikuti, Sedang Berjalan, Selesai, Sertifikat
+  (angka + ikon + warna aksen berbeda).
+- Section "Lanjutkan Belajar" (kartu kursus dengan progress bar).
+- Section aktivitas / rekomendasi.
+Sertakan state kosong yang ramah ("Belum ada kursus — Jelajahi Katalog") untuk
+akun baru. Responsif + dark mode.
+```
+
+### B.12 — T13: Dashboard member — Daftar (template)
+
+```
+Pakai design system Jago Akademi + shell dashboard member. Desain TEMPLATE
+halaman daftar member (dipakai untuk Kursus Saya, Pesanan, E-Book, Sertifikat,
+Tiket, Langganan, Afiliasi):
+- Header halaman + filter/tab bila perlu.
+- Untuk konten berbasis kartu (kursus/e-book/sertifikat/tiket): grid kartu.
+- Untuk konten transaksional (pesanan/langganan): tabel dengan badge status
+  (Lunas/Pending/Gagal) + tombol aksi (Lihat Detail/Unduh).
+- Afiliasi: kartu statistik (klik, konversi, komisi, saldo) + tombol tarik dana,
+  ATAU layar "Daftar sebagai Affiliate" bila belum terdaftar.
+Setiap varian punya empty-state ramah + skeleton loading. Responsif + dark mode.
+```
+
+### B.13 — T14: Dashboard member — Profil
+
+```
+Pakai design system Jago Akademi + shell dashboard member. Desain halaman PROFIL:
+- Kartu identitas: avatar (dengan tombol ganti foto), nama, email, badge role.
+- Form edit profil (nama, telepon, bio) dengan tombol Simpan + state sukses.
+- Kartu terpisah "Ubah Password" (password lama, baru, konfirmasi).
+- Kartu "Data & Privasi" dengan tombol Ekspor Data (GDPR).
+Responsif + dark mode.
+```
+
+### B.14 — T15: Detail pesanan
+
+```
+Pakai design system Jago Akademi + shell dashboard member. Desain DETAIL PESANAN:
+- Header: nomor invoice, tanggal, badge status besar (Lunas/Pending/Gagal).
+- Rincian item (thumbnail, judul, harga), subtotal, diskon kupon, total.
+- Info pembayaran (metode, waktu) + tombol Unduh Invoice.
+- Untuk status pending: instruksi bayar + tombol cek status.
+Responsif + dark mode.
+```
+
+### B.15 — T16: Learning player
+
+```
+Pakai design system Jago Akademi. Desain LEARNING PLAYER (layar belajar,
+kerangka FOKUS tanpa navbar publik):
+- Area utama: pemutar video / konten materi.
+- Sidebar kanan: daftar modul & lesson dengan indikator selesai/terkunci +
+  progress kursus.
+- Bawah materi: judul lesson, deskripsi, tombol "Lesson Sebelumnya/Berikutnya",
+  dan antarmuka KUIS (soal + pilihan + tombol submit + hasil lulus/gagal).
+- Topbar minimal: judul kursus + progress + tombol keluar ke dashboard.
+Mobile: daftar lesson jadi drawer. Responsif + dark mode.
+```
+
+---
+
+## B-III. PROMPT GELOMBANG 3 — Admin & Trainer
+
+### B.16 — SHELL S4: Admin
+
+```
+Pakai design system Jago Akademi. Desain kerangka PANEL ADMIN:
+- Sidebar kiri dengan GRUP menu: "Utama" (Dashboard), "Akademi" (Kursus,
+  E-Book, Portofolio Member, Review/Testimoni, Kupon), "Konten" (Blog, Event),
+  "Komersial" (Transaksi, Payout, Leads), "Sistem" (Pengguna, Sistem Kesehatan,
+  LMS). Item ikon + label, grup dengan judul kecil.
+- Topbar: breadcrumb, search, avatar admin.
+- Nuansa lebih padat/profesional dari dashboard member, tetap memakai token yang
+  sama. Responsif (sidebar → drawer) + dark mode.
+```
+
+### B.17 — T17: Admin — Beranda
+
+```
+Pakai design system Jago Akademi + shell admin. Desain BERANDA ADMIN:
+- Baris KPI (Total Pengguna, Kursus Aktif, Total Pendaftaran, Total Pendapatan,
+  Omset Retail, Langganan Aktif, Tingkat Refund, Rata-rata Rating) — kartu angka
+  + tren + ikon.
+- Tabel "Pesanan Terbaru" (ringkas).
+- Kartu "Kursus Terpopuler".
+- Badge "Leads Baru".
+Responsif + dark mode.
+```
+
+### B.18 — T18: Admin — List + Modal CRUD (template TERPENTING)
+
+```
+Pakai design system Jago Akademi + shell admin. Desain TEMPLATE manajemen data
+admin (dipakai untuk 11 halaman: Pengguna, Kursus, Transaksi, Leads, E-Book,
+Kupon, Blog, Event, Payout, Review, Portofolio):
+- Header: judul + tombol aksi utama (mis. "+ Tambah") + tombol Ekspor CSV.
+- Bar: search + tab/dropdown filter (mis. filter role/status).
+- Tabel data: kolom relevan, badge status berwarna, avatar/thumbnail bila ada,
+  aksi per baris (Lihat/Edit/Hapus), pagination.
+- MODAL detail/edit: form field lengkap + tombol Simpan/Batal; untuk approval
+  (kursus) sertakan area feedback + tombol Setujui/Tolak.
+- State: loading (skeleton baris), kosong ("Belum ada data"), dan konfirmasi
+  hapus.
+Responsif (tabel scroll horizontal di mobile) + dark mode.
+```
+
+### B.19 — T19: Admin — Sistem Kesehatan (grafik)
+
+```
+Pakai design system Jago Akademi + shell admin. Desain dashboard GRAFIK sistem:
+- Kartu grafik garis: Pendapatan 12 bulan, Pengguna baru 12 bulan, Pendaftaran
+  12 bulan.
+- Kartu donat: distribusi status order (paid/pending/failed/expired/refunded/
+  cancelled) dengan legenda.
+- Kartu "Kursus Teratas" + ringkasan database (jumlah user/order/enrollment).
+Pakai palet grafik yang selaras token (cyan primary + aksen). Responsif + dark
+mode.
+```
+
+### B.20 — T20: Admin — LMS Tenant
+
+```
+Pakai design system Jago Akademi + shell admin. Desain manajemen LMS B2B:
+- Daftar tenant/perusahaan (kartu atau tabel: logo, nama, jumlah member, paket,
+  status).
+- Halaman detail tenant: info, daftar member, statistik pemakaian.
+Responsif + dark mode.
+```
+
+### B.21 — SHELL S5 + T21: Trainer Hub
+
+```
+Pakai design system Jago Akademi. Desain TRAINER HUB (shell sidebar sendiri:
+Beranda, Kursus Saya, Payout, Ulasan, Profil) + halamannya:
+- Beranda: KPI (kursus published, total enrollment, pendapatan bersih, payout
+  pending) + grafik ringkas.
+- Kursus Saya: daftar kursus milik trainer (status, enrollment, harga) + detail
+  kursus dengan analitik per-lesson, pengaturan kelas live (Zoom link, jadwal),
+  dan tombol ajukan-review/arsipkan.
+- Payout: saldo + riwayat + form tarik dana.
+- Ulasan: daftar ulasan siswa (paginated).
+- Profil: form trainer.
+Semua dengan empty-state (akun trainer baru). Responsif + dark mode.
+```
+
+---
+
+## B-IV. PROMPT GELOMBANG 4 — LMS B2B Portal
+
+### B.22 — SHELL S6 + T22: Portal LMS Perusahaan
+
+```
+Pakai design system Jago Akademi (netral, bisa menerima aksen warna brand
+perusahaan tenant). Desain PORTAL LMS B2B:
+- Shell: sidebar tenant dengan logo perusahaan + menu (Beranda, Kursus, Batch,
+  Sertifikat, Laporan, Pengaturan).
+- Beranda portal: ringkasan progress belajar tim.
+- Admin tenant: kelola batch (grup peserta), kelola kursus (+detail kursus),
+  laporan (grafik penyelesaian), pengaturan (branding, member).
+- Halaman kursus peserta: daftar materi + progress.
+- Halaman sertifikat tim.
+- Halaman undangan (accept invite via token): kartu "Anda diundang ke [Perusahaan]"
+  + tombol Terima.
+Responsif + dark mode.
+```
+
+---
+
+## C. Rekap & Setelah Semua Template Jadi
+
+Set prompt kini **lengkap untuk seluruh 88 halaman**: Tema (B.0) + 6 shell (S1–S6) + 22 template (T1–T22) tersebar di B.1–B.22.
+
+**Checklist desain Stitch:**
+- [ ] B.0 Tema ditetapkan sebagai acuan
+- [ ] Gelombang 1 (B.1–B.9): muka publik, auth, checkout
+- [ ] Gelombang 2 (B.10–B.15): dashboard member + learning player
+- [ ] Gelombang 3 (B.16–B.21): admin + trainer
+- [ ] Gelombang 4 (B.22): LMS B2B
+
+**Lalu implementasi** mengikuti **kontrak presentation-only** (`REDESIGN_BRIEF.md` §5):
+1. Buat layer token (§A) di `globals.css` + hapus 405 hex mentah.
+2. Bangun kit komponen bersama (Button, Card, Input, Table, Modal, Badge, EmptyState, Skeleton).
+3. Reskin per template di branch terpisah, shell dulu.
+4. Jaga **458 test API + 120 E2E** tetap hijau; regenerate visual baseline per halaman.
