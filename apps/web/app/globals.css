@@ -11,6 +11,11 @@
   --brand-pink:          #ff0066;
   --brand-pink-strong:   #CC0052;   /* accessible for text on white (4.84:1) */
   --brand-pink-dark:     #d40054;   /* legacy compat */
+  --brand-purple:        #7C3AED;   /* gradient mid-stop (Stitch `secondary`) */
+
+  /* Canonical brand gradient — hero/accent only. Use via `.bg-brand-gradient`
+     so pages stop inlining the raw linear-gradient(...). */
+  --brand-gradient:      linear-gradient(100deg, #0077A8 0%, #7C3AED 55%, #CC0052 100%);
 
   /* ── Surfaces ───────────────────────────────────────────────────── */
   --surface-page:        #F5F5F7;
@@ -91,6 +96,7 @@
   --color-accent-cyan-strong:   var(--brand-cyan-strong);
   --color-accent-pink:          var(--brand-pink);
   --color-accent-pink-strong:   var(--brand-pink-strong);
+  --color-accent-purple:        var(--brand-purple);
   --color-border-default:       var(--border-default);
   --color-border-subtle:        var(--border-subtle);
   --color-border-strong:        var(--border-strong);
@@ -217,6 +223,21 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  /* Canonical brand gradient fill — replaces inlined linear-gradient(...) on
+     hero/accent surfaces. Pair with a light text color on top. */
+  .bg-brand-gradient {
+    background: var(--brand-gradient);
+  }
+
+  /* Frosted-glass surface (light-only) — floating nav, overlay cards.
+     No .dark variant by design: this app is LIGHT-ONLY. */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
   }
 
   /* Cards — white + elevation. `.card` is the canonical name; `.card-dark`
