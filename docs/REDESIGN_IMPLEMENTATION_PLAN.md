@@ -6,6 +6,15 @@
 
 ---
 
+## 0. Keputusan Reviewer (24 Jul 2026)
+
+1. **Dark mode:** LIGHT-ONLY — strip semua `dark:` dari Stitch. Dark mode ditunda.
+2. **Shell login:** SATUKAN ke sidebar TERANG untuk admin + member + trainer (ganti navy gelap).
+3. **Isi gap:** reviewer akan **menyuplai desain Stitch tambahan** untuk halaman gap (§6). Implementasi gap MENUNGGU desain itu; Wave 0 + template yang sudah ada tetap jalan. (Navigasi mobile = perilaku shell, dibangun di W0.3 mengikuti desain navbar desktop.)
+4. **Cadence:** WAVE-DEMI-WAVE — tiap wave diverifikasi (E2E+build+CI) lalu checkpoint ke reviewer sebelum lanjut.
+
+---
+
 ## 1. Keputusan Arsitektur Inti
 
 **Kabar baik:** Tailwind v4 **sudah aktif penuh** di proyek (`@import "tailwindcss"` + `@config tailwind-legacy.config.ts` + `@theme inline` + plugin typography). Utility Tailwind sudah jalan di produksi hari ini. Sudah ada **token lengkap** di `globals.css` (`--brand-cyan-strong #0077A8`, surface, text, border, shadow e0–e4, radius, motion) + **layer komponen** (`.btn*`, `.badge*`, `.card*`, `.section`, `.container-pad`). Desain Stitch (Tailwind) karena itu **diadopsi, bukan diterjemahkan dari nol**.
