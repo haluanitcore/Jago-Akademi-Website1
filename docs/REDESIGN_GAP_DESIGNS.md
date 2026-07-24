@@ -1,5 +1,25 @@
 # Gap Designs — Halaman yang Masih Perlu Desain Stitch
 
+> ## ✅ STATUS 24 Jul 2026 — SEMUA GAP G1–G6 TERISI
+> Reviewer telah menyuplai **12 desain** di folder `stitch_task_execution_manager (1)/stitch_task_execution_manager/`. DESIGN.md **byte-identical** dengan yang asli (nol drift token), stack sama (Tailwind v3 CDN, Material Symbols, light-only), semua file target ada di `apps/web/app/`. Total kini **32 desain** menutup seluruh 22 template.
+>
+> **Pemetaan:** `auth_daftar_recovery`/`auth_lupa_password`/`auth_reset_password`/`auth_verifikasi_email`→(auth)/*; `dashboard_member_beranda`→dashboard/page; `member_kelas_saya`→dashboard/kursus; `member_riwayat_pesanan`→pesanan+dashboard/pesanan; `member_sertifikat_saya`→dashboard/sertifikat; `member_program_afiliasi`→dashboard/afiliasi; `admin_sistem_kesehatan`→admin/sistem-health; `admin_manajemen_lms_tenant`→admin/lms(+[tenantId]); `blog_daftar_artikel`→blog(+[slug]).
+>
+> **Drift yang WAJIB dirapikan saat port** (bukan diport apa adanya):
+> 1. **Nav sidebar member beda di tiap halaman** (5 varian + `profil_member`) → satukan ke **satu shell member kanonik** (dibangun di W0.3), reskin 5 halaman ke shell itu.
+> 2. **Label admin `admin_manajemen_lms_tenant` bahasa Inggris** (Overview/Tenant Management/...) → seragamkan ke Indonesia + rekonsiliasi dengan nav `admin_sistem_kesehatan`.
+> 3. **`member_program_afiliasi` membungkus navbar publik DI LUAR sidebar** (hibrid) → buang navbar, pakai shell member saja.
+> 4. **Buang toggle "Mode Tampilan"** (dark) di sidebar `profil_member` (light-only); footer sidebar seragam = user-card + Keluar.
+> 5. **🐛 BUG render `auth_verifikasi_email`**: blok `<style>` TIDAK punya rule `.bg-brand-gradient` (beda dari daftar/lupa/reset) → tombol CTA sukses jadi putih-di-atas-putih (tak terlihat). **Fix saat port**: tambah rule `.bg-brand-gradient` / gradien inline pada tombol itu.
+> 6. Tambah **state kosong/loading/error** saat port (banyak desain gap hanya menampilkan versi berisi data).
+>
+> **Sub-gap kecil (halaman ada di app, belum ada desain Stitch) — SAYA turunkan in-code dari template terdekat:** `dashboard/tiket` (tiket bantuan), `dashboard/berlangganan`+`berlangganan` (langganan), `dashboard/ebook` (pustaka e-book member), dan **detail** `admin/lms/[tenantId]` (dari pola tabel/detail admin). Order DETAIL sudah tercakup desain asli `detail_pesanan`.
+>
+> Detail wave: G1+G6→Wave 1 · G2+G3→Wave 2 · G4+G5→Wave 3.
+
+---
+
+
 > Daftar halaman/template yang **belum** punya desain Stitch, lengkap dengan prompt siap-tempel.
 > Dibuat dari analisis coverage 20 desain Stitch vs 88 route (multi-agent, 24 Jul 2026).
 > **Cara pakai:** di Stitch, tempel dulu **Prompt Tema** (`REDESIGN_TOKENS_AND_PROMPTS.md` §B.0) sebagai acuan, lalu tempel tiap prompt gap di bawah. Beri nama desain sesuai kode (mis. `daftar`, `dashboard_member`, `admin_sistem_health`) agar pemetaan ke kode 1:1.
