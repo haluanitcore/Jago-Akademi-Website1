@@ -112,12 +112,13 @@ export function Navbar() {
   }, []);
 
   return (
+    <>
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 backdrop-blur-md",
         isScrolled
-          ? "bg-white/95 backdrop-blur-dark border-b border-[#E5E5E5] shadow-e1"
-          : "bg-transparent"
+          ? "bg-white/85 border-b border-border-default shadow-e2"
+          : "bg-white/70 border-b border-transparent"
       )}
     >
       <nav className="container-pad flex items-center justify-between h-16 md:h-[4.5rem]" aria-label="Navigasi utama">
@@ -154,7 +155,12 @@ export function Navbar() {
                   }
                   onFocus={() => openDropdown(link.label)}
                   onBlur={scheduleClose}
-                  className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-[#636366] hover:text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors"
+                  className={cn(
+                    "flex items-center gap-1 px-3.5 py-2 rounded-full text-sm font-medium transition-colors",
+                    activeDropdown === link.label
+                      ? "text-accent-cyan-strong bg-surface-accent-soft"
+                      : "text-text-secondary hover:text-text-primary hover:bg-surface-sunken"
+                  )}
                 >
                   {link.label}
                   <ChevronDown
@@ -177,18 +183,18 @@ export function Navbar() {
                     onFocus={() => openDropdown(link.label)}
                     onBlur={scheduleClose}
                   >
-                    <div className="card-glow min-w-[220px] p-2">
+                    <div className="card-glow min-w-[240px] p-2">
                       {link.children.map((child) => (
                         <Link
                           key={child.href}
                           href={child.href}
                           role="menuitem"
-                          className="flex flex-col gap-0.5 px-3 py-2.5 rounded-lg hover:bg-[#F5F5F7] transition-colors group"
+                          className="flex flex-col gap-0.5 px-3 py-2.5 rounded-xl hover:bg-surface-accent-soft transition-colors group"
                         >
-                          <span className="text-sm font-medium text-[#1D1D1F] group-hover:text-[#0077A8] transition-colors">
+                          <span className="text-sm font-semibold text-text-primary group-hover:text-accent-cyan-strong transition-colors">
                             {child.label}
                           </span>
-                          <span className="text-xs text-[#6E6E73]">{child.desc}</span>
+                          <span className="text-xs text-text-muted">{child.desc}</span>
                         </Link>
                       ))}
                     </div>
@@ -201,10 +207,10 @@ export function Navbar() {
                   href={link.href}
                   aria-current={pathname.startsWith(link.href) && link.href !== "#" ? "page" : undefined}
                   className={cn(
-                    "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    "px-3.5 py-2 rounded-full text-sm font-medium transition-colors",
                     pathname.startsWith(link.href) && link.href !== "#"
-                      ? "text-[#1D1D1F] bg-[#F5F5F7]"
-                      : "text-[#636366] hover:text-[#1D1D1F] hover:bg-[#F5F5F7]"
+                      ? "text-accent-cyan-strong bg-surface-accent-soft"
+                      : "text-text-secondary hover:text-text-primary hover:bg-surface-sunken"
                   )}
                 >
                   {link.label}
@@ -218,30 +224,36 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-3">
           <Link
             href="/kolaborasi"
-            className="flex items-center gap-1.5 text-sm font-medium text-[#636366] hover:text-[#0077A8] transition-colors"
+            className="flex items-center gap-1.5 text-sm font-medium text-text-secondary hover:text-accent-cyan-strong transition-colors"
           >
             <Sparkles size={14} aria-hidden="true" />
             Kolaborasi
           </Link>
           {isLoggedIn ? (
             <>
-              <Link href="/dashboard" className="btn btn-ghost btn-sm">
+              <Link
+                href="/dashboard"
+                className="btn bg-brand-gradient text-white shadow-e1 hover:opacity-90 btn-sm"
+              >
                 Dashboard
               </Link>
               <Link
                 href="/dashboard"
                 aria-label="Profil saya"
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-[#0077A8] text-white text-xs font-bold hover:opacity-90 transition-opacity"
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-brand-gradient text-white text-xs font-bold shadow-e1 hover:opacity-90 transition-opacity"
               >
                 {userInitials}
               </Link>
             </>
           ) : (
             <>
-              <Link href="/masuk" className="btn btn-ghost btn-sm">
+              <Link href="/masuk" className="btn btn-outline btn-sm">
                 Masuk
               </Link>
-              <Link href="/daftar" className="btn btn-primary btn-sm">
+              <Link
+                href="/daftar"
+                className="btn bg-brand-gradient text-white shadow-e1 hover:opacity-90 btn-sm"
+              >
                 Mulai Gratis
               </Link>
             </>
@@ -254,75 +266,106 @@ export function Navbar() {
           aria-label={isMobileOpen ? "Tutup menu" : "Buka menu"}
           aria-expanded={isMobileOpen}
           aria-controls={mobileMenuId}
-          className="md:hidden p-2 rounded-lg text-[#636366] hover:text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors"
+          className="md:hidden p-2 rounded-full text-text-secondary hover:text-text-primary hover:bg-surface-sunken transition-colors"
           onClick={() => setIsMobileOpen(!isMobileOpen)}
         >
-          {isMobileOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
+          {isMobileOpen ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
         </button>
       </nav>
+    </header>
 
-      {/* Mobile menu */}
-      {isMobileOpen && (
-        <div
-          id={mobileMenuId}
-          role="dialog"
-          aria-label="Menu navigasi mobile"
-          className="md:hidden border-t border-[#E5E5E5] bg-white/95 backdrop-blur-dark"
-        >
-          <div className="container-pad py-4 space-y-1">
-            {navLinks.map((link) =>
-              link.children ? (
-                <div key={link.label}>
-                  <p className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#6E6E73]">
+    {/* Mobile drawer (gap G8 — slide-in nav). Rendered OUTSIDE <header> so the
+        header's backdrop-blur (which establishes a containing block for fixed
+        descendants) can't clip the full-height fixed drawer. */}
+    {isMobileOpen && (
+        <>
+          {/* Scrim */}
+          <div
+            className="md:hidden fixed top-16 left-0 right-0 bottom-0 z-40 bg-[#1D1D1F]/40 backdrop-blur-sm animate-overlay-in"
+            aria-hidden="true"
+            onClick={() => setIsMobileOpen(false)}
+          />
+          {/* Panel */}
+          <div
+            id={mobileMenuId}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu navigasi mobile"
+            className="md:hidden fixed top-16 right-0 bottom-0 z-50 w-[86%] max-w-sm bg-white shadow-e4 flex flex-col overflow-y-auto animate-drawer-in"
+          >
+            <div className="flex-1 px-5 py-6 space-y-1">
+              {navLinks.map((link) =>
+                link.children ? (
+                  <div key={link.label} className="pt-2">
+                    <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">
+                      {link.label}
+                    </p>
+                    {link.children.map((child) => (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        className="block px-3 py-2.5 rounded-xl text-sm text-text-secondary hover:text-accent-cyan-strong hover:bg-surface-accent-soft transition-colors"
+                        onClick={() => setIsMobileOpen(false)}
+                      >
+                        {child.label}
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <Link
+                    key={link.label}
+                    href={link.href}
+                    aria-current={pathname.startsWith(link.href) && link.href !== "#" ? "page" : undefined}
+                    className={cn(
+                      "block px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
+                      pathname.startsWith(link.href) && link.href !== "#"
+                        ? "text-accent-cyan-strong bg-surface-accent-soft"
+                        : "text-text-secondary hover:text-text-primary hover:bg-surface-sunken"
+                    )}
+                    onClick={() => setIsMobileOpen(false)}
+                  >
                     {link.label}
-                  </p>
-                  {link.children.map((child) => (
-                    <Link
-                      key={child.href}
-                      href={child.href}
-                      className="block px-3 py-2.5 rounded-lg text-sm text-[#636366] hover:text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors"
-                      onClick={() => setIsMobileOpen(false)}
-                    >
-                      {child.label}
-                    </Link>
-                  ))}
-                </div>
-              ) : (
+                  </Link>
+                )
+              )}
+
+              <Link
+                href="/kolaborasi"
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-text-secondary hover:text-accent-cyan-strong hover:bg-surface-accent-soft transition-colors"
+                onClick={() => setIsMobileOpen(false)}
+              >
+                <Sparkles size={15} aria-hidden="true" />
+                Kolaborasi
+              </Link>
+            </div>
+
+            <div className="px-5 py-5 border-t border-border-default flex flex-col gap-2">
+              {isLoggedIn ? (
                 <Link
-                  key={link.label}
-                  href={link.href}
-                  aria-current={pathname.startsWith(link.href) && link.href !== "#" ? "page" : undefined}
-                  className={cn(
-                    "block px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                    pathname.startsWith(link.href) && link.href !== "#"
-                      ? "text-[#1D1D1F] bg-[#F5F5F7]"
-                      : "text-[#636366] hover:text-[#1D1D1F] hover:bg-[#F5F5F7]"
-                  )}
+                  href="/dashboard"
+                  className="btn bg-brand-gradient text-white shadow-e1 hover:opacity-90 w-full justify-center"
                   onClick={() => setIsMobileOpen(false)}
                 >
-                  {link.label}
-                </Link>
-              )
-            )}
-            <div className="pt-4 border-t border-[#E5E5E5] flex flex-col gap-2">
-              {isLoggedIn ? (
-                <Link href="/dashboard" className="btn btn-primary w-full justify-center" onClick={() => setIsMobileOpen(false)}>
                   Dashboard Saya
                 </Link>
               ) : (
                 <>
-                  <Link href="/masuk" className="btn btn-ghost w-full justify-center" onClick={() => setIsMobileOpen(false)}>
+                  <Link href="/masuk" className="btn btn-outline w-full justify-center" onClick={() => setIsMobileOpen(false)}>
                     Masuk
                   </Link>
-                  <Link href="/daftar" className="btn btn-primary w-full justify-center" onClick={() => setIsMobileOpen(false)}>
+                  <Link
+                    href="/daftar"
+                    className="btn bg-brand-gradient text-white shadow-e1 hover:opacity-90 w-full justify-center"
+                    onClick={() => setIsMobileOpen(false)}
+                  >
                     Mulai Gratis
                   </Link>
                 </>
               )}
             </div>
           </div>
-        </div>
+        </>
       )}
-    </header>
+    </>
   );
 }

@@ -4,18 +4,34 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import {
+  Home,
+  BookOpen,
+  Award,
+  BookMarked,
+  Ticket,
+  ShoppingBag,
+  Crown,
+  Handshake,
+  User,
+  LogOut,
+  Menu,
+  X,
+  GraduationCap,
+  Settings,
+} from "lucide-react";
 import { getToken, setToken, clearToken, refreshAccessToken } from "@/lib/auth/token";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Beranda", icon: HomeIcon, exact: true },
-  { href: "/dashboard/kursus", label: "Kursus Saya", icon: CourseIcon },
-  { href: "/dashboard/sertifikat", label: "Sertifikat", icon: CertIcon },
-  { href: "/dashboard/ebook", label: "E-Book Saya", icon: EbookIcon },
-  { href: "/dashboard/tiket", label: "Tiket Event", icon: TicketIcon },
-  { href: "/dashboard/pesanan", label: "Pesanan", icon: OrderIcon },
-  { href: "/dashboard/berlangganan", label: "Berlangganan", icon: SubIcon },
-  { href: "/dashboard/afiliasi", label: "Afiliasi", icon: AffiliateIcon },
-  { href: "/dashboard/profil", label: "Profil Saya", icon: ProfileIcon },
+  { href: "/dashboard", label: "Beranda", icon: Home, exact: true },
+  { href: "/dashboard/kursus", label: "Kursus Saya", icon: BookOpen },
+  { href: "/dashboard/sertifikat", label: "Sertifikat", icon: Award },
+  { href: "/dashboard/ebook", label: "E-Book Saya", icon: BookMarked },
+  { href: "/dashboard/tiket", label: "Tiket Event", icon: Ticket },
+  { href: "/dashboard/pesanan", label: "Pesanan", icon: ShoppingBag },
+  { href: "/dashboard/berlangganan", label: "Berlangganan", icon: Crown },
+  { href: "/dashboard/afiliasi", label: "Afiliasi", icon: Handshake },
+  { href: "/dashboard/profil", label: "Profil Saya", icon: User },
 ];
 
 type UserInfo = {
@@ -120,7 +136,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onClick={() => setSidebarOpen(false)}
             aria-label="Tutup menu"
           >
-            ✕
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
@@ -157,7 +173,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 className={`sidebar-nav-item ${isActive ? "sidebar-nav-active" : ""}`}
                 onClick={() => setSidebarOpen(false)}
               >
-                <item.icon className="sidebar-nav-icon" />
+                <item.icon className="sidebar-nav-icon" size={18} aria-hidden="true" />
                 <span>{item.label}</span>
               </Link>
             );
@@ -170,7 +186,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <p style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em", padding: "0 12px", marginBottom: 4 }}>LMS Portal</p>
             {lmsTenants.map((t) => (
               <a key={t.id} href={`/lms/${t.slug}`} className="sidebar-admin-link" style={{ gap: 8 }}>
-                <span>📚</span>
+                <GraduationCap size={16} aria-hidden="true" />
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
               </a>
             ))}
@@ -181,7 +197,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {isAdmin && (
           <div className="sidebar-admin-wrap">
             <a href="/admin/dashboard" className="sidebar-admin-link">
-              <span>⚙️</span>
+              <Settings size={16} aria-hidden="true" />
               <span>Admin Panel</span>
             </a>
           </div>
@@ -190,7 +206,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Logout */}
         <div className="sidebar-footer">
           <button onClick={logout} className="sidebar-logout-btn">
-            <LogoutIcon className="sidebar-nav-icon" />
+            <LogOut className="sidebar-nav-icon" size={18} aria-hidden="true" />
             <span>Keluar</span>
           </button>
         </div>
@@ -205,7 +221,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onClick={() => setSidebarOpen(true)}
             aria-label="Buka menu"
           >
-            <HamburgerIcon />
+            <Menu size={22} aria-hidden="true" />
           </button>
           <Link href="/" className="topbar-logo">
             <Image src="/logo.png" alt="Jago Akademi" width={100} height={26} />
@@ -226,7 +242,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       <style jsx global>{`
-        /* ── Notion Pro Badge ── */
+        /* ── Pro Badge ── */
         .pro-badge {
           background: #EBE5FC;
           color: #7C3AED;
@@ -244,15 +260,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .dashboard-root {
           display: flex;
           min-height: 100vh;
-          background: #F0F4F8;
+          background: #F5F5F7;
           font-family: 'Inter', sans-serif;
         }
 
-        /* ── Sidebar ── */
+        /* ── Sidebar (light) ── */
         .dashboard-sidebar {
           width: 260px;
           min-height: 100vh;
-          background: linear-gradient(180deg, #0a1628 0%, #0d1f3c 100%);
+          background: #FFFFFF;
+          border-right: 1px solid #E5E5E5;
           display: flex;
           flex-direction: column;
           position: fixed;
@@ -261,13 +278,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           bottom: 0;
           z-index: 50;
           transition: transform 0.3s ease;
-          box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
 
         .sidebar-overlay {
           position: fixed;
           inset: 0;
-          background: rgba(0,0,0,0.5);
+          background: rgba(29,29,31,0.4);
+          backdrop-filter: blur(2px);
           z-index: 40;
           display: none;
         }
@@ -277,7 +295,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           display: flex;
           align-items: center;
           justify-content: space-between;
-          border-bottom: 1px solid rgba(255,255,255,0.08);
+          border-bottom: 1px solid #E5E5E5;
         }
 
         .sidebar-logo-link { display: flex; align-items: center; }
@@ -285,21 +303,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         .sidebar-close-btn {
           display: none;
-          color: rgba(255,255,255,0.5);
+          color: #6E6E73;
           background: none;
           border: none;
-          font-size: 16px;
           cursor: pointer;
           padding: 4px;
+          align-items: center;
+          justify-content: center;
         }
+        .sidebar-close-btn:hover { color: #1D1D1F; }
 
         .sidebar-user-card {
           display: flex;
           align-items: center;
           gap: 12px;
           padding: 16px 20px;
-          border-bottom: 1px solid rgba(255,255,255,0.08);
-          background: rgba(255,255,255,0.04);
+          border-bottom: 1px solid #E5E5E5;
+          background: #FAFAFA;
         }
 
         .sidebar-avatar {
@@ -312,7 +332,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           justify-content: center;
           overflow: hidden;
           flex-shrink: 0;
-          border: 2px solid rgba(255,255,255,0.15);
+          border: 2px solid #FFFFFF;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.08);
         }
 
         .sidebar-avatar-img { width: 100%; height: 100%; object-fit: cover; }
@@ -320,7 +341,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         .sidebar-user-info { min-width: 0; }
         .sidebar-user-name {
-          color: white;
+          color: #1D1D1F;
           font-size: 13px;
           font-weight: 600;
           white-space: nowrap;
@@ -328,7 +349,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           text-overflow: ellipsis;
         }
         .sidebar-user-email {
-          color: rgba(255,255,255,0.45);
+          color: #6E6E73;
           font-size: 11px;
           white-space: nowrap;
           overflow: hidden;
@@ -351,7 +372,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           gap: 11px;
           padding: 10px 12px;
           border-radius: 10px;
-          color: rgba(255,255,255,0.6);
+          color: #636366;
           font-size: 13.5px;
           font-weight: 500;
           text-decoration: none;
@@ -359,21 +380,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
 
         .sidebar-nav-item:hover {
-          background: rgba(255,255,255,0.08);
-          color: rgba(255,255,255,0.9);
+          background: #F5F5F7;
+          color: #1D1D1F;
         }
 
         .sidebar-nav-active {
-          background: linear-gradient(135deg, rgba(0,119,168,0.35), rgba(204,0,82,0.2));
-          color: white !important;
-          border: 1px solid rgba(0,119,168,0.3);
+          background: rgba(0, 212, 255, 0.08);
+          color: #0077A8 !important;
+          font-weight: 600;
+          box-shadow: inset 3px 0 0 #0077A8;
         }
 
         .sidebar-nav-icon { width: 18px; height: 18px; flex-shrink: 0; }
 
         .sidebar-admin-wrap {
           padding: 8px 12px;
-          border-top: 1px solid rgba(255,255,255,0.08);
+          border-top: 1px solid #E5E5E5;
         }
         .sidebar-admin-link {
           display: flex;
@@ -381,21 +403,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           gap: 10px;
           padding: 9px 12px;
           border-radius: 10px;
-          color: rgba(255,215,0,0.8);
+          color: #B45309;
           font-size: 13px;
           font-weight: 600;
           text-decoration: none;
-          background: rgba(255,215,0,0.08);
+          background: rgba(245, 158, 11, 0.1);
           transition: all 0.18s;
         }
         .sidebar-admin-link:hover {
-          background: rgba(255,215,0,0.15);
-          color: gold;
+          background: rgba(245, 158, 11, 0.18);
+          color: #92400E;
         }
 
         .sidebar-footer {
           padding: 12px 12px 20px;
-          border-top: 1px solid rgba(255,255,255,0.08);
+          border-top: 1px solid #E5E5E5;
         }
 
         .sidebar-logout-btn {
@@ -404,7 +426,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           gap: 11px;
           padding: 10px 12px;
           border-radius: 10px;
-          color: rgba(255,100,100,0.75);
+          color: #DC2626;
           font-size: 13.5px;
           font-weight: 500;
           background: none;
@@ -414,8 +436,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           transition: all 0.18s;
         }
         .sidebar-logout-btn:hover {
-          background: rgba(255,100,100,0.1);
-          color: #ff6464;
+          background: rgba(220, 38, 38, 0.08);
+          color: #B91C1C;
         }
 
         /* ── Main area ── */
@@ -433,17 +455,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           align-items: center;
           justify-content: space-between;
           padding: 12px 16px;
-          background: #0a1628;
+          background: #FFFFFF;
           position: sticky;
           top: 0;
           z-index: 30;
-          border-bottom: 1px solid rgba(255,255,255,0.08);
+          border-bottom: 1px solid #E5E5E5;
         }
 
         .topbar-hamburger {
           background: none;
           border: none;
-          color: white;
+          color: #1D1D1F;
           cursor: pointer;
           padding: 4px;
           display: flex;
@@ -495,84 +517,5 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
       `}</style>
     </div>
-  );
-}
-
-/* ── Icon Components ── */
-function HomeIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-    </svg>
-  );
-}
-function CourseIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-    </svg>
-  );
-}
-function CertIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-    </svg>
-  );
-}
-function EbookIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-    </svg>
-  );
-}
-function TicketIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-    </svg>
-  );
-}
-function OrderIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-    </svg>
-  );
-}
-function SubIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-    </svg>
-  );
-}
-function AffiliateIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-  );
-}
-function ProfileIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  );
-}
-function LogoutIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-    </svg>
-  );
-}
-function HamburgerIcon() {
-  return (
-    <svg width={22} height={22} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
   );
 }

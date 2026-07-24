@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight } from "lucide-react";
-import { waLink } from "@/lib/config";
+import { MessageCircle, Clock, ArrowUpRight } from "lucide-react";
+import { waLink, WA_NUMBER_DISPLAY } from "@/lib/config";
 import { features } from "@/lib/features";
 
 const footerLinks = {
@@ -32,6 +32,8 @@ const footerLinks = {
   ],
 };
 
+// lucide v1.21 ships no brand-social glyphs (per REDESIGN_ICON_MAP "do not port"
+// note), so the social chips use the short text mark. hrefs preserved.
 const socials = [
   { label: "IG", text: "Instagram", href: "https://instagram.com/jagoakademi" },
   { label: "YT", text: "YouTube", href: "https://youtube.com/@jagoakademi" },
@@ -41,13 +43,13 @@ const socials = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-[#E5E5E5] bg-[#FAFAFA]">
+    <footer className="border-t border-border-default bg-surface-sunken">
       {/* Main footer */}
       <div className="container-pad py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-10 lg:gap-8">
           {/* Brand column */}
           <div className="lg:col-span-2 space-y-6">
-            <Link href="/">
+            <Link href="/" className="inline-flex">
               <div className="relative w-36 h-10">
                 <Image
                   src="/logo.png"
@@ -58,13 +60,13 @@ export function Footer() {
                 />
               </div>
             </Link>
-            <p className="text-sm text-[#636366] leading-relaxed max-w-xs">
+            <p className="text-sm text-text-secondary leading-relaxed max-w-xs">
               Platform edukasi digital terlengkap Indonesia. Belajar, berlatih, dan
               berkarier bersama ribuan profesional.
             </p>
 
             {/* Social links */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               {socials.map(({ label, text, href }) => (
                 <a
                   key={label}
@@ -72,30 +74,29 @@ export function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={text}
-                  className="w-9 h-9 flex items-center justify-center rounded-lg bg-white border border-[#E5E5E5] text-[#636366] hover:text-[#0077A8] hover:border-[rgba(0,119,168,0.3)] hover:bg-[rgba(0,212,255,0.06)] transition-all duration-200 text-[10px] font-bold shadow-e1"
+                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-card border border-border-default text-text-secondary hover:text-accent-cyan-strong hover:border-border-brand hover:bg-surface-accent-soft transition-all duration-200 text-[11px] font-bold shadow-e1"
                 >
                   {label}
                 </a>
               ))}
             </div>
 
-            {/* WhatsApp CTA */}
+            {/* WhatsApp CTA button */}
             <a
               href={waLink()}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm font-medium text-[#1D1D1F] hover:text-[#0077A8] transition-colors group"
+              className="btn bg-brand-gradient text-white shadow-e1 hover:opacity-90 btn-sm w-fit"
             >
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              Chat WhatsApp
-              <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              <MessageCircle size={16} aria-hidden="true" />
+              Chat via WhatsApp
             </a>
           </div>
 
           {/* Link columns */}
           {Object.entries(footerLinks).map(([category, links]) => (
             <nav key={category} aria-label={`Navigasi ${category}`} className="space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-[#6E6E73]">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-text-muted">
                 {category}
               </h4>
               <ul className="space-y-2.5">
@@ -103,7 +104,7 @@ export function Footer() {
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="text-sm text-[#636366] hover:text-[#1D1D1F] transition-colors"
+                      className="text-sm text-text-secondary hover:text-accent-cyan-strong transition-colors"
                     >
                       {link.label}
                     </Link>
@@ -112,6 +113,41 @@ export function Footer() {
               </ul>
             </nav>
           ))}
+
+          {/* Kontak column */}
+          <nav aria-label="Navigasi Kontak" className="space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-text-muted">
+              Kontak
+            </h4>
+            <ul className="space-y-2.5">
+              <li>
+                <a
+                  href={waLink()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-accent-cyan-strong transition-colors group"
+                >
+                  <MessageCircle size={15} aria-hidden="true" className="text-accent-cyan-strong" />
+                  WhatsApp
+                  <ArrowUpRight size={13} aria-hidden="true" className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                </a>
+              </li>
+              <li>
+                <a
+                  href={waLink()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-text-secondary hover:text-accent-cyan-strong transition-colors"
+                >
+                  {WA_NUMBER_DISPLAY}
+                </a>
+              </li>
+              <li className="flex items-center gap-1.5 text-sm text-text-muted">
+                <Clock size={15} aria-hidden="true" />
+                Sen–Jum, 09.00–17.00 WIB
+              </li>
+            </ul>
+          </nav>
         </div>
       </div>
 
@@ -120,14 +156,14 @@ export function Footer() {
 
       {/* Bottom bar */}
       <div className="container-pad py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p className="text-xs text-[#6E6E73]">
+        <p className="text-xs text-text-muted">
           © 2025–2026 Jago Akademi. Hak cipta dilindungi.
         </p>
         <div className="flex items-center gap-6">
-          <Link href="/privacy" className="text-xs text-[#6E6E73] hover:text-[#636366] transition-colors">
+          <Link href="/privacy" className="text-xs text-text-muted hover:text-text-secondary transition-colors">
             Kebijakan Privasi
           </Link>
-          <Link href="/terms" className="text-xs text-[#6E6E73] hover:text-[#636366] transition-colors">
+          <Link href="/terms" className="text-xs text-text-muted hover:text-text-secondary transition-colors">
             Syarat & Ketentuan
           </Link>
         </div>

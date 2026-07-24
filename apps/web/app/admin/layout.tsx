@@ -4,36 +4,55 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import {
+  LayoutDashboard,
+  Activity,
+  BookOpen,
+  Newspaper,
+  CalendarDays,
+  Star,
+  BookMarked,
+  Images,
+  Users,
+  CreditCard,
+  Wallet,
+  ClipboardList,
+  Tag,
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  ArrowLeft,
+} from "lucide-react";
 import { getToken, clearToken, refreshAccessToken } from "@/lib/auth/token";
 
 const NAV_GROUPS = [
   {
     label: "Utama",
     items: [
-      { href: "/admin/dashboard",     label: "Dashboard",  icon: "📊", exact: true },
-      { href: "/admin/sistem-health", label: "Kesehatan",  icon: "📈" },
+      { href: "/admin/dashboard",     label: "Dashboard",  icon: LayoutDashboard, exact: true },
+      { href: "/admin/sistem-health", label: "Kesehatan",  icon: Activity },
     ],
   },
   {
     label: "Akademi",
     items: [
-      { href: "/admin/kursus",   label: "Kursus",    icon: "📖" },
-      { href: "/admin/blog",     label: "Blog",      icon: "✍️" },
-      { href: "/admin/event",    label: "Event",     icon: "🎫" },
-      { href: "/admin/review",   label: "Review",    icon: "⭐" },
-      { href: "/admin/ebook",    label: "E-Book",    icon: "📘" },
-      { href: "/admin/portofolio", label: "Portofolio Member", icon: "🖼️" },
+      { href: "/admin/kursus",   label: "Kursus",    icon: BookOpen },
+      { href: "/admin/blog",     label: "Blog",      icon: Newspaper },
+      { href: "/admin/event",    label: "Event",     icon: CalendarDays },
+      { href: "/admin/review",   label: "Review",    icon: Star },
+      { href: "/admin/ebook",    label: "E-Book",    icon: BookMarked },
+      { href: "/admin/portofolio", label: "Portofolio Member", icon: Images },
     ],
   },
   {
     label: "Bisnis",
     items: [
-      { href: "/admin/pengguna",  label: "Pengguna",  icon: "👥" },
-      { href: "/admin/transaksi", label: "Transaksi", icon: "💳" },
-      { href: "/admin/payout",    label: "Payout",    icon: "💰" },
-      { href: "/admin/leads",     label: "Leads",     icon: "📋" },
-      { href: "/admin/kupon",     label: "Kupon",     icon: "🏷️" },
-      { href: "/admin/lms",       label: "LMS B2B",   icon: "🏢" },
+      { href: "/admin/pengguna",  label: "Pengguna",  icon: Users },
+      { href: "/admin/transaksi", label: "Transaksi", icon: CreditCard },
+      { href: "/admin/payout",    label: "Payout",    icon: Wallet },
+      { href: "/admin/leads",     label: "Leads",     icon: ClipboardList },
+      { href: "/admin/kupon",     label: "Kupon",     icon: Tag },
+      { href: "/admin/lms",       label: "LMS B2B",   icon: Building2 },
     ],
   },
 ];
@@ -96,7 +115,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="al-loading">
         <span className="al-spinner" />
         <style jsx>{`
-          .al-loading { display:flex; align-items:center; justify-content:center; min-height:100vh; background:#0a1628; }
+          .al-loading { display:flex; align-items:center; justify-content:center; min-height:100vh; background:#F5F5F7; }
           .al-spinner { width:36px; height:36px; border-radius:50%; border:3px solid #0077A8; border-top-color:transparent; animation:spin 0.8s linear infinite; }
           @keyframes spin { to { transform:rotate(360deg); } }
         `}</style>
@@ -121,8 +140,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
             </div>
           )}
-          <button className="al-collapse-btn" onClick={() => setCollapsed(!collapsed)} title="Toggle sidebar">
-            {collapsed ? "→" : "←"}
+          <button className="al-collapse-btn" onClick={() => setCollapsed(!collapsed)} title="Toggle sidebar" aria-label="Toggle sidebar">
+            {collapsed ? <ChevronRight size={16} aria-hidden="true" /> : <ChevronLeft size={16} aria-hidden="true" />}
           </button>
         </div>
 
@@ -135,9 +154,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 const isActive = ("exact" in item && item.exact) ? pathname === item.href : pathname.startsWith(item.href);
                 return (
                   <Link key={item.href} href={item.href} className={`al-nav-item ${isActive ? "al-nav-active" : ""}`} title={collapsed ? item.label : ""}>
-                    <span className="al-nav-icon">{item.icon}</span>
+                    <item.icon className="al-nav-icon" size={18} aria-hidden="true" />
                     {!collapsed && <span className="al-nav-label">{item.label}</span>}
-                    {isActive && !collapsed && <span className="al-nav-dot" />}
                   </Link>
                 );
               })}
@@ -157,7 +175,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             )}
           </div>
           <Link href="/" className={`al-back-btn ${collapsed ? "al-back-btn-sm" : ""}`} title="Kembali ke situs">
-            <span>↩</span>
+            <ArrowLeft size={15} aria-hidden="true" />
             {!collapsed && <span>Situs Utama</span>}
           </Link>
         </div>
@@ -196,13 +214,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         .al-root {
           display: flex;
           min-height: 100vh;
-          background: #F0F2F5;
+          background: #F5F5F7;
         }
 
-        /* ── Sidebar ── */
+        /* ── Sidebar (light) ── */
         .al-sidebar {
           width: 240px;
-          background: linear-gradient(180deg, #0a1628 0%, #0d2040 100%);
+          background: #FFFFFF;
+          border-right: 1px solid #E5E5E5;
           display: flex;
           flex-direction: column;
           flex-shrink: 0;
@@ -219,55 +238,55 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           align-items: center;
           justify-content: space-between;
           padding: 18px 14px;
-          border-bottom: 1px solid rgba(255,255,255,0.08);
+          border-bottom: 1px solid #E5E5E5;
           min-height: 68px;
           flex-shrink: 0;
         }
         .al-logo-wrap { display: flex; align-items: center; gap: 10px; overflow: hidden; }
         .al-logo-img { border-radius: 8px; flex-shrink: 0; }
         .al-logo-text { display: flex; flex-direction: column; white-space: nowrap; }
-        .al-logo-name { font-size: 14px; font-weight: 800; color: white; letter-spacing: -0.01em; }
-        .al-logo-sub { font-size: 10px; color: rgba(255,255,255,0.4); font-weight: 500; margin-top: 1px; }
+        .al-logo-name { font-size: 14px; font-weight: 800; color: #1D1D1F; letter-spacing: -0.01em; }
+        .al-logo-sub { font-size: 10px; color: #6E6E73; font-weight: 500; margin-top: 1px; }
 
         .al-collapse-btn {
           width: 28px; height: 28px; border-radius: 8px;
-          background: rgba(255,255,255,0.08); border: none;
-          color: rgba(255,255,255,0.5); font-size: 12px;
+          background: #F5F5F7; border: 1px solid #E5E5E5;
+          color: #6E6E73;
           cursor: pointer; display: flex; align-items: center; justify-content: center;
           flex-shrink: 0; transition: all 0.18s;
         }
-        .al-collapse-btn:hover { background: rgba(255,255,255,0.15); color: white; }
+        .al-collapse-btn:hover { background: #EBECEF; color: #1D1D1F; }
 
         .al-nav { flex: 1; min-height: 0; padding: 12px 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
         .al-nav::-webkit-scrollbar { width: 4px; }
-        .al-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+        .al-nav::-webkit-scrollbar-thumb { background: #D2D2D7; border-radius: 4px; }
         .al-nav::-webkit-scrollbar-track { background: transparent; }
         .al-nav-group { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
         .al-group-label {
-          font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.25);
+          font-size: 9px; font-weight: 700; color: #A0A0A7;
           text-transform: uppercase; letter-spacing: 0.1em;
           padding: 6px 10px 4px;
         }
         .al-nav-item {
           display: flex; align-items: center; gap: 10px;
           padding: 9px 10px; border-radius: 10px;
-          color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500;
+          color: #636366; font-size: 13px; font-weight: 500;
           text-decoration: none; transition: all 0.18s;
           position: relative; white-space: nowrap;
         }
-        .al-nav-item:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
+        .al-nav-item:hover { background: #F5F5F7; color: #1D1D1F; }
         .al-nav-active {
-          background: linear-gradient(135deg, rgba(0,119,168,0.35), rgba(0,119,168,0.15)) !important;
-          color: white !important;
-          border: 1px solid rgba(0,119,168,0.4);
+          background: rgba(0, 212, 255, 0.08) !important;
+          color: #0077A8 !important;
+          font-weight: 600;
+          box-shadow: inset 3px 0 0 #0077A8;
         }
-        .al-nav-icon { font-size: 16px; flex-shrink: 0; width: 20px; text-align: center; }
+        .al-nav-icon { width: 18px; height: 18px; flex-shrink: 0; }
         .al-nav-label { flex: 1; }
-        .al-nav-dot { width: 6px; height: 6px; border-radius: 50%; background: #0077A8; flex-shrink: 0; }
 
         .al-bottom {
           padding: 12px 8px 16px;
-          border-top: 1px solid rgba(255,255,255,0.08);
+          border-top: 1px solid #E5E5E5;
           display: flex; flex-direction: column; gap: 8px;
           flex-shrink: 0;
         }
@@ -280,17 +299,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           flex-shrink: 0;
         }
         .al-admin-info { overflow: hidden; }
-        .al-admin-name { font-size: 12px; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .al-admin-role { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 1px; }
+        .al-admin-name { font-size: 12px; font-weight: 600; color: #1D1D1F; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .al-admin-role { font-size: 10px; color: #6E6E73; margin-top: 1px; }
 
         .al-back-btn {
           display: flex; align-items: center; gap: 8px;
           padding: 8px 10px; border-radius: 10px;
-          color: rgba(255,255,255,0.4); font-size: 12px;
+          color: #636366; font-size: 12px; font-weight: 500;
           text-decoration: none; transition: all 0.18s;
-          background: rgba(255,255,255,0.04);
+          background: #F5F5F7; border: 1px solid #E5E5E5;
         }
-        .al-back-btn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
+        .al-back-btn:hover { background: #EBECEF; color: #1D1D1F; }
         .al-back-btn-sm { justify-content: center; }
 
         /* ── Main ── */
@@ -298,7 +317,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         .al-topbar {
           height: 56px; background: white;
-          border-bottom: 1px solid rgba(0,0,0,0.06);
+          border-bottom: 1px solid #E5E5E5;
           display: flex; align-items: center; justify-content: space-between;
           padding: 0 24px; flex-shrink: 0;
           box-shadow: 0 1px 3px rgba(0,0,0,0.05);

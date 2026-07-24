@@ -431,6 +431,11 @@
   .animate-delay-300 { animation-delay: 300ms; }
   .animate-delay-400 { animation-delay: 400ms; }
   .animate-delay-500 { animation-delay: 500ms; }
+
+  /* Mobile nav drawer (Navbar gap G8) — slide the panel in from the right and
+     fade the scrim in. Light-only; honours prefers-reduced-motion below. */
+  .animate-drawer-in { animation: drawer-in 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
+  .animate-overlay-in { animation: overlay-in 0.2s ease; }
 }
 
 /* ─── Keyframes ─────────────────────────────────────────────────────── */
@@ -449,6 +454,14 @@
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50%       { transform: translateY(-8px); }
+}
+@keyframes drawer-in {
+  0%   { transform: translateX(100%); }
+  100% { transform: translateX(0); }
+}
+@keyframes overlay-in {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 /* ─── Reduced Motion ────────────────────────────────────────────────── */
