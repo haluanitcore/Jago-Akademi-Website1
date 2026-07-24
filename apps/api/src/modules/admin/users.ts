@@ -11,16 +11,20 @@ const UserListSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().optional(),
+  // The /admin/pengguna UI sends a role dropdown; it was previously parsed
+  // nowhere, so every value returned the full list. Constrain to known roles.
+  role: z.enum(["student", "trainer", "affiliate", "super_admin"]).optional(),
 });
 
 // GET /api/admin/users — paginated user list
 router.get("/users", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { page, limit, search } = UserListSchema.parse(req.query);
+    const { page, limit, search, role } = UserListSchema.parse(req.query);
     const skip = (page - 1) * limit;
 
     const where = {
       deletedAt: null,
+      ...(role ? { roles: { some: { role } } } : {}),
       ...(search
         ? {
             OR: [

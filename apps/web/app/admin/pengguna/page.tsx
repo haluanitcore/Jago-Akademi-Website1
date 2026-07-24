@@ -10,14 +10,15 @@ type User = {
   isVerified: boolean;
   provider: string;
   createdAt: string;
-  roles: { role: { name: string } }[];
-  _count?: { enrollments: number; orders: number };
+  // GET /api/admin/users returns roles as { role: string }, not a nested object.
+  roles: { role: string }[];
+  _count?: { enrollments: number };
 };
 
 
 const ROLES_COLOR: Record<string, string> = {
   super_admin: "bg-purple-100 text-purple-700",
-  admin: "bg-blue-100 text-blue-700",
+  affiliate: "bg-blue-100 text-blue-700",
   trainer: "bg-orange-100 text-orange-700",
   student: "bg-green-100 text-green-700",
 };
@@ -140,7 +141,7 @@ export default function AdminPenggunaPage() {
           <button type="submit" className="up-search-btn">🔍 Cari</button>
         </form>
         <div className="up-role-tabs">
-          {["all", "student", "trainer", "admin", "super_admin"].map((role) => (
+          {["all", "student", "trainer", "affiliate", "super_admin"].map((role) => (
             <button
               key={role}
               onClick={() => { setSelectedRole(role); setPage(1); }}
@@ -175,7 +176,7 @@ export default function AdminPenggunaPage() {
             </thead>
             <tbody>
               {users.map((user) => {
-                const roleNames = user.roles?.map((r) => r.role.name) ?? [];
+                const roleNames = user.roles?.map((r) => r.role) ?? [];
                 const initials = user.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
                 return (
                   <tr key={user.id}>

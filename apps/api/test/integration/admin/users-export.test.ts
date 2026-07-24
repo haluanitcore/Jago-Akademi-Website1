@@ -111,6 +111,32 @@ describe("GET /api/admin/users (query validation)", () => {
     expect(res.status).toBe(400);
     expect(prisma.user.findMany).not.toHaveBeenCalled();
   });
+
+  it("filters by role via a roles.some clause", async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.user.count).mockResolvedValue(0);
+
+    const res = await request(app)
+      .get("/api/admin/users")
+      .query({ role: "trainer" })
+      .set(ADMIN_AUTH);
+
+    expect(res.status).toBe(200);
+    expect(vi.mocked(prisma.user.findMany).mock.calls[0]![0]!.where).toEqual({
+      deletedAt: null,
+      roles: { some: { role: "trainer" } },
+    });
+  });
+
+  it("rejects an unknown role value (400)", async () => {
+    const res = await request(app)
+      .get("/api/admin/users")
+      .query({ role: "hacker" })
+      .set(ADMIN_AUTH);
+
+    expect(res.status).toBe(400);
+    expect(prisma.user.findMany).not.toHaveBeenCalled();
+  });
 });
 
 describe("PATCH /api/admin/users/:id", () => {
