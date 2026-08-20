@@ -3,6 +3,7 @@ import { z } from "zod";
 import { validateBody } from "../../middleware/validateBody.js";
 import { prisma } from "../../db/prisma.js";
 import { AppError, successResponse } from "../../types/index.js";
+import { reindexEbook, removeEbookFromIndex } from "../../services/ebook/ebookSearchService.js";
 
 const router = Router();
 
@@ -95,6 +96,9 @@ router.post("/ebooks", validateBody(ebookSchema), async (req: Request, res: Resp
         salePrice: data.salePrice ?? null,
       },
     });
+    // Degrade-safe: `reindexEbook` swallows its own failures, so a Meilisearch
+    // outage can never turn a successful create into a 500 (BL-103).
+    await reindexEbook(ebook);
     res.status(201).json(successResponse(ebook));
   } catch (err) {
     next(err);
@@ -119,6 +123,10 @@ router.patch("/ebooks/:id", validateBody(ebookSchema.partial()), async (req: Req
       where: { id },
       data,
     });
+    // Covers the unpublish path too: `reindexEbook` DELETES the document when
+    // the row is no longer `published`, so archiving an ebook removes it from
+    // public search instead of leaving a stale hit behind.
+    await reindexEbook(updated);
     res.json(successResponse(updated));
   } catch (err) {
     next(err);
@@ -146,6 +154,9 @@ router.delete("/ebooks/:id", async (req: Request, res: Response, next: NextFunct
     }
 
     await prisma.eBook.delete({ where: { id } });
+    // `existing.id` rather than the raw route param: it is the id that was
+    // actually verified against the DB, and it is typed as a definite string.
+    await removeEbookFromIndex(existing.id);
     res.json(successResponse({ message: "E-Book berhasil dihapus." }));
   } catch (err) {
     next(err);
