@@ -3,7 +3,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { CalendarDays, MapPin, Mic2, Users, Radio, Building2, Layers3, Sparkles, ArrowRight } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Reveal } from "@/components/ui/Reveal";
 import { MediaPlaceholder } from "@/components/shared/MediaPlaceholder";
 import { getEventTypeLabel } from "@/lib/event-labels";
 import { listEvents, type EventSummary } from "@/lib/api/events";

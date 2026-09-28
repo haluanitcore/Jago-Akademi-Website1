@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Mail, MapPin, MessageCircle, Clock, ShieldCheck, Headphones } from "lucide-react";
-import { Card } from "@/components/ui";
 import ContactForm from "./ContactForm";
 import { WA_NUMBER_DISPLAY, waLink } from "@/lib/config";
 
@@ -52,7 +51,7 @@ const TRUST_METRICS = [
   {
     icon: ShieldCheck,
     title: "Kerahasiaan Terjamin",
-    desc: "Data profil dan invoice dienkripsi standar ISO/IEC 27001.",
+    desc: "Data profil dan invoice dienkripsi menggunakan TLS 1.3.",
   },
 ];
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
-import { ArrowLeft, ExternalLink, Sparkles, CheckCircle2, ShieldCheck, Play, Layers } from "lucide-react";
+import { ArrowLeft, ExternalLink, Sparkles } from "lucide-react";
 import { API_BASE as API } from "@/lib/api/base";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -23,48 +23,6 @@ type ApiPortfolioDetail = {
   photoUrl?: string | null;
   featured?: boolean;
   portfolioItems?: ApiPortfolioItem[];
-};
-
-// ─── Curated Fallback for Showcase Items ───────────────────────────────────────
-
-const CURATED_SHOWCASE_DETAILS: Record<string, ApiPortfolioDetail> = {
-  "showcase-1": {
-    id: "showcase-1",
-    name: "Dimas Bagaskara",
-    role: "Commercial Video Director",
-    headline: "Batch 12 • Spesialisasi Iklan TVC Komersial & Consistent Character",
-    photoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-    featured: true,
-    portfolioItems: [
-      {
-        title: "High-Paced Commercial TVC for Hydration Brand",
-        description: "Kampanye video iklan 30 detik untuk produk minuman olahraga. Karakter konsisten di 8 scene.",
-        url: "https://youtube.com/watch?v=example1",
-        imageUrl: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600&auto=format&fit=crop&q=80",
-      },
-      {
-        title: "Master Node Graph ComfyUI IP-Adapter",
-        description: "Arsitektur kontrol wajah multi-angle tanpa glitch.",
-        url: null,
-      },
-    ],
-  },
-  "showcase-2": {
-    id: "showcase-2",
-    name: "Maya Anggraini",
-    role: "Creative Director",
-    headline: "Batch 14 • Fashion & UGC Shortform Lookbook",
-    photoUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80",
-    featured: true,
-    portfolioItems: [
-      {
-        title: "OmniPOS: Shortform Fashion Lookbook UGC",
-        description: "Lookbook katalog fesyen 15 detik dengan otomasi pencahayaan studio.",
-        url: "https://vimeo.com/example2",
-        imageUrl: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&auto=format&fit=crop&q=80",
-      },
-    ],
-  },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -134,12 +92,6 @@ export default function PortofolioMemberDetailPage() {
   useEffect(() => {
     if (!id) {
       setMember(null);
-      return;
-    }
-
-    // Check curated showcase item first
-    if (CURATED_SHOWCASE_DETAILS[id]) {
-      setMember(CURATED_SHOWCASE_DETAILS[id]);
       return;
     }
 

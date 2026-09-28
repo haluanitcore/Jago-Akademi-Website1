@@ -4,14 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
-  AlertCircle,
   CheckCircle2,
   Mail,
   ExternalLink,
-  RefreshCw,
-  Clock,
   ArrowRight,
-  ShieldCheck,
   MessageSquare,
 } from "lucide-react";
 import { verifyEmail } from "@/lib/auth/api";

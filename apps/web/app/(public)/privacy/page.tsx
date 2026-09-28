@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, ShieldCheck, Lock, FileCheck } from "lucide-react";
-import { Card } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "Kebijakan Privasi & PDP — Hazl Academy",
@@ -12,7 +11,7 @@ export const metadata: Metadata = {
 const sections = [
   {
     h: "1. Komitmen Pelindungan Data Pribadi",
-    p: "PT Hazl Teknologi Solusi Edukasi berkomitmen untuk melindungi privasi setiap peserta, instruktur, dan mitra korporat di platform Hazl Academy. Kebijakan ini disusun berdasarkan Undang-Undang Republik Indonesia Nomor 27 Tahun 2022 tentang Pelindungan Data Pribadi (UU PDP) serta standar tata kelola keamanan informasi ISO/IEC 27001.",
+    p: "PT Hazl Teknologi Solusi Edukasi berkomitmen untuk melindungi privasi setiap peserta, instruktur, dan mitra korporat di platform Hazl Academy. Kebijakan ini disusun berdasarkan Undang-Undang Republik Indonesia Nomor 27 Tahun 2022 tentang Pelindungan Data Pribadi (UU PDP).",
   },
   {
     h: "2. Data Pribadi yang Kami Kumpulkan",
@@ -32,7 +31,7 @@ const sections = [
   },
   {
     h: "6. Pembagian Data kepada Pihak Ketiga Tepercaya",
-    p: "Kami tidak pernah menjual data pribadi Anda kepada pihak mana pun. Data hanya dibagikan kepada penyedia infrastruktur esensial: Payment Gateway Duitku (untuk settlement perbankan), penyedia komputasi cloud bersertifikasi ISO 27001, serta penyedia layanan email transaksional resmi.",
+    p: "Kami tidak pernah menjual data pribadi Anda kepada pihak mana pun. Data hanya dibagikan kepada penyedia infrastruktur esensial: Payment Gateway Duitku (untuk settlement perbankan), penyedia komputasi cloud, serta penyedia layanan email transaksional resmi.",
   },
   {
     h: "7. Kontak Data Protection Officer (DPO)",

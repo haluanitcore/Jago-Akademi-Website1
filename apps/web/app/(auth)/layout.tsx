@@ -26,7 +26,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
           <div className="flex items-center gap-2 rounded-full border border-[#E7E9EC] bg-[#F6F7F9] px-3 py-1 text-[11px] font-semibold text-[#5B616E]">
             <ShieldCheck size={13} className="text-[#0077A8]" />
-            <span>Sistem Terakreditasi ISO/IEC 27001</span>
+            <span>Data Terenkripsi TLS 1.3</span>
           </div>
         </div>
       </header>
@@ -59,7 +59,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <footer className="border-t border-[#E7E9EC] bg-white py-6 text-xs text-[#5B616E]">
         <div className="mx-auto flex max-w-6xl flex-col sm:flex-row items-center justify-between gap-4 px-4 sm:px-6">
           <p className="text-[11px] text-[#8A909A]">
-            &copy; 2026 Hazl Academy. TLS 1.3 &amp; ISO/IEC 27001 Certified.
+            &copy; 2026 Hazl Academy. Terenkripsi TLS 1.3.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-5 text-[11px]">

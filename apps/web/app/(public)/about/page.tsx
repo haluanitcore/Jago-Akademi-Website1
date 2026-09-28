@@ -2,22 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  Sparkles,
   ShieldCheck,
-  CheckCircle2,
-  Users,
-  Award,
   ArrowRight,
   Clock,
   MapPin,
   Mail,
-  MessageSquare,
   FileCode2,
   GitPullRequest,
-  Building2,
-  Briefcase,
-  ExternalLink,
-} from "lucide-react";
+  } from "lucide-react";
 import ContactForm from "../contact/ContactForm";
 
 export const metadata: Metadata = {
@@ -30,7 +22,7 @@ const STATS = [
   { value: "4.200+", label: "Kreator & Siswa Aktif" },
   { value: "100%", label: "Kurikulum Praktikal Berlisensi" },
   { value: "35+", label: "Modul & Template Siap Pakai" },
-  { value: "ISO 27001", label: "Terakreditasi Keamanan Data" },
+  { value: "TLS 1.3", label: "Enkripsi Data Standar Industri" },
 ];
 
 const VALUES = [
@@ -77,7 +69,7 @@ const TIMELINE = [
     year: "2026",
     tag: "SCALE",
     title: "Akreditasi & Integrasi Industri",
-    desc: "Mengimplementasikan sertifikat QR kriptografis, verifikasi keamanan ISO/IEC 27001, dan jejaring agensi kreatif rekanan.",
+    desc: "Mengimplementasikan sertifikat QR kriptografis dan jejaring agensi kreatif rekanan.",
   },
   {
     year: "2026+",

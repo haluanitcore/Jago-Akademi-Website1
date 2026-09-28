@@ -2,7 +2,6 @@
 
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { Suspense, useEffect, useState } from "react";
 import {
   CheckCircle2,
@@ -555,7 +554,7 @@ function SuccessContent() {
             </Link>
           </div>
           <p className="text-[11px] text-[#8A909A]">
-            © 2026 Hazl Academy. Seluruh hak cipta dilindungi. Sistem Keamanan ISO/IEC 27001 Terverifikasi.
+            © 2026 Hazl Academy. Seluruh hak cipta dilindungi.
           </p>
         </div>
       </footer>

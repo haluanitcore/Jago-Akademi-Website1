@@ -9,31 +9,20 @@ import {
   CheckCircle2,
   Clock,
   CircleX,
-  AlertCircle,
-  RotateCcw,
   Download,
-  CreditCard,
   Tag,
-  Wallet,
   GraduationCap,
   Printer,
-  Copy,
-  Check,
   ShieldCheck,
   ExternalLink,
   MessageSquare,
   Sparkles,
   FileText,
   Lock,
-  type LucideIcon,
 } from "lucide-react";
 import { getValidToken } from "@/lib/auth/token";
 import { downloadProtected } from "@/lib/download";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
   Button,
   Textarea,
   DashboardLoading,
@@ -101,7 +90,6 @@ function OrderDetailContent() {
   const [refundLoading, setRefundLoading] = useState(false);
   const [refundMessage, setRefundMessage] = useState("");
   const [downloadError, setDownloadError] = useState("");
-  const [copiedHash, setCopiedHash] = useState(false);
 
   const searchParams = useSearchParams();
   const isMock = searchParams.get("mock") === "1";
@@ -198,13 +186,6 @@ function OrderDetailContent() {
 
   const isPaid = order.status === "paid";
   const displayTx = order.id.slice(0, 14).toUpperCase();
-  const mockSha256 = `7b8f9d3c29b393504f569d5cf190c309f140${order.id.replace(/-/g, "").slice(0, 24)}`;
-
-  function handleCopyHash() {
-    navigator.clipboard.writeText(mockSha256);
-    setCopiedHash(true);
-    setTimeout(() => setCopiedHash(false), 2000);
-  }
 
   async function submitRefund(e: React.FormEvent) {
     e.preventDefault();
@@ -643,47 +624,6 @@ function OrderDetailContent() {
                   </span>
                 </div>
               </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => alert("e-Faktur PPN otomatis terbit dan dapat diunduh pada penutupan masa pajak bulanan.")}
-              className="w-full mt-2 inline-flex items-center justify-center gap-1.5 rounded-full border border-[#E7E9EC] bg-[#FAFAFA] py-2 text-xs font-semibold text-[#5B616E] hover:bg-[#F6F7F9]"
-            >
-              <FileText size={13} />
-              <span>Faktur Pajak Elektronik (e-Faktur PPN)</span>
-            </button>
-          </div>
-
-          {/* Cryptographic Verification Seal */}
-          <div className="rounded-[26px] border border-[#E7E9EC] bg-white p-6 shadow-sm space-y-3">
-            <div className="flex items-center gap-2">
-              <ShieldCheck size={18} className="text-[#0077A8]" />
-              <h4 className="font-bold text-xs uppercase tracking-wider text-[#16181D]">
-                Verifikasi Keaslian Kriptografis
-              </h4>
-            </div>
-            <p className="text-xs text-[#5B616E] leading-relaxed">
-              Faktur ini disegel secara digital menggunakan tanda tangan SHA-256 tersertifikasi dan sah diakui secara hukum.
-            </p>
-
-            <div className="rounded-xl border border-[#E7E9EC] bg-[#FAFAFA] p-3 flex items-center justify-between text-xs">
-              <span className="font-mono text-[11px] text-[#5B616E] truncate max-w-[220px]">
-                {mockSha256}
-              </span>
-              <button
-                type="button"
-                onClick={handleCopyHash}
-                className="text-[#5B616E] hover:text-[#0077A8] p-1"
-                title="Salin Hash"
-              >
-                {copiedHash ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 pt-1 text-[11px] text-[#8A909A]">
-              <Lock size={12} className="text-emerald-600" />
-              <span>ISO/IEC 27001 Certified • Terdaftar di BSSN</span>
             </div>
           </div>
         </div>

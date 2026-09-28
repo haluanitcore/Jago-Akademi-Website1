@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Mail, Lock, LogIn, ArrowRight, ShieldCheck } from "lucide-react";
+import { Mail, Lock, LogIn, ArrowRight } from "lucide-react";
 import { login, buildGoogleLoginUrl } from "@/lib/auth/api";
 import { setToken } from "@/lib/auth/token";
 

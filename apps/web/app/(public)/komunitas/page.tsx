@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import Image from "next/image";
 import {
   MessageSquare,
   Users,
   Radio,
-  Sparkles,
   ArrowRight,
   Clock,
-  Calendar,
   ShieldCheck,
   CheckCircle2,
   MessageCircle,
@@ -21,6 +18,12 @@ import { LeadCaptureForm } from "@/components/landing/LeadCaptureForm";
 import { waLink, CONTACT_FALLBACK_HREF } from "@/lib/config";
 
 const waHref = waLink("Halo, saya ingin bergabung dengan Komunitas Kreator Hazl Academy");
+
+export const metadata: Metadata = {
+  title: "Komunitas Kreator Video AI | Hazl Academy",
+  description:
+    "Gabung komunitas kreator video AI Hazl Academy — diskusi, feedback karya, dan info event lewat WhatsApp & Discord.",
+};
 
 const RAW_GROUP_URL = process.env.NEXT_PUBLIC_WA_COMMUNITY_GROUP;
 const GROUP_URL = RAW_GROUP_URL?.startsWith("https://") ? RAW_GROUP_URL : null;

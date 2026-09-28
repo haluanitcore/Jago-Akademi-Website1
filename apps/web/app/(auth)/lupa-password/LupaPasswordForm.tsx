@@ -109,7 +109,7 @@ export function LupaPasswordForm() {
         <div className="rounded-xl border border-[#E7E9EC] bg-[#FAFAFA] p-3 flex items-start gap-2.5 text-[11px] text-[#5B616E]">
           <ShieldCheck size={16} className="text-[#0077A8] flex-shrink-0 mt-0.5" />
           <span>
-            Demi keamanan data dan kepatuhan ISO/IEC 27001, tautan hanya dapat digunakan 1 kali.
+            Demi keamanan data Anda, tautan hanya dapat digunakan 1 kali.
           </span>
         </div>
 

@@ -4,19 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  GraduationCap,
   Star,
   TrendingUp,
-  Sparkles,
-  Building2,
-  Briefcase,
-  Users,
-  CheckCircle2,
-  Calendar,
   ArrowRight,
-  ShieldCheck,
-  ExternalLink,
-} from "lucide-react";
+  } from "lucide-react";
 import { fetchList, resolveListState, type ListState } from "@/lib/api/listResource";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -273,8 +264,6 @@ export default function AlumniPage() {
   useEffect(() => {
     load();
   }, [load]);
-
-  const hasApiStories = state.kind === "list" && state.items.length > 0;
 
   return (
     <main id="main-content" className="al-root min-h-screen bg-surface-page">

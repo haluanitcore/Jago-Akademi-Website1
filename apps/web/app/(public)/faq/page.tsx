@@ -11,7 +11,6 @@ import {
   Sparkles,
   HelpCircle,
 } from "lucide-react";
-import { Card } from "@/components/ui";
 import { waLink, CONTACT_FALLBACK_HREF } from "@/lib/config";
 import FaqAccordion from "./FaqAccordion";
 

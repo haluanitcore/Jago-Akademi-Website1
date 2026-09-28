@@ -3,7 +3,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { BookOpen, Sparkles, ArrowRight, DownloadCloud, FileText } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { MediaPlaceholder } from "@/components/shared/MediaPlaceholder";
 import { API_BASE } from "@/lib/api/base";
 
 export const metadata: Metadata = {

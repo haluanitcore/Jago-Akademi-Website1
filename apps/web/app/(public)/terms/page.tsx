@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, ShieldCheck, Scale, FileText } from "lucide-react";
-import { Card } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "Syarat & Ketentuan Layanan — Hazl Academy",
